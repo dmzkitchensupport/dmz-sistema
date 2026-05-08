@@ -1243,6 +1243,74 @@ td:hover .hz-edit-hint { opacity: 1; }
 .ai-ext-ta:focus { background: rgba(26,107,138,.04); border-radius: 3px; }
 
 
+/* ── RACREAA Tab ──────────────────────────────────────────────── */
+#racreaa-view {
+  flex: 1; overflow-y: auto; display: none; flex-direction: column;
+  background: var(--off);
+}
+#racreaa-view.visible { display: flex; }
+.rac-topbar {
+  background: #2C2A24; color: #fff; padding: .75rem 1.4rem;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: .6rem; flex-shrink: 0;
+  border-bottom: 2px solid #B8922A;
+}
+.rac-brand { font-family: var(--f-t); font-size: .68rem; letter-spacing: .3em;
+  font-weight: 300; color: rgba(255,255,255,.55); }
+.rac-brand span { color: #B8922A; }
+.rac-kpis { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.rac-kpi { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 4px; padding: .3rem .75rem; text-align: center; min-width: 64px; }
+.rac-kpi .rk-n { font-family: var(--f-t); font-size: 1.2rem; font-weight: 800; line-height: 1; }
+.rac-kpi .rk-l { font-size: .5rem; letter-spacing: .12em; color: rgba(255,255,255,.4); margin-top: .1rem; }
+.rac-login-box { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+.rac-login-card { background: #fff; border-radius: 8px; width: 340px; max-width: 96%;
+  padding: 1.8rem 1.6rem; box-shadow: var(--shadow); }
+.rac-login-title { font-family: var(--f-t); font-size: .9rem; font-weight: 800;
+  letter-spacing: .06em; color: #2C2A24; margin-bottom: .25rem; }
+.rac-login-sub { font-size: .6rem; letter-spacing: .15em; color: var(--mid); margin-bottom: 1.2rem; }
+.rac-field { margin-bottom: .7rem; }
+.rac-field label { font-size: .58rem; font-weight: 700; letter-spacing: .12em;
+  color: var(--mid); display: block; margin-bottom: .2rem; }
+.rac-input { width: 100%; border: 1.5px solid var(--border); border-radius: 4px;
+  padding: .45rem .7rem; font-size: .82rem; outline: none; font-family: inherit;
+  transition: border-color .15s; color: var(--dark); background: #fff; }
+.rac-input:focus { border-color: #B8922A; }
+.rac-btn-login { width: 100%; padding: .6rem; background: #2C2A24; color: #fff;
+  border: none; border-radius: 4px; font-size: .72rem; font-weight: 700;
+  letter-spacing: .1em; cursor: pointer; margin-top: .4rem;
+  font-family: inherit; transition: background .15s; }
+.rac-btn-login:hover { background: #3d3a30; }
+.rac-err { font-size: .66rem; color: var(--red); min-height: 1rem; margin-top: .3rem; }
+.rac-content { flex: 1; padding: 1.2rem 1.4rem; display: none; flex-direction: column; gap: 1rem; }
+.rac-content.visible { display: flex; }
+.rac-section-title { font-size: .58rem; font-weight: 700; letter-spacing: .22em;
+  color: var(--mid); border-bottom: 1px solid var(--border);
+  padding-bottom: .35rem; margin-bottom: .1rem; }
+.rac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: .8rem; }
+.rac-card { background: #fff; border-radius: var(--r); border: 1px solid var(--border);
+  overflow: hidden; transition: box-shadow .15s; }
+.rac-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+.rac-card-head { background: #2C2A24; color: #fff; padding: .5rem .9rem;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: .62rem; letter-spacing: .1em; font-weight: 700; }
+.rac-score { font-family: var(--f-t); font-size: 1.1rem; font-weight: 800; }
+.rac-card-body { padding: .75rem .9rem; font-size: .72rem; }
+.rac-row { display: flex; justify-content: space-between; margin-bottom: .25rem; }
+.rac-lbl { color: var(--mid); }
+.rac-val { font-weight: 600; color: var(--dark); }
+.rac-badge-nivel { display: inline-block; font-size: .56rem; font-weight: 700; letter-spacing: .07em;
+  padding: .12rem .42rem; border-radius: 2px; color: #fff; margin-top: .4rem; }
+.rac-summary { background: #fff; border-radius: var(--r); border: 1px solid var(--border);
+  padding: .9rem 1.1rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+.rac-summary-kpi { text-align: center; min-width: 60px; }
+.rac-summary-kpi .sk-n { font-family: var(--f-t); font-size: 1.4rem; font-weight: 800; line-height: 1; }
+.rac-summary-kpi .sk-l { font-size: .55rem; letter-spacing: .1em; color: var(--mid); }
+.rac-signout { font-size: .62rem; color: rgba(255,255,255,.45); cursor: pointer;
+  background: none; border: 1px solid rgba(255,255,255,.2); border-radius: 3px;
+  padding: .2rem .5rem; transition: all .15s; }
+.rac-signout:hover { color: #fff; border-color: rgba(255,255,255,.5); }
+
 /*  Modulo Calificacion de Alimentos  */
 #alimentos-view {
   flex: 1; overflow-y: auto; display: none; flex-direction: column;
@@ -1479,6 +1547,7 @@ td:hover .hz-edit-hint { opacity: 1; }
       <button class="mode-btn"        id="btn-clima2"    onclick="setMode('clima2')">CLIMA</button>
       <button class="mode-btn"        id="btn-rep"       onclick="setMode('rep')">REPORTE</button>
       <button class="mode-btn"        id="btn-hist"      onclick="setMode('hist')">HISTORIAL</button>
+      <button class="mode-btn"        id="btn-racreaa"   onclick="setMode('racreaa')">RACREAA</button>
     </div>
     <!-- Save indicator -->
     <div class="save-wrap">
@@ -1718,6 +1787,53 @@ td:hover .hz-edit-hint { opacity: 1; }
 
   <!-- Report view -->
   <div id="report-view"></div>
+
+  <!-- RACREAA Integration Tab -->
+  <div id="racreaa-view">
+    <div class="rac-topbar">
+      <div class="rac-brand"><span>R</span>ACREAA <span>·</span> DE LA MORA ZUMARÁN <span>·</span> KITCHEN SUPPORT</div>
+      <div id="rac-topbar-right" class="rac-kpis">
+        <span style="font-size:.62rem;color:rgba(255,255,255,.4)">Iniciando sesión...</span>
+      </div>
+    </div>
+
+    <!-- Login box — visible cuando no hay sesión RACREAA -->
+    <div class="rac-login-box" id="rac-login-box">
+      <div class="rac-login-card">
+        <div class="rac-login-title">ACCESO RACREAA</div>
+        <div class="rac-login-sub">PLATAFORMA DE CALIFICACIÓN DE ALIMENTOS</div>
+        <div class="rac-field">
+          <label>CORREO</label>
+          <input class="rac-input" id="rac-email" type="email"
+            value="mario@delamorazumaran.com"
+            onkeydown="if(event.key==='Enter')racLogin()">
+        </div>
+        <div class="rac-field">
+          <label>CONTRASEÑA</label>
+          <input class="rac-input" id="rac-pass" type="password"
+            placeholder="DMZRacreaa2026!"
+            onkeydown="if(event.key==='Enter')racLogin()">
+        </div>
+        <div class="rac-err" id="rac-err"></div>
+        <button class="rac-btn-login" onclick="racLogin()">INICIAR SESION</button>
+        <div style="font-size:.58rem;color:var(--mid);text-align:center;margin-top:.8rem;letter-spacing:.06em">
+          Tenant: dmz · Servidor: dmz-audit.netlify.app
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenido principal — visible cuando hay sesión RACREAA -->
+    <div class="rac-content" id="rac-content">
+      <div class="rac-section-title">RESUMEN EJECUTIVO</div>
+      <div class="rac-summary" id="rac-summary">
+        <span style="font-size:.72rem;color:var(--mid)">Cargando datos...</span>
+      </div>
+      <div class="rac-section-title">AUDITORIAS DE CALIFICACION DE ALIMENTOS</div>
+      <div id="rac-grid" class="rac-grid">
+        <div style="font-size:.72rem;color:var(--mid);padding:1rem">Cargando auditorias...</div>
+      </div>
+    </div>
+  </div>
 
   <!-- Historial view -->
   <div id="hist-view">
@@ -3100,22 +3216,24 @@ function init() {
    UI — modo, nav, progreso
  */
 function setMode(m) {
-  ['cap','dash','ali','hz','clima2','rep','hist'].forEach(id => {
+  ['cap','dash','ali','hz','clima2','rep','hist','racreaa'].forEach(id => {
     const btn = document.getElementById('btn-' + id);
     if (btn) btn.classList.toggle('active', m === id);
   });
-  document.getElementById('main').style.display               = m === 'cap'    ? 'flex'  : 'none';
-  document.getElementById('dash-view').style.display          = m === 'dash'   ? 'block' : 'none';
+  document.getElementById('main').style.display               = m === 'cap'     ? 'flex'  : 'none';
+  document.getElementById('dash-view').style.display          = m === 'dash'    ? 'block' : 'none';
   document.getElementById('alimentos-view').classList.toggle('visible', m === 'ali');
   document.getElementById('hallazgos-view').classList.toggle('visible', m === 'hz');
   document.getElementById('clima2-view').classList.toggle('visible',    m === 'clima2');
-  document.getElementById('report-view').style.display        = m === 'rep'    ? 'block' : 'none';
-  document.getElementById('hist-view').classList.toggle('visible',   m === 'hist');
-  if (m === 'dash')   buildDash();
-  if (m === 'rep')    buildReport();
-  if (m === 'clima2') buildClima2View();
-  if (m === 'hist')   buildHistorial();
-  if (m === 'ali')    buildAlimentosView();
+  document.getElementById('report-view').style.display        = m === 'rep'     ? 'block' : 'none';
+  document.getElementById('hist-view').classList.toggle('visible',      m === 'hist');
+  document.getElementById('racreaa-view').classList.toggle('visible',   m === 'racreaa');
+  if (m === 'dash')    buildDash();
+  if (m === 'rep')     buildReport();
+  if (m === 'clima2')  buildClima2View();
+  if (m === 'hist')    buildHistorial();
+  if (m === 'ali')     buildAlimentosView();
+  if (m === 'racreaa') racInit();
 }
 
 function onKeyInput() {
@@ -5718,7 +5836,299 @@ async function exportAlimentosPDF() {
   document.body.removeChild(tmp);
 }
 
-// 
+
+// ══════════════════════════════════════════════════════════════
+//  RACREAA — Integración API bridge (read-only, sin tocar Neon)
+//  Backend: https://dmz-audit.netlify.app
+//  Tenant:  dmz · Auth: JWT HS256 15min + refresh cookie
+// ══════════════════════════════════════════════════════════════
+const RAC = {
+  BASE:    'https://dmz-audit.netlify.app/.netlify/functions',
+  TENANT:  'dmz',
+  token:   null,
+  data:    null,   // { audits, total, avg, counts }
+  _initialized: false,
+};
+const RAC_TOKEN_KEY = 'dmz_rac_token';
+
+function racHeaders() {
+  return {
+    'Content-Type':  'application/json',
+    'Authorization': 'Bearer ' + (RAC.token || ''),
+    'Origin':        'https://mariozumaran.github.io',
+  };
+}
+
+async function racFetch(path, opts) {
+  const resp = await fetch(RAC.BASE + path, {
+    ...opts,
+    headers: { ...racHeaders(), ...(opts && opts.headers || {}) },
+  });
+  return resp;
+}
+
+/** Intenta restaurar token guardado y verifica validez */
+async function racRestoreToken() {
+  const saved = localStorage.getItem(RAC_TOKEN_KEY);
+  if (!saved) return false;
+  RAC.token = saved;
+  // Verificar que el token aún funciona
+  try {
+    const r = await racFetch('/audits');
+    if (r.ok) return true;
+    // Token expirado — intentar refresh via cookie
+    const rr = await racFetch('/auth-refresh', { method: 'POST', credentials: 'include' });
+    if (rr.ok) {
+      const d = await rr.json();
+      if (d.access_token) {
+        RAC.token = d.access_token;
+        localStorage.setItem(RAC_TOKEN_KEY, RAC.token);
+        return true;
+      }
+    }
+  } catch(e) {}
+  RAC.token = null;
+  localStorage.removeItem(RAC_TOKEN_KEY);
+  return false;
+}
+
+async function racLogin() {
+  const email = document.getElementById('rac-email').value.trim();
+  const pass  = document.getElementById('rac-pass').value;
+  const errEl = document.getElementById('rac-err');
+  errEl.textContent = 'Autenticando...';
+
+  try {
+    const resp = await fetch(RAC.BASE + '/auth-login', {
+      method:      'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin':       'https://mariozumaran.github.io',
+      },
+      body: JSON.stringify({
+        email,
+        password:    pass,
+        tenant_slug: RAC.TENANT,
+      }),
+    });
+    const data = await resp.json();
+    if (!data.success) { errEl.textContent = data.message || 'Error de autenticacion'; return; }
+
+    RAC.token = data.access_token;
+    localStorage.setItem(RAC_TOKEN_KEY, RAC.token);
+    errEl.textContent = '';
+    await racLoadAndRender();
+  } catch(e) {
+    errEl.textContent = 'Error de conexion: ' + e.message;
+  }
+}
+
+async function racLogout() {
+  try {
+    await racFetch('/auth-logout', { method: 'POST', credentials: 'include' });
+  } catch(e) {}
+  RAC.token = null;
+  RAC.data  = null;
+  localStorage.removeItem(RAC_TOKEN_KEY);
+  racShowLogin();
+}
+
+function racShowLogin() {
+  const loginBox  = document.getElementById('rac-login-box');
+  const content   = document.getElementById('rac-content');
+  const topRight  = document.getElementById('rac-topbar-right');
+  if (loginBox) loginBox.style.display = 'flex';
+  if (content)  content.classList.remove('visible');
+  if (topRight) topRight.innerHTML = `<span style="font-size:.62rem;color:rgba(255,255,255,.4)">Sin sesion activa</span>`;
+}
+
+function racShowContent() {
+  const loginBox = document.getElementById('rac-login-box');
+  const content  = document.getElementById('rac-content');
+  if (loginBox) loginBox.style.display = 'none';
+  if (content)  content.classList.add('visible');
+}
+
+async function racLoadAndRender() {
+  try {
+    const resp = await racFetch('/audits');
+    if (!resp.ok) {
+      if (resp.status === 401) { racShowLogin(); return; }
+      throw new Error('HTTP ' + resp.status);
+    }
+    RAC.data = await resp.json();
+    racRenderTopbar();
+    racRenderSummary();
+    racRenderGrid();
+    racShowContent();
+  } catch(e) {
+    const err = document.getElementById('rac-err');
+    if (err) err.textContent = 'Error al cargar datos: ' + e.message;
+    racShowLogin();
+  }
+}
+
+function racRenderTopbar() {
+  const d = RAC.data;
+  if (!d) return;
+  const avg  = parseFloat(d.avg  || 0);
+  const col  = avg >= 85 ? '#22C55E' : avg >= 70 ? '#F59E0B' : '#EF4444';
+  const topR = document.getElementById('rac-topbar-right');
+  if (!topR) return;
+  topR.innerHTML = `
+    <div class="rac-kpi">
+      <div class="rk-n" style="color:${col}">${avg.toFixed(1)}</div>
+      <div class="rk-l">SCORE GLOBAL</div>
+    </div>
+    <div class="rac-kpi">
+      <div class="rk-n">${d.total || 0}</div>
+      <div class="rk-l">AUDITORIAS</div>
+    </div>
+    <div class="rac-kpi">
+      <div class="rk-n" style="color:#22C55E">${(d.counts && d.counts.excelente) || 0}</div>
+      <div class="rk-l">EXCELENTE</div>
+    </div>
+    <div class="rac-kpi">
+      <div class="rk-n" style="color:#EF4444">${(d.counts && d.counts.critico) || 0}</div>
+      <div class="rk-l">CRITICO</div>
+    </div>
+    <button class="rac-signout" onclick="racLogout()">Cerrar sesion</button>
+  `;
+}
+
+function racRenderSummary() {
+  const d = RAC.data;
+  if (!d) return;
+  const avg  = parseFloat(d.avg  || 0);
+  const col  = avg >= 85 ? '#22C55E' : avg >= 70 ? '#F59E0B' : '#EF4444';
+  const c    = d.counts || {};
+  const el   = document.getElementById('rac-summary');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="rac-summary-kpi">
+      <div class="sk-n" style="color:${col}">${avg.toFixed(1)}</div>
+      <div class="sk-l">PROMEDIO GLOBAL</div>
+    </div>
+    <div class="rac-summary-kpi">
+      <div class="sk-n">${d.total || 0}</div>
+      <div class="sk-l">TOTAL AUDITORIAS</div>
+    </div>
+    <div style="flex:1;display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+      ${[
+        ['EXCELENTE', c.excelente || 0, '#22C55E'],
+        ['BUENO',     c.bueno     || 0, '#84CC16'],
+        ['REGULAR',   c.regular   || 0, '#F59E0B'],
+        ['DEFICIENTE',c.deficiente|| 0, '#F97316'],
+        ['CRITICO',   c.critico   || 0, '#EF4444'],
+      ].map(([l, n, c]) => `
+        <span style="font-size:.64rem;font-weight:700;padding:.15rem .5rem;border-radius:3px;
+          background:${c}22;color:${c};border:1px solid ${c}44">
+          ${n} ${l}
+        </span>`).join('')}
+    </div>
+    <div style="font-size:.6rem;color:var(--mid);text-align:right;line-height:1.5">
+      <strong>Tenant:</strong> ${esc(RAC.TENANT)}<br>
+      <strong>Fuente:</strong> Neon PostgreSQL · RACREAA
+    </div>
+  `;
+}
+
+const NIVEL_COLORS = {
+  excelente: '#22C55E', bueno: '#84CC16', regular: '#F59E0B',
+  deficiente: '#F97316', critico: '#EF4444'
+};
+
+function racRenderGrid() {
+  const d   = RAC.data;
+  const el  = document.getElementById('rac-grid');
+  if (!d || !d.audits || !el) return;
+
+  if (!d.audits.length) {
+    el.innerHTML = `<div style="font-size:.75rem;color:var(--mid);padding:2rem;grid-column:1/-1;text-align:center">
+      Sin auditorias registradas en RACREAA para el tenant <strong>dmz</strong>.
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = d.audits.map((a, i) => {
+    const score    = parseInt(a.global_score || 0);
+    const scoreCol = score >= 85 ? '#22C55E' : score >= 70 ? '#F59E0B' : '#EF4444';
+    const nivel    = score >= 85 ? 'excelente' : score >= 70 ? 'bueno' : score >= 55 ? 'regular' : score >= 40 ? 'deficiente' : 'critico';
+    const nivelCol = NIVEL_COLORS[nivel] || '#888';
+    const date     = a.audit_date ? new Date(a.audit_date).toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'}) : '—';
+    const ts       = a.server_timestamp ? new Date(a.server_timestamp).toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'}) : '';
+    const gps      = a.gps_lat && a.gps_lng
+      ? `<a href="https://maps.google.com/?q=${a.gps_lat},${a.gps_lng}" target="_blank"
+           style="font-size:.6rem;color:#1A6B8A;text-decoration:none">
+           ${a.gps_lat.toFixed(4)}, ${a.gps_lng.toFixed(4)}
+         </a>`
+      : '<span style="color:var(--mid)">Sin GPS</span>';
+
+    return `<div class="rac-card">
+      <div class="rac-card-head">
+        <span>${esc(a.establecimiento || 'Sin nombre')}</span>
+        <span class="rac-score" style="color:${scoreCol}">${score}</span>
+      </div>
+      <div class="rac-card-body">
+        <div class="rac-row">
+          <span class="rac-lbl">Fecha</span>
+          <span class="rac-val">${date}${ts ? ' · ' + ts : ''}</span>
+        </div>
+        <div class="rac-row">
+          <span class="rac-lbl">Periodo</span>
+          <span class="rac-val">${esc(a.service_period || '—')}</span>
+        </div>
+        <div class="rac-row">
+          <span class="rac-lbl">Auditor</span>
+          <span class="rac-val">${esc(a.auditor_name || '—')}</span>
+        </div>
+        <div class="rac-row">
+          <span class="rac-lbl">Items eval.</span>
+          <span class="rac-val">${a.item_count || 0}</span>
+        </div>
+        <div class="rac-row">
+          <span class="rac-lbl">GPS</span>
+          <span class="rac-val">${gps}</span>
+        </div>
+        <div class="rac-row">
+          <span class="rac-lbl">Estado</span>
+          <span class="rac-val">${esc((a.status || '').toUpperCase())}</span>
+        </div>
+        ${a.conclusion ? `<div style="font-size:.67rem;color:var(--mid);margin-top:.4rem;
+          border-top:1px solid var(--border);padding-top:.4rem;line-height:1.45;text-align:justify">
+          ${esc(a.conclusion.slice(0,180))}${a.conclusion.length > 180 ? '...' : ''}
+        </div>` : ''}
+        <span class="rac-badge-nivel" style="background:${nivelCol}">${nivel.toUpperCase()}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/** Punto de entrada al activar el tab RACREAA */
+async function racInit() {
+  if (RAC._initialized && RAC.data) {
+    // Ya tiene datos — solo re-renderizar topbar
+    racRenderTopbar();
+    return;
+  }
+  RAC._initialized = true;
+
+  // Intentar restaurar token guardado
+  const restored = await racRestoreToken();
+  if (restored) {
+    await racLoadAndRender();
+  } else {
+    racShowLogin();
+    // Pre-llenar email del usuario Supabase si está logueado
+    const emailEl = document.getElementById('rac-email');
+    if (emailEl && SB.userId) {
+      // mantener el valor por defecto
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
 //  HISTORIAL DE AUDITORÍAS — IndexedDB
 // 
 const HIST_STORE = 'historial';
