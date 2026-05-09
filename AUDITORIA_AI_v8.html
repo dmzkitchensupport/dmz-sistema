@@ -1311,7 +1311,7 @@ td:hover .hz-edit-hint { opacity: 1; }
   padding: .2rem .5rem; transition: all .15s; }
 .rac-signout:hover { color: #fff; border-color: rgba(255,255,255,.5); }
 
-/*  Modulo Calificacion de Alimentos  */
+/*  Modulo Calificacion de Alimentos — ECT 1-5  */
 #alimentos-view {
   flex: 1; overflow-y: auto; display: none; flex-direction: column;
   padding: 1.4rem; gap: 1.2rem; background: var(--off);
@@ -1325,17 +1325,42 @@ td:hover .hz-edit-hint { opacity: 1; }
 }
 .ali-title { font-family: var(--f-t); font-size: 1.1rem; font-weight: 800; letter-spacing: .07em; }
 .ali-sub { font-size: .6rem; color: var(--mid); letter-spacing: .1em; margin-top: .15rem; }
+
+/* Cronómetro global */
+.ali-timer-bar {
+  background: #fff; border-radius: var(--r); padding: .75rem 1.2rem;
+  box-shadow: var(--shadow); border: 1px solid var(--border);
+  display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap;
+}
+.ali-timer-display {
+  font-family: var(--f-t); font-size: 1.8rem; font-weight: 800;
+  letter-spacing: .06em; min-width: 80px; transition: color .3s;
+}
+.ali-timer-display.verde  { color: #2E7D32; }
+.ali-timer-display.ambar  { color: #E07B00; }
+.ali-timer-display.rojo   { color: #C0392B; }
+.ali-semaforo { display: flex; gap: .35rem; align-items: center; }
+.ali-sem-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--border); transition: background .3s;
+}
+.ali-sem-dot.on-verde  { background: #2E7D32; box-shadow: 0 0 6px #2E7D32; }
+.ali-sem-dot.on-ambar  { background: #E07B00; box-shadow: 0 0 6px #E07B00; }
+.ali-sem-dot.on-rojo   { background: #C0392B; box-shadow: 0 0 6px #C0392B; }
+.ali-timer-lbl { font-size: .58rem; letter-spacing: .14em; color: var(--mid); font-weight: 700; }
+.ali-timer-btns { display: flex; gap: .4rem; margin-left: auto; }
+
+/* Grid de platillos */
 .ali-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 1rem;
 }
 .ali-card {
   background: #fff; border-radius: var(--r); box-shadow: var(--shadow);
-  border: 1px solid var(--border); overflow: hidden;
-  transition: box-shadow .15s;
+  border: 1px solid var(--border); overflow: hidden; transition: box-shadow .15s;
 }
-.ali-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+.ali-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
 .ali-card-head {
   background: var(--dark); color: #fff;
   padding: .55rem 1rem;
@@ -1343,50 +1368,78 @@ td:hover .hz-edit-hint { opacity: 1; }
   font-size: .62rem; letter-spacing: .12em; font-weight: 700;
 }
 .ali-card-num { color: var(--gold); font-family: var(--f-t); font-size: 1rem; font-weight: 800; }
-.ali-card-body { padding: .9rem 1rem; display: flex; flex-direction: column; gap: .6rem; }
+.ali-card-body { padding: .9rem 1rem; display: flex; flex-direction: column; gap: .7rem; }
 .ali-field { display: flex; flex-direction: column; gap: .2rem; }
 .ali-field label {
-  font-size: .6rem; font-weight: 700; letter-spacing: .14em;
+  font-size: .58rem; font-weight: 700; letter-spacing: .14em;
   color: var(--mid); text-transform: uppercase;
 }
 .ali-input {
   border: 1.5px solid var(--border); border-radius: 4px;
   padding: .4rem .65rem; font-size: .82rem; font-family: var(--f-b);
-  color: var(--dark); outline: none; transition: border-color .15s;
-  background: #fff;
+  color: var(--dark); outline: none; transition: border-color .15s; background: #fff;
 }
 .ali-input:focus { border-color: var(--gold); }
 .ali-row { display: flex; gap: .6rem; }
 .ali-row .ali-field { flex: 1; }
-.ali-status-row { display: flex; gap: .4rem; margin-top: .1rem; }
-.ali-status-btn {
-  flex: 1; padding: .42rem .4rem; border-radius: 4px; border: 2px solid transparent;
-  font-size: .68rem; font-weight: 700; letter-spacing: .06em; cursor: pointer;
-  transition: all .15s;
+
+/* Escala ECT 1-5 */
+.ali-ect-row { display: flex; flex-direction: column; gap: .4rem; }
+.ali-ect-criterio {
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
 }
-.ali-status-btn.cumple {
-  color: var(--green); background: rgba(46,125,50,.07);
-  border-color: rgba(46,125,50,.25);
+.ali-ect-lbl {
+  font-size: .65rem; font-weight: 600; color: var(--dark);
+  width: 100px; flex-shrink: 0;
 }
-.ali-status-btn.desviacion {
-  color: var(--red); background: rgba(192,57,43,.07);
-  border-color: rgba(192,57,43,.25);
+.ali-ect-btns { display: flex; gap: .25rem; }
+.ali-ect-btn {
+  width: 32px; height: 32px; border-radius: 4px; border: 2px solid var(--border);
+  font-size: .8rem; font-weight: 700; cursor: pointer; background: #fff;
+  color: var(--mid); transition: all .15s; display: flex; align-items: center;
+  justify-content: center; font-family: var(--f-b);
 }
-.ali-status-btn.cumple.sel { background: var(--green); color: #fff; border-color: var(--green); }
-.ali-status-btn.desviacion.sel { background: var(--red); color: #fff; border-color: var(--red); }
-.ali-badge {
-  display: inline-block; font-size: .58rem; font-weight: 700; letter-spacing: .08em;
-  padding: .15rem .45rem; border-radius: 2px; color: #fff;
+.ali-ect-btn:hover { border-color: var(--gold); color: var(--dark); }
+.ali-ect-btn.sel-1 { background: #C0392B; color: #fff; border-color: #C0392B; }
+.ali-ect-btn.sel-2 { background: #E07B00; color: #fff; border-color: #E07B00; }
+.ali-ect-btn.sel-3 { background: #F5C518; color: #000; border-color: #F5C518; }
+.ali-ect-btn.sel-4 { background: #84CC16; color: #fff; border-color: #84CC16; }
+.ali-ect-btn.sel-5 { background: #2E7D32; color: #fff; border-color: #2E7D32; }
+.ali-ect-score {
+  font-family: var(--f-t); font-size: 1rem; font-weight: 800;
+  min-width: 28px; text-align: right; transition: color .15s;
 }
-.ali-temp-alert { font-size: .64rem; color: var(--red); font-weight: 600; margin-top: .15rem; display: none; }
-.ali-add-wrap { display: flex; justify-content: center; padding: .5rem 0; }
-.ali-footer {
-  padding: .65rem 1rem; border-top: 1px solid var(--border);
-  background: var(--cream); display: flex; gap: .5rem; align-items: center;
-  justify-content: space-between; flex-wrap: wrap;
+.ali-ect-nivel {
+  font-size: .58rem; font-weight: 700; letter-spacing: .08em;
+  padding: .1rem .35rem; border-radius: 2px; color: #fff; margin-left: .3rem;
 }
+
+/* Foto de evidencia */
+.ali-foto-zone {
+  border: 1.5px dashed var(--border); border-radius: 4px;
+  min-height: 80px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: border-color .15s; position: relative; overflow: hidden;
+}
+.ali-foto-zone:hover { border-color: var(--gold); }
+.ali-foto-zone img {
+  width: 100%; max-height: 160px; object-fit: cover; display: block;
+}
+.ali-foto-placeholder {
+  font-size: .65rem; color: var(--mid); letter-spacing: .1em; text-align: center; padding: 1rem;
+}
+.ali-foto-input { display: none; }
+
+/* Resumen */
+.ali-summary-bar {
+  background: #fff; border-radius: var(--r); padding: .75rem 1.2rem;
+  box-shadow: var(--shadow); border: 1px solid var(--border);
+  display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
+}
+.ali-summary-kpi { text-align: center; min-width: 56px; }
+.ali-summary-kpi .sk-n { font-family: var(--f-t); font-size: 1.4rem; font-weight: 800; line-height: 1; }
+.ali-summary-kpi .sk-l { font-size: .52rem; letter-spacing: .1em; color: var(--mid); margin-top: .1rem; }
 .ali-summary-chip {
-  font-size: .64rem; font-weight: 700; padding: .2rem .6rem;
+  font-size: .62rem; font-weight: 700; padding: .18rem .55rem;
   border-radius: 3px; color: #fff;
 }
 
@@ -1761,27 +1814,60 @@ td:hover .hz-edit-hint { opacity: 1; }
     <div class="dmz-powered">POWERED BY <span>DMZ</span> · DE LA MORA ZUMARÁN · KITCHEN SUPPORT</div>
   </div>
 
-  <!-- Modulo Calificacion de Alimentos -->
+  <!-- Modulo Calificacion de Alimentos — ECT 1-5 -->
   <div id="alimentos-view">
     <div class="ali-header">
       <div>
         <div class="ali-title">CALIFICACIÓN DE ALIMENTOS</div>
-        <div class="ali-sub">TEMPERATURA · ESTÁNDAR OPERATIVO · CALIDAD ORGANOLÉPTICA</div>
+        <div class="ali-sub">ESCALA ECT 1-5 · 1=DEFICIENTE · 5=EXCELENTE · PRESENTACIÓN · TEMPERATURA · SABOR · TEXTURA · PORCIÓN</div>
       </div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-        <button class="btn btn-gold" onclick="addAlimentoCard()">+ Agregar insumo</button>
+        <button class="btn btn-gold" onclick="addAlimentoCard()">+ Agregar platillo</button>
         <button class="btn btn-outline" onclick="exportAlimentosPDF()" style="font-size:.65rem">Exportar PDF</button>
       </div>
     </div>
-    <div class="ali-grid" id="ali-grid">
-      <!-- Tarjetas generadas por JS -->
+
+    <!-- Cronómetro de servicio -->
+    <div class="ali-timer-bar">
+      <div>
+        <div class="ali-timer-lbl">TIEMPO DE SERVICIO</div>
+        <div class="ali-timer-display verde" id="ali-timer-display">00:00</div>
+      </div>
+      <div class="ali-semaforo">
+        <div class="ali-sem-dot on-verde" id="ali-sem-verde" title="Correcto ≤20 min"></div>
+        <div class="ali-sem-dot" id="ali-sem-ambar" title="Observación ≤30 min"></div>
+        <div class="ali-sem-dot" id="ali-sem-rojo"  title="Crítico >30 min"></div>
+      </div>
+      <div>
+        <div class="ali-timer-lbl" id="ali-timer-nivel-lbl">CORRECTO</div>
+        <div class="ali-timer-lbl" style="opacity:.5">Estándar: 20 min</div>
+      </div>
+      <div class="ali-timer-btns">
+        <button class="btn btn-gold"    id="ali-timer-btn" onclick="aliTimerToggle()">Iniciar</button>
+        <button class="btn btn-outline" onclick="aliTimerReset()" style="font-size:.65rem">Reset</button>
+      </div>
     </div>
-    <div id="ali-summary-bar" style="display:none;background:#fff;border-radius:var(--r);padding:.75rem 1.2rem;box-shadow:var(--shadow);border:1px solid var(--border);display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
-      <span style="font-size:.6rem;font-weight:700;letter-spacing:.14em;color:var(--mid);">RESUMEN:</span>
-      <span class="ali-summary-chip" id="ali-sum-cumple" style="background:var(--green)">0 Cumplen</span>
-      <span class="ali-summary-chip" id="ali-sum-desv" style="background:var(--red)">0 Desviaciones</span>
-      <span class="ali-summary-chip" id="ali-sum-total" style="background:var(--mid)">0 Total</span>
+
+    <div class="ali-grid" id="ali-grid"><!-- JS --></div>
+
+    <div class="ali-summary-bar" id="ali-summary-bar" style="display:none">
+      <div class="ali-summary-kpi">
+        <div class="sk-n" id="ali-sum-prom" style="color:var(--gold)">—</div>
+        <div class="sk-l">PROMEDIO GLOBAL</div>
+      </div>
+      <div class="ali-summary-kpi">
+        <div class="sk-n" id="ali-sum-total">0</div>
+        <div class="sk-l">PLATILLOS</div>
+      </div>
+      <div style="flex:1;display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+        <span class="ali-summary-chip" id="ali-sum-5" style="background:#2E7D32">0 Excelente</span>
+        <span class="ali-summary-chip" id="ali-sum-4" style="background:#84CC16">0 Bueno</span>
+        <span class="ali-summary-chip" id="ali-sum-3" style="background:#F5C518;color:#000">0 Regular</span>
+        <span class="ali-summary-chip" id="ali-sum-2" style="background:#E07B00">0 Deficiente</span>
+        <span class="ali-summary-chip" id="ali-sum-1" style="background:#C0392B">0 Crítico</span>
+      </div>
     </div>
+
     <div class="dmz-powered">POWERED BY <span>DMZ</span> · DE LA MORA ZUMARÁN · KITCHEN SUPPORT</div>
   </div>
 
@@ -5581,37 +5667,89 @@ async function exportHallazgosPDF() {
 //  MÓDULO CALIFICACIÓN DE ALIMENTOS — v10
 // 
 
-/**
- * Agrega una nueva tarjeta de insumo al módulo de alimentos.
- * Si se llama desde el botón + del UI genera un ítem vacío.
- */
+// ── MÓDULO CALIFICACIÓN DE ALIMENTOS — ECT 1-5 ────────────────
+const ECT_CRITERIOS  = ['Presentación','Temperatura','Sabor','Textura','Porción'];
+const ECT_NIVELES    = {1:'DEFICIENTE',2:'BAJO',3:'REGULAR',4:'BUENO',5:'EXCELENTE'};
+const ECT_COLORS     = {1:'#C0392B',2:'#E07B00',3:'#F5C518',4:'#84CC16',5:'#2E7D32'};
+const ECT_TEXT_COLS  = {1:'#fff',2:'#fff',3:'#000',4:'#fff',5:'#fff'};
+
+// ── CRONÓMETRO ────────────────────────────────────────────────
+let _aliTimerSec = 0, _aliTimerRunning = false, _aliTimerInterval = null;
+
+function aliTimerToggle() {
+  if (_aliTimerRunning) {
+    clearInterval(_aliTimerInterval);
+    _aliTimerRunning = false;
+    document.getElementById('ali-timer-btn').textContent = 'Continuar';
+  } else {
+    _aliTimerRunning = true;
+    document.getElementById('ali-timer-btn').textContent = 'Pausar';
+    _aliTimerInterval = setInterval(() => {
+      _aliTimerSec++;
+      aliTimerUpdate();
+    }, 1000);
+  }
+}
+
+function aliTimerReset() {
+  clearInterval(_aliTimerInterval);
+  _aliTimerRunning = false;
+  _aliTimerSec = 0;
+  document.getElementById('ali-timer-btn').textContent = 'Iniciar';
+  aliTimerUpdate();
+}
+
+function aliTimerUpdate() {
+  const m = String(Math.floor(_aliTimerSec / 60)).padStart(2,'0');
+  const s = String(_aliTimerSec % 60).padStart(2,'0');
+  const display = document.getElementById('ali-timer-display');
+  const lvlLbl  = document.getElementById('ali-timer-nivel-lbl');
+  const semV = document.getElementById('ali-sem-verde');
+  const semA = document.getElementById('ali-sem-ambar');
+  const semR = document.getElementById('ali-sem-rojo');
+  if (!display) return;
+
+  display.textContent = m + ':' + s;
+  if (_aliTimerSec <= 1200) {         // ≤20 min: verde
+    display.className = 'ali-timer-display verde';
+    if (semV) { semV.className='ali-sem-dot on-verde'; semA.className='ali-sem-dot'; semR.className='ali-sem-dot'; }
+    if (lvlLbl) lvlLbl.textContent = 'CORRECTO';
+  } else if (_aliTimerSec <= 1800) {  // ≤30 min: ámbar
+    display.className = 'ali-timer-display ambar';
+    if (semV) { semV.className='ali-sem-dot'; semA.className='ali-sem-dot on-ambar'; semR.className='ali-sem-dot'; }
+    if (lvlLbl) lvlLbl.textContent = 'OBSERVACIÓN';
+  } else {                            // >30 min: rojo
+    display.className = 'ali-timer-display rojo';
+    if (semV) { semV.className='ali-sem-dot'; semA.className='ali-sem-dot'; semR.className='ali-sem-dot on-rojo'; }
+    if (lvlLbl) lvlLbl.textContent = 'CRÍTICO';
+  }
+}
+
+// ── ESTADO ────────────────────────────────────────────────────
+// ALI_STATE ya definido arriba — compatibilidad con Supabase snapshot
+// Estructura de cada item:
+// { id, nombre, categoria, obs, fotoB64, scores:{Presentación:0,...} }
+
 function addAlimentoCard(data) {
   const item = data || {
-    id:           _newAliId(),
-    nombre:       '',
-    temperatura:  '',
-    tempLimite:   '',
-    estandar:     '',   // 'cumple' | 'desviacion' | ''
-    organoleptica:'',
+    id:        _newAliId(),
+    nombre:    '',
+    categoria: '',
+    obs:       '',
+    fotoB64:   '',
+    scores:    { 'Presentación':0,'Temperatura':0,'Sabor':0,'Textura':0,'Porción':0 },
   };
   if (!data) ALI_STATE.items.push(item);
   renderAlimentosGrid();
   markDirty();
 }
 
-/** Renderiza el grid completo de tarjetas de alimentos. */
 function buildAlimentosView() {
   if (!ALI_STATE.items.length) {
-    // Agrega 3 tarjetas iniciales de ejemplo si está vacío
-    const defaults = [
-      { nombre: 'Producto lácteo laminado', tempLimite: '4' },
-      { nombre: 'Pre-fermento activo',       tempLimite: '5' },
-      { nombre: 'Cárnicos porcionados',      tempLimite: '4' },
-    ];
-    defaults.forEach(d => {
+    ['Platillo de temporada','Sopa del día','Plato fuerte'].forEach(n => {
       ALI_STATE.items.push({
-        id: _newAliId(), nombre: d.nombre, temperatura: '',
-        tempLimite: d.tempLimite, estandar: '', organoleptica: '',
+        id: _newAliId(), nombre: n, categoria:'', obs:'', fotoB64:'',
+        scores: { 'Presentación':0,'Temperatura':0,'Sabor':0,'Textura':0,'Porción':0 },
       });
     });
   }
@@ -5621,90 +5759,112 @@ function buildAlimentosView() {
 function renderAlimentosGrid() {
   const grid = document.getElementById('ali-grid');
   if (!grid) return;
-
   if (!ALI_STATE.items.length) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 1rem;color:var(--mid);font-size:.78rem;">
-      Sin insumos registrados. Presione <strong>+ Agregar insumo</strong> para comenzar.
-    </div>`;
-    updateAliSummary();
-    return;
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 1rem;
+      color:var(--mid);font-size:.78rem">Presiona <strong>+ Agregar platillo</strong></div>`;
+    updateAliSummary(); return;
   }
-
   grid.innerHTML = ALI_STATE.items.map((item, idx) => buildAliCard(item, idx)).join('');
   updateAliSummary();
 }
 
-function buildAliCard(item, idx) {
-  const tempNum  = parseFloat(item.temperatura);
-  const limNum   = parseFloat(item.tempLimite);
-  const tempOver = item.temperatura !== '' && !isNaN(tempNum) && !isNaN(limNum) && tempNum > limNum;
-  const esCumple = item.estandar === 'cumple';
-  const esDesv   = item.estandar === 'desviacion';
-  const estado   = esCumple ? '#2E7D32' : esDesv ? '#C0392B' : 'var(--border)';
-  const estLabel = esCumple ? 'CUMPLE' : esDesv ? 'DESVIACIÓN' : '—';
+function _aliPromedio(scores) {
+  const vals = Object.values(scores).filter(v => v > 0);
+  if (!vals.length) return 0;
+  return vals.reduce((a,b) => a+b, 0) / vals.length;
+}
 
-  return `<div class="ali-card" id="ali-card-${item.id}" data-ali="${item.id}">
-    <div class="ali-card-head" style="border-left:3px solid ${estado}">
-      <span class="ali-card-num">${String(idx + 1).padStart(2, '0')}</span>
-      <span class="ali-badge" style="background:${estado}">${estLabel}</span>
+function buildAliCard(item, idx) {
+  const prom    = _aliPromedio(item.scores);
+  const promStr = prom > 0 ? prom.toFixed(1) : '—';
+  const nivel   = prom >= 4.5 ? 5 : prom >= 3.5 ? 4 : prom >= 2.5 ? 3 : prom >= 1.5 ? 2 : prom > 0 ? 1 : 0;
+  const nivelCol   = ECT_COLORS[nivel]   || 'var(--border)';
+  const nivelTxt   = ECT_TEXT_COLS[nivel]|| '#fff';
+  const nivelLabel = ECT_NIVELES[nivel]  || '—';
+
+  const ectRows = ECT_CRITERIOS.map(crit => {
+    const val = item.scores[crit] || 0;
+    const btns = [1,2,3,4,5].map(n => {
+      const selClass = val === n ? `sel-${n}` : '';
+      return `<button class="ali-ect-btn ${selClass}" 
+        onclick="aliSetScore('${item.id}','${crit}',${n})">${n}</button>`;
+    }).join('');
+    const scoreCol = val > 0 ? ECT_COLORS[val] : 'var(--mid)';
+    return `<div class="ali-ect-criterio">
+      <span class="ali-ect-lbl">${crit}</span>
+      <div class="ali-ect-btns">${btns}</div>
+      <span class="ali-ect-score" style="color:${scoreCol}">${val || '—'}</span>
+    </div>`;
+  }).join('');
+
+  const fotoHtml = item.fotoB64
+    ? `<img src="${item.fotoB64}" alt="evidencia">`
+    : `<div class="ali-foto-placeholder">Toca para agregar foto de evidencia</div>`;
+
+  return `<div class="ali-card" id="ali-card-${item.id}">
+    <div class="ali-card-head" style="border-left:3px solid ${nivelCol}">
+      <span class="ali-card-num">${String(idx+1).padStart(2,'0')}</span>
+      <span style="flex:1;padding:0 .5rem;font-size:.65rem;letter-spacing:.06em">
+        ${esc(item.nombre||'Sin nombre')}
+      </span>
+      <span style="background:${nivelCol};color:${nivelTxt};font-size:.55rem;font-weight:700;
+        padding:.12rem .42rem;border-radius:2px;letter-spacing:.06em">${nivelLabel}</span>
+      <span style="font-family:var(--f-t);font-size:1.1rem;font-weight:800;margin-left:.6rem;
+        color:${nivelCol}">${promStr}</span>
       <button onclick="deleteAliCard('${item.id}')"
-        style="background:none;border:none;color:rgba(255,255,255,.45);font-size:.9rem;cursor:pointer;margin-left:auto;transition:color .15s"
-        onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.45)'">×</button>
+        style="background:none;border:none;color:rgba(255,255,255,.4);font-size:1rem;
+               cursor:pointer;margin-left:.5rem;transition:color .15s"
+        onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.4)'">×</button>
     </div>
     <div class="ali-card-body">
-      <div class="ali-field">
-        <label>NOMBRE DEL INSUMO / PRODUCTO</label>
-        <input class="ali-input" type="text" value="${esc(item.nombre)}"
-          placeholder="Ej: Pechuga de pollo porcionada, pre-fermento, laminados"
-          oninput="updateAliField('${item.id}','nombre',sanitizarTexto(this.value));this.value=sanitizarTexto(this.value)">
-      </div>
       <div class="ali-row">
-        <div class="ali-field">
-          <label>TEMPERATURA REGISTRADA (°C)</label>
-          <input class="ali-input" type="number" step="0.1" value="${esc(item.temperatura)}"
-            placeholder="Ej: 3.5"
-            oninput="updateAliField('${item.id}','temperatura',this.value);checkAliTemp('${item.id}')">
-          <span class="ali-temp-alert" id="ali-ta-${item.id}"
-            style="${tempOver ? 'display:block' : 'display:none'}">
-            Temperatura supera el limite de control (${item.tempLimite} °C)
-          </span>
+        <div class="ali-field" style="flex:2">
+          <label>NOMBRE DEL PLATILLO</label>
+          <input class="ali-input" type="text" value="${esc(item.nombre)}"
+            placeholder="Ej: Pechuga a la plancha, sopa azteca..."
+            oninput="updateAliField('${item.id}','nombre',sanitizarTexto(this.value));this.value=sanitizarTexto(this.value)">
         </div>
-        <div class="ali-field">
-          <label>LÍMITE DE CONTROL (°C)</label>
-          <input class="ali-input" type="number" step="0.1" value="${esc(item.tempLimite)}"
-            placeholder="Ej: 4"
-            oninput="updateAliField('${item.id}','tempLimite',this.value);checkAliTemp('${item.id}')">
+        <div class="ali-field" style="flex:1">
+          <label>CATEGORÍA</label>
+          <select class="ali-input" onchange="updateAliField('${item.id}','categoria',this.value)">
+            <option value="">—</option>
+            ${['Entrada','Sopa','Ensalada','Plato fuerte','Postre','Bebida','Especial del día']
+              .map(c => `<option value="${c}" ${item.categoria===c?'selected':''}>${c}</option>`).join('')}
+          </select>
         </div>
       </div>
+
       <div class="ali-field">
-        <label>APEGO AL ESTÁNDAR OPERATIVO</label>
-        <div class="ali-status-row">
-          <button class="ali-status-btn cumple ${esCumple ? 'sel' : ''}"
-            onclick="setAliStatus('${item.id}','cumple')">CUMPLE</button>
-          <button class="ali-status-btn desviacion ${esDesv ? 'sel' : ''}"
-            onclick="setAliStatus('${item.id}','desviacion')">DESVIACIÓN</button>
-        </div>
+        <label>CALIFICACIÓN POR CRITERIO (1=Deficiente · 5=Excelente)</label>
+        <div class="ali-ect-row">${ectRows}</div>
       </div>
+
       <div class="ali-field">
-        <label>CALIDAD ORGANOLÉPTICA (VISTA, OLOR, TEXTURA)</label>
-        <input class="ali-input" type="text" value="${esc(item.organoleptica)}"
-          placeholder="Ej: Color uniforme, olor neutro, textura firme"
-          oninput="updateAliField('${item.id}','organoleptica',sanitizarTexto(this.value));this.value=sanitizarTexto(this.value)">
+        <label>FOTO DE EVIDENCIA</label>
+        <div class="ali-foto-zone" onclick="document.getElementById('ali-foto-${item.id}').click()">
+          ${fotoHtml}
+        </div>
+        <input class="ali-foto-input" type="file" id="ali-foto-${item.id}"
+          accept="image/*" capture="environment"
+          onchange="aliLoadFoto('${item.id}', this)">
+      </div>
+
+      <div class="ali-field">
+        <label>OBSERVACIONES</label>
+        <textarea class="ali-input" rows="2" placeholder="Temperatura fuera de rango, presentación inconsistente..."
+          style="resize:none;line-height:1.4"
+          oninput="updateAliField('${item.id}','obs',this.value)">${esc(item.obs||'')}</textarea>
       </div>
     </div>
   </div>`;
 }
 
-function updateAliField(id, field, value) {
-  const item = ALI_STATE.items.find(i => i.id === id);
-  if (item) { item[field] = value; markDirty(); }
-}
-
-function setAliStatus(id, status) {
+function aliSetScore(id, criterio, valor) {
   const item = ALI_STATE.items.find(i => i.id === id);
   if (!item) return;
-  item.estandar = item.estandar === status ? '' : status;
-  // Re-render solo la tarjeta afectada
+  // Toggle: mismo valor = limpiar
+  item.scores[criterio] = item.scores[criterio] === valor ? 0 : valor;
+  // Re-render solo esta tarjeta
   const idx  = ALI_STATE.items.indexOf(item);
   const card = document.getElementById('ali-card-' + id);
   if (card) {
@@ -5716,14 +5876,34 @@ function setAliStatus(id, status) {
   markDirty();
 }
 
-function checkAliTemp(id) {
+function aliLoadFoto(id, input) {
+  const file = input.files[0];
+  if (!file) return;
   const item = ALI_STATE.items.find(i => i.id === id);
   if (!item) return;
-  const t = parseFloat(item.temperatura);
-  const l = parseFloat(item.tempLimite);
-  const alert = document.getElementById('ali-ta-' + id);
-  if (alert) alert.style.display = (!isNaN(t) && !isNaN(l) && t > l) ? 'block' : 'none';
+  const reader = new FileReader();
+  reader.onload = e => {
+    item.fotoB64 = e.target.result;
+    // Re-render la tarjeta
+    const idx  = ALI_STATE.items.indexOf(item);
+    const card = document.getElementById('ali-card-' + id);
+    if (card) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = buildAliCard(item, idx);
+      card.replaceWith(tmp.firstElementChild);
+    }
+    markDirty();
+  };
+  reader.readAsDataURL(file);
 }
+
+function updateAliField(id, field, value) {
+  const item = ALI_STATE.items.find(i => i.id === id);
+  if (item) { item[field] = value; markDirty(); }
+}
+
+function setAliStatus() {}   // legacy — no-op en ECT
+function checkAliTemp()  {}  // legacy — no-op en ECT
 
 function deleteAliCard(id) {
   ALI_STATE.items = ALI_STATE.items.filter(i => i.id !== id);
@@ -5732,52 +5912,64 @@ function deleteAliCard(id) {
 }
 
 function updateAliSummary() {
-  const items   = ALI_STATE.items;
-  const cumple  = items.filter(i => i.estandar === 'cumple').length;
-  const desv    = items.filter(i => i.estandar === 'desviacion').length;
-  const total   = items.length;
-
-  const bar = document.getElementById('ali-summary-bar');
+  const items  = ALI_STATE.items;
+  const total  = items.length;
+  const bar    = document.getElementById('ali-summary-bar');
   if (bar) bar.style.display = total ? 'flex' : 'none';
 
-  const elC = document.getElementById('ali-sum-cumple');
-  const elD = document.getElementById('ali-sum-desv');
-  const elT = document.getElementById('ali-sum-total');
-  if (elC) elC.textContent = cumple + ' Cumplen';
-  if (elD) elD.textContent = desv   + ' Desviaciones';
-  if (elT) elT.textContent = total  + ' Total';
+  const proms  = items.map(i => _aliPromedio(i.scores)).filter(p => p > 0);
+  const avg    = proms.length ? (proms.reduce((a,b)=>a+b,0)/proms.length) : 0;
+  const avgCol = avg >= 4 ? '#2E7D32' : avg >= 3 ? '#F5C518' : avg > 0 ? '#C0392B' : 'var(--mid)';
+
+  const cnt = {1:0,2:0,3:0,4:0,5:0};
+  items.forEach(i => {
+    const p = _aliPromedio(i.scores);
+    if (!p) return;
+    const n = p>=4.5?5:p>=3.5?4:p>=2.5?3:p>=1.5?2:1;
+    cnt[n]++;
+  });
+
+  const el = s => document.getElementById(s);
+  if (el('ali-sum-prom')) { el('ali-sum-prom').textContent = avg>0?avg.toFixed(1):'—'; el('ali-sum-prom').style.color=avgCol; }
+  if (el('ali-sum-total')) el('ali-sum-total').textContent = total;
+  if (el('ali-sum-5')) el('ali-sum-5').textContent = cnt[5]+' Excelente';
+  if (el('ali-sum-4')) el('ali-sum-4').textContent = cnt[4]+' Bueno';
+  if (el('ali-sum-3')) el('ali-sum-3').textContent = cnt[3]+' Regular';
+  if (el('ali-sum-2')) el('ali-sum-2').textContent = cnt[2]+' Deficiente';
+  if (el('ali-sum-1')) el('ali-sum-1').textContent = cnt[1]+' Crítico';
 }
 
-/** Construye la sección del módulo de alimentos para el reporte unificado */
 function buildAlimentosReportSection() {
-  const items = ALI_STATE.items.filter(i => i.nombre || i.temperatura);
-  if (!items.length) {
-    return `<div style="padding:1.5rem 2rem;color:var(--mid);font-size:.78rem;background:#fff;border-bottom:1px solid var(--border)">
-      Sin datos de calificación de alimentos registrados en esta sesión.
-    </div>`;
-  }
+  const items = ALI_STATE.items.filter(i => i.nombre || Object.values(i.scores).some(v=>v>0));
+  if (!items.length) return `<div style="padding:1.5rem 2rem;color:var(--mid);font-size:.78rem">
+    Sin datos de calificación de alimentos en esta sesión.</div>`;
 
-  const cumple = items.filter(i => i.estandar === 'cumple').length;
-  const desv   = items.filter(i => i.estandar === 'desviacion').length;
+  const proms = items.map(i => _aliPromedio(i.scores)).filter(p=>p>0);
+  const avg   = proms.length ? (proms.reduce((a,b)=>a+b,0)/proms.length) : 0;
+  const avgCol= avg>=4?'#2E7D32':avg>=3?'#F5C518':avg>0?'#C0392B':'#888';
 
   const rows = items.map((item, i) => {
-    const tempNum  = parseFloat(item.temperatura);
-    const limNum   = parseFloat(item.tempLimite);
-    const tempOver = !isNaN(tempNum) && !isNaN(limNum) && tempNum > limNum;
-    const eCol     = item.estandar === 'cumple' ? '#2E7D32' : item.estandar === 'desviacion' ? '#C0392B' : '#888';
-    const eLbl     = item.estandar === 'cumple' ? 'CUMPLE' : item.estandar === 'desviacion' ? 'DESVIACIÓN' : 'SIN CLASIFICAR';
-    const tCol     = tempOver ? '#C0392B' : '#2E7D32';
+    const prom  = _aliPromedio(item.scores);
+    const nivel = prom>=4.5?5:prom>=3.5?4:prom>=2.5?3:prom>=1.5?2:prom>0?1:0;
+    const col   = ECT_COLORS[nivel]||'#888';
+    const lbl   = ECT_NIVELES[nivel]||'—';
+    const scoresCells = ECT_CRITERIOS.map(c => {
+      const v = item.scores[c]||0;
+      return `<td style="text-align:center;font-weight:700;color:${v?ECT_COLORS[v]:'var(--mid)'}">${v||'—'}</td>`;
+    }).join('');
+    const fotoCell = item.fotoB64
+      ? `<img src="${item.fotoB64}" style="width:60px;height:44px;object-fit:cover;border-radius:3px">`
+      : '—';
     return `<tr>
-      <td class="td-n">${i + 1}</td>
-      <td style="font-weight:600;font-size:.72rem">${esc(item.nombre || '—')}</td>
-      <td style="text-align:center;font-size:.72rem;color:${tCol};font-weight:700">
-        ${item.temperatura !== '' ? item.temperatura + ' °C' : '—'}
-        ${item.tempLimite  !== '' ? '<span style="color:var(--mid);font-weight:400"> / lím. ' + item.tempLimite + ' °C</span>' : ''}
+      <td style="text-align:center;color:var(--mid);font-weight:700;font-size:.65rem">${i+1}</td>
+      <td style="font-weight:600;font-size:.72rem">${esc(item.nombre||'—')}</td>
+      <td style="font-size:.68rem;color:var(--mid)">${esc(item.categoria||'—')}</td>
+      ${scoresCells}
+      <td style="text-align:center;font-family:var(--f-t);font-weight:800;font-size:.9rem;color:${col}">
+        ${prom>0?prom.toFixed(1):'—'}
       </td>
-      <td style="text-align:center">
-        <span class="tbadge" style="background:${eCol}">${eLbl}</span>
-      </td>
-      <td style="font-size:.68rem;color:var(--mid)">${esc(item.organoleptica || '—')}</td>
+      <td style="text-align:center"><span class="tbadge" style="background:${col}">${lbl}</span></td>
+      <td style="text-align:center">${fotoCell}</td>
     </tr>`;
   }).join('');
 
@@ -5786,24 +5978,23 @@ function buildAlimentosReportSection() {
       <div class="rpt-ah-left">
         <div class="rpt-ah-n" style="color:var(--amber)">AL</div>
         <div>
-          <div class="rpt-ah-name">CALIFICACIÓN DE ALIMENTOS</div>
-          <div class="rpt-ah-tag" style="color:var(--amber)">TEMPERATURA · ESTÁNDAR · CALIDAD ORGANOLÉPTICA</div>
+          <div class="rpt-ah-name">CALIFICACIÓN DE ALIMENTOS — ECT 1-5</div>
+          <div class="rpt-ah-tag" style="color:var(--amber)">PRESENTACIÓN · TEMPERATURA · SABOR · TEXTURA · PORCIÓN</div>
         </div>
       </div>
-      <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-        <span class="tbadge" style="background:#2E7D32">${cumple} Cumplen</span>
-        <span class="tbadge" style="background:#C0392B">${desv} Desviaciones</span>
-        <span class="tbadge" style="background:var(--mid)">${items.length} Total</span>
+      <div style="text-align:right">
+        <div style="font-family:var(--f-t);font-size:1.6rem;font-weight:800;color:${avgCol}">${avg>0?avg.toFixed(1):'—'}</div>
+        <div style="font-size:.52rem;letter-spacing:.1em;color:var(--mid)">PROMEDIO GLOBAL</div>
       </div>
     </div>
     <div style="padding:1rem 1.5rem;overflow-x:auto">
       <table class="rpt-table">
         <thead><tr>
-          <th class="td-n">#</th>
-          <th>INSUMO / PRODUCTO</th>
-          <th style="text-align:center">TEMPERATURA</th>
-          <th style="text-align:center">ESTÁNDAR</th>
-          <th>CALIDAD ORGANOLÉPTICA</th>
+          <th>#</th><th>PLATILLO</th><th>CATEGORÍA</th>
+          ${ECT_CRITERIOS.map(c=>`<th style="text-align:center">${c.toUpperCase().slice(0,4)}</th>`).join('')}
+          <th style="text-align:center">PROM</th>
+          <th style="text-align:center">NIVEL</th>
+          <th style="text-align:center">FOTO</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -5813,24 +6004,24 @@ function buildAlimentosReportSection() {
 
 async function exportAlimentosPDF() {
   if (typeof html2pdf === 'undefined') { showToast('Libreria PDF no disponible'); return; }
-  // Construye un elemento temporal con solo la seccion de alimentos
-  const tmp  = document.createElement('div');
+  const tmp = document.createElement('div');
   tmp.style.cssText = 'font-family:Inter,sans-serif;color:#000;padding:1.5rem';
-  tmp.innerHTML = `<div style="font-family:Raleway,sans-serif;font-size:.8rem;letter-spacing:.2em;color:#2D3A3F;margin-bottom:1.5rem;border-bottom:2px solid #C9952A;padding-bottom:.6rem">
-    DE LA MORA ZUMARÁN · KITCHEN SUPPORT — CALIFICACIÓN DE ALIMENTOS
+  tmp.innerHTML = `<div style="font-family:Raleway,sans-serif;font-size:.8rem;letter-spacing:.2em;
+    color:#2D3A3F;margin-bottom:1.5rem;border-bottom:2px solid #C9952A;padding-bottom:.6rem">
+    DE LA MORA ZUMARÁN · KITCHEN SUPPORT — CALIFICACIÓN DE ALIMENTOS ECT
   </div>` + buildAlimentosReportSection();
   document.body.appendChild(tmp);
-  const client  = (STATE.client || 'auditoria').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+  const client  = (STATE.client||'auditoria').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
   const dateStr = new Date().toISOString().slice(0,10);
   try {
     await html2pdf().set({
-      margin: [10, 10, 12, 10],
-      filename: `DMZ-Alimentos-${client}-${dateStr}.pdf`,
-      image: { type: 'jpeg', quality: 0.92 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+      margin: [10,10,12,10],
+      filename: `DMZ-Alimentos-ECT-${client}-${dateStr}.pdf`,
+      image: { type:'jpeg', quality:.92 },
+      html2canvas: { scale:2, useCORS:true, logging:false },
+      jsPDF: { unit:'mm', format:'a4', orientation:'landscape' },
     }).from(tmp).save();
-    showToast('PDF de alimentos generado');
+    showToast('PDF de calificación generado');
   } catch(e) { showToast('Error al generar PDF: ' + e.message); }
   document.body.removeChild(tmp);
 }
