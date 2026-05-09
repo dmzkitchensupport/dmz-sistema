@@ -258,9 +258,10 @@ button { cursor: pointer; font-family: var(--f-b); }
 }
 .main-area-name {
   font-family: var(--f-t);
-  font-size: 1.3rem;
-  font-weight: 700;
-  letter-spacing: .06em;
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: var(--dark);
 }
 .main-header-right { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .btn {
@@ -532,10 +533,10 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
 .btn-del-note:hover { border-color: var(--red); color: var(--red); background: #fff0f0; }
 /* ── Panel de Hallazgos por foto ─────────────────────────────── */
 .hz-panel { border-top: 1px solid var(--border); padding: .65rem .7rem .5rem; display: flex; flex-direction: column; gap: .5rem; }
-.hz-panel-title { font-size: .55rem; font-weight: 700; letter-spacing: .18em; color: var(--mid); margin-bottom: .1rem; }
+.hz-panel-title { font-size: .78rem; font-weight: 800; letter-spacing: .14em; color: var(--dark); margin-bottom: .4rem; border-bottom: 2px solid var(--gold); padding-bottom: .3rem; }
 .hz-sec { background: var(--off); border-radius: 4px; padding: .5rem .65rem; border: 1px solid var(--border); }
 .hz-sec-head { display: flex; align-items: center; justify-content: space-between; gap: .4rem; margin-bottom: .4rem; }
-.hz-sec-label { font-size: .62rem; font-weight: 700; color: var(--dark); }
+.hz-sec-label { font-size: .78rem; font-weight: 800; color: var(--dark); letter-spacing: .03em; }
 .hz-cal-btns { display: flex; gap: 3px; }
 .hz-cal-btn { border: 1px solid var(--border); background: #fff; border-radius: 12px; font-size: .56rem; font-weight: 700; padding: 2px 8px; cursor: pointer; color: var(--mid); transition: all .12s; white-space: nowrap; }
 .hz-cal-btn.cr.sel { background: #FCEBEB; border-color: #C0392B; color: #C0392B; }
@@ -730,7 +731,7 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
 }
 .rpt-ah-left { display: flex; align-items: center; gap: .9rem; }
 .rpt-ah-n { font-family: var(--f-t); font-size: 2.8rem; font-weight: 200; color: var(--border); line-height: 1; }
-.rpt-ah-name { font-family: var(--f-t); font-size: 1.25rem; font-weight: 700; letter-spacing: .07em; }
+.rpt-ah-name { font-family: var(--f-t); font-size: 1.45rem; font-weight: 800; letter-spacing: .05em; }
 .rpt-ah-tag { font-size: .58rem; letter-spacing: .18em; font-weight: 600; margin-top: .18rem; }
 .rpt-ah-pct .pn { font-family: var(--f-t); font-size: 1.9rem; font-weight: 800; line-height: 1; }
 .rpt-ah-pct .pl { font-size: .54rem; letter-spacing: .16em; color: var(--mid); }
@@ -1514,8 +1515,8 @@ td:hover .hz-edit-hint { opacity: 1; }
 .rpt-module-divider {
   background: var(--dark); color: #fff;
   padding: .55rem 2rem;
-  font-family: var(--f-t); font-size: .68rem; letter-spacing: .28em;
-  font-weight: 700; border-top: 3px solid var(--gold);
+  font-family: var(--f-t); font-size: .85rem; letter-spacing: .2em;
+  font-weight: 800; border-top: 3px solid var(--gold);
 }
 
   flex: 1; overflow-y: auto;
@@ -4558,7 +4559,33 @@ function buildReport() {
             : '';
           // Cada pt puede contener texto largo — renderizar como ítem independiente con buen tamaño
           const ptsHtml = (sec.pts||[]).filter(p => p.trim()).map(p => {
-            // Si el texto contiene ". " o ": " separar en sub-ítems para legibilidad
+            // Detectar prioridad en Próximos pasos
+            if (s.key === 'prox') {
+              const txt = p.trim();
+              let priColor = '', priBg = '', priLabel = '', priIcon = '';
+              if (txt.startsWith('PRIORIDAD CRÍTICA')) {
+                priColor = '#C0392B'; priBg = '#FCEBEB'; priLabel = 'CRÍTICA';
+                // SVG warning triangle — profesional, sin emoji
+                priIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${priColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+              } else if (txt.startsWith('PRIORIDAD ALTA')) {
+                priColor = '#E07B00'; priBg = '#FFF3E0'; priLabel = 'ALTA';
+              } else if (txt.startsWith('PRIORIDAD MEDIA')) {
+                priColor = '#2E7D32'; priBg = '#F0FDF4'; priLabel = 'MEDIA';
+              }
+
+              if (priColor) {
+                // Quitar el prefijo de prioridad del texto visible
+                const cleanTxt = txt.replace(/^PRIORIDAD (CRÍTICA|ALTA|MEDIA)\s*—\s*/i, '');
+                return `<li style="list-style:none;margin-bottom:.7rem;padding:.6rem .8rem;
+                  background:${priBg};border-left:3px solid ${priColor};border-radius:0 4px 4px 0;">
+                  <div style="display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.25rem">
+                    ${priIcon}
+                    <span style="font-size:.68rem;font-weight:800;color:${priColor};letter-spacing:.08em">${priLabel}</span>
+                  </div>
+                  <span style="font-size:.78rem;color:#2D3A3F;line-height:1.6;text-align:justify;display:block">${esc(cleanTxt)}</span>
+                </li>`;
+              }
+            }
             return `<li style="font-size:.78rem;color:#2D3A3F;line-height:1.6;margin-bottom:.5rem;
               text-align:justify;padding-left:.2rem">${esc(p.trim())}</li>`;
           }).join('');
@@ -4568,10 +4595,10 @@ function buildReport() {
           return `<div style="margin-bottom:1rem">
             <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;
               padding-bottom:.3rem;border-bottom:1px solid #E5E2DC">
-              <span style="font-size:.62rem;font-weight:700;letter-spacing:.12em;color:#8A9096">${s.label.toUpperCase()}</span>
+              <span style="font-size:.72rem;font-weight:800;letter-spacing:.12em;color:#5F5E5A">${s.label.toUpperCase()}</span>
               ${badge}
             </div>
-            ${ptsHtml ? `<ul style="margin:.2rem 0 0 1rem;padding:0;list-style:disc">${ptsHtml}</ul>` : ''}
+            ${ptsHtml ? `<ul style="margin:.2rem 0 0 ${s.key==='prox'?'0':'1rem'};padding:0;list-style:${s.key==='prox'?'none':'disc'}">${ptsHtml}</ul>` : ''}
             ${obs}
           </div>`;
         }).filter(Boolean).join('');
@@ -4579,7 +4606,7 @@ function buildReport() {
         return `<div style="padding:1.2rem 1.6rem;border-top:2px solid ${nivelInfo.color}30;background:${nivelInfo.bg}30">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;
             padding-bottom:.6rem;border-bottom:2px solid ${nivelInfo.color}20">
-            <span style="font-size:.68rem;font-weight:700;letter-spacing:.16em;color:#5F5E5A">HALLAZGOS DEL ÁREA</span>
+            <span style="font-size:.82rem;font-weight:800;letter-spacing:.14em;color:#2D3A3F">HALLAZGOS DEL ÁREA</span>
             <span style="font-size:.65rem;font-weight:700;padding:3px 12px;border-radius:10px;background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
           </div>
           ${secsHtml}
@@ -4933,7 +4960,7 @@ body{font-family:var(--f-b);background:var(--off);color:var(--dark)}
 .rpt-ah{padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between;gap:.8rem;border-left:4px solid var(--border);flex-wrap:wrap}
 .rpt-ah-left{display:flex;align-items:center;gap:.8rem}
 .rpt-ah-n{font-size:1.4rem;font-weight:800;font-family:var(--f-t);color:var(--border);line-height:1}
-.rpt-ah-name{font-family:var(--f-t);font-size:.85rem;font-weight:700;letter-spacing:.06em;color:var(--dark)}
+.rpt-ah-name{font-family:var(--f-t);font-size:1rem;font-weight:800;letter-spacing:.04em;color:var(--dark)}
 .rpt-ah-tag{font-size:.55rem;letter-spacing:.15em;font-weight:700;margin-top:.1rem}
 .rpt-ah-pct{text-align:right}
 .pn{font-family:var(--f-t);font-size:1.6rem;font-weight:800;line-height:1}
