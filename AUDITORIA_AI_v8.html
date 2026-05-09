@@ -167,19 +167,24 @@ button { cursor: pointer; font-family: var(--f-b); }
 .key-status { width: 8px; height: 8px; border-radius: 50%; background: var(--mid); flex-shrink: 0; }
 .key-status.ok  { background: var(--green); }
 .key-status.err { background: var(--red); }
-.mode-btns { display: flex; gap: .35rem; }
-.mode-btn {
-  padding: .38rem 1rem;
-  border-radius: var(--r);
-  border: none;
-  font-size: .68rem;
-  font-weight: 600;
-  letter-spacing: .07em;
-  transition: all .15s;
+.mode-btns {
+  display: flex; gap: 2px; align-items: center;
+  background: rgba(255,255,255,.07);
+  border-radius: 10px; padding: 3px;
 }
-.mode-btn.active { background: var(--gold); color: #fff; }
-.mode-btn:not(.active) { background: rgba(255,255,255,.08); color: rgba(255,255,255,.55); }
-.mode-btn:not(.active):hover { background: rgba(255,255,255,.14); }
+.mode-btn {
+  padding: .38rem .9rem; border-radius: 7px; border: none;
+  font-family: var(--f-b); font-size: .7rem; font-weight: 600;
+  letter-spacing: .05em; cursor: pointer; white-space: nowrap;
+  color: rgba(255,255,255,.52); background: transparent;
+  transition: all .18s;
+}
+.mode-btn:hover { color: #fff; background: rgba(255,255,255,.12); }
+.mode-btn.active {
+  background: var(--gold); color: #fff;
+  box-shadow: 0 2px 8px rgba(201,149,42,.45);
+  font-weight: 700;
+}
 
 /*  App layout  */
 #app { display: flex; flex: 1; overflow: hidden; min-height: 0; }
@@ -908,7 +913,7 @@ textarea.note-ta, .cl-section-body,
   display: flex; align-items: center; justify-content: space-between;
   gap: 1rem; flex-wrap: wrap;
 }
-.cl2-title { font-family: var(--f-t); font-size: 1.1rem; font-weight: 800; letter-spacing: .07em; }
+.cl2-title { font-family: var(--f-t); font-size: 1.3rem; font-weight: 800; letter-spacing: .05em; color: var(--dark); }
 .cl2-sub { font-size: .6rem; color: var(--mid); letter-spacing: .1em; margin-top: .15rem; }
 .cl2-tabs-wrap {
   background: #fff; border-radius: var(--r); box-shadow: var(--shadow);
@@ -919,10 +924,10 @@ textarea.note-ta, .cl-section-body,
   overflow-x: auto; background: var(--cream);
 }
 .cl2-tab {
-  padding: .5rem 1rem; font-size: .68rem; font-weight: 600;
-  letter-spacing: .06em; cursor: pointer; border: none;
+  padding: .55rem 1.1rem; font-size: .72rem; font-weight: 600;
+  letter-spacing: .05em; cursor: pointer; border: none;
   background: none; color: var(--mid); white-space: nowrap;
-  border-bottom: 2px solid transparent; transition: all .12s;
+  border-bottom: 2px solid transparent; transition: all .15s;
   flex-shrink: 0;
 }
 .cl2-tab.active { color: var(--dark); border-bottom-color: var(--gold); background: #fff; }
@@ -950,8 +955,8 @@ textarea.note-ta, .cl-section-body,
 .cl2-q-item { padding: .85rem 0; border-bottom: 1px solid var(--border); }
 .cl2-q-item:last-child { border-bottom: none; }
 .cl2-q-label {
-  font-size: .74rem; font-weight: 600; color: var(--dark);
-  line-height: 1.4; margin-bottom: .4rem;
+  font-size: .82rem; font-weight: 700; color: var(--dark);
+  line-height: 1.4; margin-bottom: .5rem;
 }
 .cl2-q-num {
   display: inline-block; width: 18px; height: 18px; border-radius: 50%;
@@ -1758,7 +1763,19 @@ td:hover .hz-edit-hint { opacity: 1; }
         <div class="cl2-title">EVALUACIÓN DE CLIMA LABORAL</div>
         <div class="cl2-sub">CAPTURA MULTI-COLABORADOR · 13 PREGUNTAS ESTÁNDAR</div>
       </div>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+        <!-- Upload documento -->
+        <label class="btn btn-outline" style="font-size:.65rem;cursor:pointer;display:flex;align-items:center;gap:.35rem"
+          title="Carga un documento TXT o PDF con las respuestas y se mapean automáticamente">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Cargar documento
+          <input type="file" accept=".txt,.pdf,.docx" style="display:none"
+            onchange="climaImportarDocumento(this)">
+        </label>
         <button class="btn btn-gold" id="btn-gen-clima2" onclick="generarResumenClima2()">Generar Resumen</button>
         <button class="btn btn-outline" onclick="exportClima2PDF()" style="font-size:.65rem">PDF Clima</button>
       </div>
@@ -5280,6 +5297,132 @@ const CL2_STATE = {
 
 let _cl2Counter = 6; // next colaborador id counter
 
+/* ── Importar documento de clima laboral ─────────────────────── *
+ * Lee un archivo TXT/PDF y mapea el texto a las 13 preguntas
+ * estándar del colaborador activo.
+ *
+ * FORMATO ESPERADO (TXT):
+ *   Colaborador: Juan López
+ *   1. Me gusta mucho mi trabajo...
+ *   2. Mi jefe es...
+ *   (o separado por líneas en blanco, o por "Pregunta N:")
+ *
+ * Si el doc no tiene numeración, reparte párrafos en orden.
+ * ─────────────────────────────────────────────────────────────── */
+async function climaImportarDocumento(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  showToast('Leyendo documento...');
+
+  let text = '';
+  try {
+    if (file.name.endsWith('.pdf')) {
+      // PDF: usar html2canvas no aplica — leer como texto plano via FileReader
+      // Para PDF real se necesitaría PDF.js; aquí extraemos el texto legible
+      text = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => {
+          // Intentar extraer texto del PDF (funciona para PDFs de texto, no escaneados)
+          const raw = new Uint8Array(e.target.result);
+          let str = '';
+          for (let i = 0; i < raw.length; i++) {
+            const c = raw[i];
+            if (c >= 32 && c < 127) str += String.fromCharCode(c);
+            else if (c === 10 || c === 13) str += '\n';
+          }
+          // Filtrar ruido de PDF y extraer texto legible
+          str = str.replace(/[^\x20-\x7E\n\xC0-\xFF\u00C0-\u017E]+/g, ' ')
+                   .replace(/\s{3,}/g, '\n').trim();
+          res(str);
+        };
+        r.onerror = rej;
+        r.readAsArrayBuffer(file);
+      });
+    } else {
+      // TXT / DOCX como texto plano
+      text = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result);
+        r.onerror = rej;
+        r.readAsText(file, 'UTF-8');
+      });
+    }
+  } catch(e) {
+    showToast('Error al leer el archivo: ' + e.message);
+    return;
+  }
+
+  if (!text.trim()) { showToast('El documento está vacío o no se pudo leer'); return; }
+
+  // ── Parser de texto ───────────────────────────────────────────
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Detectar nombre de colaborador si viene indicado
+  let nombreColaborador = '';
+  const nombreMatch = lines.find(l => /^colaborador[:\s]/i.test(l));
+  if (nombreMatch) nombreColaborador = nombreMatch.replace(/^colaborador[:\s]*/i, '').trim();
+
+  // Intentar mapear respuestas por número (1. / 1: / Pregunta 1)
+  const respuestasPorNum = {};
+  let currentNum = null;
+  let currentText = [];
+
+  lines.forEach(line => {
+    // Detectar línea de pregunta numerada: "1.", "1:", "Pregunta 1:", "P1."
+    const numMatch = line.match(/^(?:pregunta\s*)?(\d{1,2})[.:)]\s*(.*)/i);
+    if (numMatch) {
+      if (currentNum !== null && currentText.length) {
+        respuestasPorNum[currentNum] = currentText.join(' ').trim();
+      }
+      currentNum = parseInt(numMatch[1]);
+      currentText = numMatch[2] ? [numMatch[2]] : [];
+    } else if (currentNum !== null && !/^colaborador[:\s]/i.test(line)) {
+      currentText.push(line);
+    }
+  });
+  if (currentNum !== null && currentText.length) {
+    respuestasPorNum[currentNum] = currentText.join(' ').trim();
+  }
+
+  // Si no hay numeración, repartir párrafos en orden
+  const hasParsed = Object.keys(respuestasPorNum).length > 0;
+  if (!hasParsed) {
+    const parrafos = text.split(/\n{2,}/).map(p => p.replace(/\n/g,' ').trim()).filter(Boolean);
+    parrafos.forEach((p, i) => {
+      if (i < CL2_PREGUNTAS.length) respuestasPorNum[i + 1] = p;
+    });
+  }
+
+  if (!Object.keys(respuestasPorNum).length) {
+    showToast('No se detectaron respuestas en el documento');
+    return;
+  }
+
+  // ── Aplicar al colaborador activo ────────────────────────────
+  const colabId = CL2_STATE.activeColabId || CL2_STATE.colaboradores[0]?.id;
+  const colab   = CL2_STATE.colaboradores.find(c => c.id === colabId);
+  if (!colab) { showToast('Sin colaborador activo'); return; }
+
+  // Actualizar nombre si se detectó
+  if (nombreColaborador) colab.nombre = nombreColaborador;
+
+  // Mapear respuestas — índice 1-based → pregunta
+  Object.entries(respuestasPorNum).forEach(([num, resp]) => {
+    const idx = parseInt(num) - 1;
+    if (idx >= 0 && idx < CL2_PREGUNTAS.length) {
+      if (!colab.respuestas) colab.respuestas = {};
+      colab.respuestas[idx] = resp;
+    }
+  });
+
+  const total = Object.keys(respuestasPorNum).length;
+  markDirty();
+  buildClima2View();
+  showToast(`Documento importado — ${total} respuesta${total !== 1 ? 's' : ''} mapeadas a ${colab.nombre}`);
+}
+
 function buildClima2View() {
   renderCl2Tabs();
   renderCl2Panel(CL2_STATE.activoId);
@@ -5299,6 +5442,7 @@ function renderCl2Tabs() {
 function switchCl2Tab(id) {
   saveCl2CurrentPanel();
   CL2_STATE.activoId = id;
+  CL2_STATE.activeColabId = id;
   renderCl2Tabs();
   renderCl2Panel(id);
   markDirty();
