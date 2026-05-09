@@ -4554,27 +4554,33 @@ function buildReport() {
           const sec = hz[s.key];
           if (!sec || (!sec.cal && !sec.pts.some(p => p.trim()) && !sec.obs)) return '';
           const badge = sec.cal
-            ? `<span style="font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:10px;background:${CAL_COL[sec.cal]}18;color:${CAL_COL[sec.cal]};border:1px solid ${CAL_COL[sec.cal]}40">${CAL_LBL[sec.cal]}</span>`
+            ? `<span style="font-size:.6rem;font-weight:700;padding:2px 10px;border-radius:10px;background:${CAL_COL[sec.cal]}18;color:${CAL_COL[sec.cal]};border:1px solid ${CAL_COL[sec.cal]}40">${CAL_LBL[sec.cal]}</span>`
             : '';
-          const pts = (sec.pts||[]).filter(p => p.trim())
-            .map(p => `<li style="font-size:.7rem;color:#2D3A3F;margin-bottom:.15rem;text-align:justify">${esc(p)}</li>`).join('');
+          // Cada pt puede contener texto largo — renderizar como ítem independiente con buen tamaño
+          const ptsHtml = (sec.pts||[]).filter(p => p.trim()).map(p => {
+            // Si el texto contiene ". " o ": " separar en sub-ítems para legibilidad
+            return `<li style="font-size:.78rem;color:#2D3A3F;line-height:1.6;margin-bottom:.5rem;
+              text-align:justify;padding-left:.2rem">${esc(p.trim())}</li>`;
+          }).join('');
           const obs = sec.obs
-            ? `<p style="font-size:.67rem;color:#8A9096;font-style:italic;margin:.2rem 0 0">${esc(sec.obs)}</p>`
+            ? `<p style="font-size:.74rem;color:#8A9096;font-style:italic;margin:.4rem 0 0;line-height:1.5">${esc(sec.obs)}</p>`
             : '';
-          return `<div style="margin-bottom:.7rem">
-            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.2rem">
-              <span style="font-size:.6rem;font-weight:700;letter-spacing:.1em;color:#8A9096">${s.label.toUpperCase()}</span>
+          return `<div style="margin-bottom:1rem">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;
+              padding-bottom:.3rem;border-bottom:1px solid #E5E2DC">
+              <span style="font-size:.62rem;font-weight:700;letter-spacing:.12em;color:#8A9096">${s.label.toUpperCase()}</span>
               ${badge}
             </div>
-            ${pts ? `<ul style="margin:.1rem 0 0 .9rem;padding:0">${pts}</ul>` : ''}
+            ${ptsHtml ? `<ul style="margin:.2rem 0 0 1rem;padding:0;list-style:disc">${ptsHtml}</ul>` : ''}
             ${obs}
           </div>`;
         }).filter(Boolean).join('');
         if (!secsHtml) return '';
-        return `<div style="padding:.9rem 1.4rem;border-top:2px solid ${nivelInfo.color}20;background:${nivelInfo.bg}40">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
-            <span style="font-size:.62rem;font-weight:700;letter-spacing:.14em;color:#8A9096">HALLAZGOS DEL ÁREA</span>
-            <span style="font-size:.62rem;font-weight:700;padding:2px 10px;border-radius:10px;background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
+        return `<div style="padding:1.2rem 1.6rem;border-top:2px solid ${nivelInfo.color}30;background:${nivelInfo.bg}30">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;
+            padding-bottom:.6rem;border-bottom:2px solid ${nivelInfo.color}20">
+            <span style="font-size:.68rem;font-weight:700;letter-spacing:.16em;color:#5F5E5A">HALLAZGOS DEL ÁREA</span>
+            <span style="font-size:.65rem;font-weight:700;padding:3px 12px;border-radius:10px;background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
           </div>
           ${secsHtml}
         </div>`;
