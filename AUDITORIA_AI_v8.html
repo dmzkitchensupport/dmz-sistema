@@ -1716,6 +1716,7 @@ td:hover .hz-edit-hint { opacity: 1; }
       <div class="dz-sub">JPG · PNG · HEIC · DNG · RAW · CR2 · NEF · ARW · TIFF y más</div>
     </div>
     <div id="photo-grid"></div>
+    <div class="hz-panel" id="hz-area-panel" style="margin:.8rem .8rem 1.2rem"></div>
   </div>
 
   <!-- Dashboard view (LIVE) -->
@@ -2159,7 +2160,7 @@ async function saveSession(silent) {
   // Fotos: guarda en IndexedDB (sin límite), solo metadatos en localStorage
   const tasks = [];
   for (const aId in STATE.areas) {
-    saveState.areas[aId] = { photos: [] };
+    saveState.areas[aId] = { photos: [], hallazgos: STATE.areas[aId].hallazgos || _hzDefault() };
     for (const p of STATE.areas[aId].photos) {
       const savedPhoto = {
         id:           p.id,
@@ -2169,7 +2170,6 @@ async function saveSession(silent) {
         notes:        p.notes,
         markers:      p.markers,
         aiSuggestion: p.aiSuggestion,
-        hallazgos:    p.hallazgos || {hall:{cal:null,pts:[''],obs:''},crit:{cal:null,pts:[''],obs:''},op:{cal:null,pts:[''],obs:''}},
         // NO guardamos b64 en localStorage — va a IndexedDB
       };
       saveState.areas[aId].photos.push(savedPhoto);
@@ -2234,6 +2234,7 @@ async function loadSession() {
     // Carga metadatos primero (sin fotos)
     for (const aId in saved.areas) {
       if (!STATE.areas[aId]) continue;
+      STATE.areas[aId].hallazgos = saved.areas[aId].hallazgos || _hzDefault();
       for (const sp of (saved.areas[aId].photos || [])) {
         const photo = {
           id:           sp.id,
@@ -2248,7 +2249,7 @@ async function loadSession() {
           notes:        sp.notes || [''],
           markers:      sp.markers || [],
           aiSuggestion: sp.aiSuggestion || null,
-          hallazgos:    sp.hallazgos || {hall:{cal:null,pts:[''],obs:''},crit:{cal:null,pts:[''],obs:''},op:{cal:null,pts:[''],obs:''}},
+
         };
         STATE.areas[aId].photos.push(photo);
         const n = parseInt((sp.id || '').replace('p', ''));
@@ -3259,7 +3260,7 @@ const TC  = { INMEDIATO: '#C0392B', 'CORTO PLAZO': '#E07B00', 'MEDIO PLAZO': '#2
    INIT
  */
 function init() {
-  AREAS.forEach(a => STATE.areas[a.id] = { photos: [] });
+  AREAS.forEach(a => STATE.areas[a.id] = { photos: [], hallazgos: _hzDefault() });
 
   // Google Drive: interceptar callback OAuth2 y cargar token guardado
   driveHandleOAuthCallback();
@@ -3438,6 +3439,7 @@ function switchArea(id) {
   renderGrid();
   updateProgress();
   updateAnalyzeBtn();
+  renderHzPanel();
 }
 
 /* 
@@ -3884,70 +3886,17 @@ function buildCard(p) {
         <div class="card-status-dot ${statusCls}"></div>
         <button class="btn-del-card" onclick="delPhoto('${p.id}')" title="Eliminar"></button>
       </div>
-      ${buildHzPanel(p)}
     </div>
   </div>`;
 }
 
-/* ── Hallazgos por foto ─────────────────────────────────────── */
+/* ── Hallazgos por área ─────────────────────────────────────── */
 function _hzDefault() {
   return {
     hall: { cal: null, pts: [''], obs: '' },
     crit: { cal: null, pts: [''], obs: '' },
     op:   { cal: null, pts: [''], obs: '' },
   };
-}
-
-function buildHzPanel(p) {
-  const hz = p.hallazgos || _hzDefault();
-  const secs = [
-    { key: 'hall', label: 'Hallazgos' },
-    { key: 'crit', label: 'Puntos críticos' },
-    { key: 'op',   label: 'Áreas de oportunidad' },
-  ];
-
-  const nivelInfo = _hzNivel(hz);
-
-  const secsHtml = secs.map(s => {
-    const sec = hz[s.key] || { cal: null, pts: [''], obs: '' };
-    const ptsHtml = (sec.pts.length ? sec.pts : ['']).map((pt, i) => `
-      <div class="hz-pt-row">
-        <textarea class="hz-pt-ta" rows="1"
-          oninput="hzUpdatePt('${p.id}','${s.key}',${i},this.value);autoResizeHz(this)"
-          onfocus="autoResizeHz(this)"
-          placeholder="Descripción...">${esc(pt)}</textarea>
-        ${sec.pts.length > 1
-          ? `<button class="hz-pt-del" onclick="hzDelPt('${p.id}','${s.key}',${i})">×</button>`
-          : ''}
-      </div>`).join('');
-
-    const calBtns = ['cr','de','pa'].map(c => {
-      const labels = {cr:'Crítico',de:'Deficiente',pa:'Parcial'};
-      return `<button class="hz-cal-btn ${c} ${sec.cal===c?'sel':''}"
-        onclick="hzSetCal('${p.id}','${s.key}','${c}')">${labels[c]}</button>`;
-    }).join('');
-
-    return `<div class="hz-sec">
-      <div class="hz-sec-head">
-        <span class="hz-sec-label">${s.label}</span>
-        <div class="hz-cal-btns">${calBtns}</div>
-      </div>
-      <div class="hz-pts" id="hz-pts-${p.id}-${s.key}">${ptsHtml}</div>
-      <button class="hz-add-btn" onclick="hzAddPt('${p.id}','${s.key}')">+ Agregar punto</button>
-      <textarea class="hz-obs-ta" rows="2"
-        placeholder="Observación general..."
-        oninput="hzUpdateObs('${p.id}','${s.key}',this.value)">${esc(sec.obs||'')}</textarea>
-    </div>`;
-  }).join('');
-
-  return `<div class="hz-panel">
-    <div class="hz-panel-title">HALLAZGOS · PUNTOS CRÍTICOS · ÁREAS DE OPORTUNIDAD</div>
-    ${secsHtml}
-    <div class="hz-nivel-bar">
-      <span class="hz-nivel-lbl">Nivel general de esta foto</span>
-      <span class="hz-nivel-badge" style="background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
-    </div>
-  </div>`;
 }
 
 function _hzNivel(hz) {
@@ -3958,37 +3907,92 @@ function _hzNivel(hz) {
   return { label: 'Parcial', bg: '#F0FDF4', color: '#2E7D32' };
 }
 
-function _hzGet(pid) {
-  const p = findPhoto(pid);
-  if (!p) return null;
-  if (!p.hallazgos) p.hallazgos = _hzDefault();
-  return p;
+function renderHzPanel() {
+  const el = document.getElementById('hz-area-panel');
+  if (!el) return;
+  const aId = STATE.currentArea;
+  if (!aId || !STATE.areas[aId]) return;
+  const hz = STATE.areas[aId].hallazgos || _hzDefault();
+  el.innerHTML = buildHzPanelHtml(aId, hz);
 }
 
-function hzSetCal(pid, sec, cal) {
-  const p = _hzGet(pid);
-  if (!p) return;
-  p.hallazgos[sec].cal = p.hallazgos[sec].cal === cal ? null : cal;
-  markDirty();
-  renderGrid();
+function buildHzPanelHtml(aId, hz) {
+  const secs = [
+    { key: 'hall', label: 'Hallazgos' },
+    { key: 'crit', label: 'Puntos críticos' },
+    { key: 'op',   label: 'Áreas de oportunidad' },
+  ];
+  const nivelInfo = _hzNivel(hz);
+
+  const secsHtml = secs.map(s => {
+    const sec = hz[s.key] || { cal: null, pts: [''], obs: '' };
+    const ptsHtml = (sec.pts.length ? sec.pts : ['']).map((pt, i) => `
+      <div class="hz-pt-row">
+        <textarea class="hz-pt-ta" rows="1"
+          oninput="hzUpdatePt('${aId}','${s.key}',${i},this.value);autoResizeHz(this)"
+          onfocus="autoResizeHz(this)"
+          placeholder="Descripción...">${esc(pt)}</textarea>
+        ${sec.pts.length > 1
+          ? `<button class="hz-pt-del" onclick="hzDelPt('${aId}','${s.key}',${i})">×</button>`
+          : ''}
+      </div>`).join('');
+
+    const calBtns = ['cr','de','pa'].map(c => {
+      const labels = {cr:'Crítico', de:'Deficiente', pa:'Parcial'};
+      return `<button class="hz-cal-btn ${c} ${sec.cal===c?'sel':''}"
+        onclick="hzSetCal('${aId}','${s.key}','${c}')">${labels[c]}</button>`;
+    }).join('');
+
+    return `<div class="hz-sec">
+      <div class="hz-sec-head">
+        <span class="hz-sec-label">${s.label}</span>
+        <div class="hz-cal-btns">${calBtns}</div>
+      </div>
+      <div class="hz-pts" id="hz-pts-${aId}-${s.key}">${ptsHtml}</div>
+      <button class="hz-add-btn" onclick="hzAddPt('${aId}','${s.key}')">+ Agregar punto</button>
+      <textarea class="hz-obs-ta" rows="2"
+        placeholder="Observación general..."
+        oninput="hzUpdateObs('${aId}','${s.key}',this.value)">${esc(sec.obs||'')}</textarea>
+    </div>`;
+  }).join('');
+
+  return `<div class="hz-panel-title">HALLAZGOS DEL ÁREA</div>
+    ${secsHtml}
+    <div class="hz-nivel-bar">
+      <span class="hz-nivel-lbl">Nivel general del área</span>
+      <span class="hz-nivel-badge" style="background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
+    </div>`;
 }
 
-function hzUpdatePt(pid, sec, idx, val) {
-  const p = _hzGet(pid);
-  if (!p) return;
-  p.hallazgos[sec].pts[idx] = sanitizarTexto(val);
+function _hzGetArea(aId) {
+  if (!STATE.areas[aId]) return null;
+  if (!STATE.areas[aId].hallazgos) STATE.areas[aId].hallazgos = _hzDefault();
+  return STATE.areas[aId].hallazgos;
+}
+
+function hzSetCal(aId, sec, cal) {
+  const hz = _hzGetArea(aId);
+  if (!hz) return;
+  hz[sec].cal = hz[sec].cal === cal ? null : cal;
+  markDirty();
+  renderHzPanel();
+}
+
+function hzUpdatePt(aId, sec, idx, val) {
+  const hz = _hzGetArea(aId);
+  if (!hz) return;
+  hz[sec].pts[idx] = sanitizarTexto(val);
   markDirty();
 }
 
-function hzAddPt(pid, sec) {
-  const p = _hzGet(pid);
-  if (!p) return;
-  p.hallazgos[sec].pts.push('');
+function hzAddPt(aId, sec) {
+  const hz = _hzGetArea(aId);
+  if (!hz) return;
+  hz[sec].pts.push('');
   markDirty();
-  renderGrid();
-  // Focus en el último textarea del grupo
+  renderHzPanel();
   setTimeout(() => {
-    const list = document.getElementById(`hz-pts-${pid}-${sec}`);
+    const list = document.getElementById(`hz-pts-${aId}-${sec}`);
     if (list) {
       const tas = list.querySelectorAll('.hz-pt-ta');
       if (tas.length) { tas[tas.length-1].focus(); autoResizeHz(tas[tas.length-1]); }
@@ -3996,19 +4000,19 @@ function hzAddPt(pid, sec) {
   }, 50);
 }
 
-function hzDelPt(pid, sec, idx) {
-  const p = _hzGet(pid);
-  if (!p) return;
-  p.hallazgos[sec].pts.splice(idx, 1);
-  if (!p.hallazgos[sec].pts.length) p.hallazgos[sec].pts = [''];
+function hzDelPt(aId, sec, idx) {
+  const hz = _hzGetArea(aId);
+  if (!hz) return;
+  hz[sec].pts.splice(idx, 1);
+  if (!hz[sec].pts.length) hz[sec].pts = [''];
   markDirty();
-  renderGrid();
+  renderHzPanel();
 }
 
-function hzUpdateObs(pid, sec, val) {
-  const p = _hzGet(pid);
-  if (!p) return;
-  p.hallazgos[sec].obs = val;
+function hzUpdateObs(aId, sec, val) {
+  const hz = _hzGetArea(aId);
+  if (!hz) return;
+  hz[sec].obs = val;
   markDirty();
 }
 
@@ -4364,48 +4368,12 @@ function buildReport() {
       ).join('');
       const notes = p.notes.filter(n => n.trim());
       const imgSrc = p.storageB64 ? 'data:image/jpeg;base64,' + p.storageB64 : (p.displayUrl || '');
-
-      // Hallazgos en reporte
-      const hz = p.hallazgos;
-      const hzHtml = hz ? (() => {
-        const secs = [
-          { key:'hall', label:'Hallazgos' },
-          { key:'crit', label:'Puntos críticos' },
-          { key:'op',   label:'Áreas de oportunidad' },
-        ];
-        const CAL_STYLE = {
-          cr: 'background:#FCEBEB;color:#C0392B',
-          de: 'background:#FFF3E0;color:#E07B00',
-          pa: 'background:#F0FDF4;color:#2E7D32',
-        };
-        const CAL_LBL = { cr:'Crítico', de:'Deficiente', pa:'Parcial' };
-        const rows = secs.map(s => {
-          const sec = hz[s.key];
-          if (!sec || (!sec.cal && !sec.pts.some(pt => pt.trim()) && !sec.obs)) return '';
-          const badge = sec.cal
-            ? `<span style="font-size:.56rem;font-weight:700;padding:1px 7px;border-radius:10px;${CAL_STYLE[sec.cal]}">${CAL_LBL[sec.cal]}</span>`
-            : '';
-          const pts = (sec.pts||[]).filter(pt => pt.trim())
-            .map(pt => `<div style="font-size:.65rem;color:#2D3A3F;margin:.1rem 0 0 .6rem">· ${esc(pt)}</div>`).join('');
-          const obs = sec.obs ? `<div style="font-size:.63rem;color:#8A9096;font-style:italic;margin-top:.2rem">${esc(sec.obs)}</div>` : '';
-          return `<div style="margin-top:.3rem">
-            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
-              <span style="font-size:.58rem;font-weight:700;letter-spacing:.08em;color:#8A9096">${s.label.toUpperCase()}</span>
-              ${badge}
-            </div>
-            ${pts}${obs}
-          </div>`;
-        }).filter(Boolean).join('');
-        return rows ? `<div style="margin-top:.4rem;padding-top:.4rem;border-top:1px solid #E5E2DC">${rows}</div>` : '';
-      })() : '';
-
       return `<div class="rpt-photo">
         <img src="${imgSrc}" alt="" loading="lazy">
         ${mkrs}
         <div class="rpt-caption">
           <span class="rpt-badge" style="background:${col}">${icon} ${lbl}</span>
           ${notes.map(n => `<div class="rpt-note">${esc(n)}</div>`).join('')}
-          ${hzHtml}
         </div>
       </div>`;
     }).join('');
@@ -4472,6 +4440,46 @@ function buildReport() {
           <tbody>${hallRows}</tbody>
         </table>
       </div>` : ''}
+      ${(() => {
+        const hz = STATE.areas[a.id].hallazgos;
+        if (!hz) return '';
+        const secs = [
+          { key:'hall', label:'Hallazgos' },
+          { key:'crit', label:'Puntos críticos' },
+          { key:'op',   label:'Áreas de oportunidad' },
+        ];
+        const CAL_COL = { cr:'#C0392B', de:'#E07B00', pa:'#2E7D32' };
+        const CAL_LBL = { cr:'Crítico', de:'Deficiente', pa:'Parcial' };
+        const nivelInfo = _hzNivel(hz);
+        const secsHtml = secs.map(s => {
+          const sec = hz[s.key];
+          if (!sec || (!sec.cal && !sec.pts.some(p => p.trim()) && !sec.obs)) return '';
+          const badge = sec.cal
+            ? `<span style="font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:10px;background:${CAL_COL[sec.cal]}18;color:${CAL_COL[sec.cal]};border:1px solid ${CAL_COL[sec.cal]}40">${CAL_LBL[sec.cal]}</span>`
+            : '';
+          const pts = (sec.pts||[]).filter(p => p.trim())
+            .map(p => `<li style="font-size:.7rem;color:#2D3A3F;margin-bottom:.15rem;text-align:justify">${esc(p)}</li>`).join('');
+          const obs = sec.obs
+            ? `<p style="font-size:.67rem;color:#8A9096;font-style:italic;margin:.2rem 0 0">${esc(sec.obs)}</p>`
+            : '';
+          return `<div style="margin-bottom:.7rem">
+            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.2rem">
+              <span style="font-size:.6rem;font-weight:700;letter-spacing:.1em;color:#8A9096">${s.label.toUpperCase()}</span>
+              ${badge}
+            </div>
+            ${pts ? `<ul style="margin:.1rem 0 0 .9rem;padding:0">${pts}</ul>` : ''}
+            ${obs}
+          </div>`;
+        }).filter(Boolean).join('');
+        if (!secsHtml) return '';
+        return `<div style="padding:.9rem 1.4rem;border-top:2px solid ${nivelInfo.color}20;background:${nivelInfo.bg}40">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+            <span style="font-size:.62rem;font-weight:700;letter-spacing:.14em;color:#8A9096">HALLAZGOS DEL ÁREA</span>
+            <span style="font-size:.62rem;font-weight:700;padding:2px 10px;border-radius:10px;background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
+          </div>
+          ${secsHtml}
+        </div>`;
+      })()}
     </div>`;
   });
 
