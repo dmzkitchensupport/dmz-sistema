@@ -5745,6 +5745,16 @@ function addAlimentoCard(data) {
 }
 
 function buildAlimentosView() {
+  // Migrar items del formato anterior (sin scores) al formato ECT
+  ALI_STATE.items = ALI_STATE.items.map(item => {
+    if (!item.scores || typeof item.scores !== 'object') {
+      item.scores = { 'Presentación':0,'Temperatura':0,'Sabor':0,'Textura':0,'Porción':0 };
+    }
+    if (!item.fotoB64) item.fotoB64 = '';
+    if (!item.categoria) item.categoria = '';
+    if (!item.obs) item.obs = item.organoleptica || '';
+    return item;
+  });
   if (!ALI_STATE.items.length) {
     ['Platillo de temporada','Sopa del día','Plato fuerte'].forEach(n => {
       ALI_STATE.items.push({
@@ -5769,6 +5779,7 @@ function renderAlimentosGrid() {
 }
 
 function _aliPromedio(scores) {
+  if (!scores || typeof scores !== 'object') return 0;
   const vals = Object.values(scores).filter(v => v > 0);
   if (!vals.length) return 0;
   return vals.reduce((a,b) => a+b, 0) / vals.length;
