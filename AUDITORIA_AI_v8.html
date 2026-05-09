@@ -3896,6 +3896,8 @@ function _hzDefault() {
     hall: { cal: null, pts: [''], obs: '' },
     crit: { cal: null, pts: [''], obs: '' },
     op:   { cal: null, pts: [''], obs: '' },
+    imp:  { cal: null, pts: [''], obs: '' },
+    prox: { cal: null, pts: [''], obs: '' },
   };
 }
 
@@ -3921,6 +3923,8 @@ function buildHzPanelHtml(aId, hz) {
     { key: 'hall', label: 'Hallazgos' },
     { key: 'crit', label: 'Puntos críticos' },
     { key: 'op',   label: 'Áreas de oportunidad' },
+    { key: 'imp',  label: 'Implementación de mejoras' },
+    { key: 'prox', label: 'Próximos pasos' },
   ];
   const nivelInfo = _hzNivel(hz);
 
@@ -3942,11 +3946,12 @@ function buildHzPanelHtml(aId, hz) {
       return `<button class="hz-cal-btn ${c} ${sec.cal===c?'sel':''}"
         onclick="hzSetCal('${aId}','${s.key}','${c}')">${labels[c]}</button>`;
     }).join('');
+    const showCal = ['hall','crit','op'].includes(s.key);
 
     return `<div class="hz-sec">
       <div class="hz-sec-head">
         <span class="hz-sec-label">${s.label}</span>
-        <div class="hz-cal-btns">${calBtns}</div>
+        ${showCal ? `<div class="hz-cal-btns">${calBtns}</div>` : ''}
       </div>
       <div class="hz-pts" id="hz-pts-${aId}-${s.key}">${ptsHtml}</div>
       <button class="hz-add-btn" onclick="hzAddPt('${aId}','${s.key}')">+ Agregar punto</button>
@@ -4447,6 +4452,8 @@ function buildReport() {
           { key:'hall', label:'Hallazgos' },
           { key:'crit', label:'Puntos críticos' },
           { key:'op',   label:'Áreas de oportunidad' },
+          { key:'imp',  label:'Implementación de mejoras' },
+          { key:'prox', label:'Próximos pasos' },
         ];
         const CAL_COL = { cr:'#C0392B', de:'#E07B00', pa:'#2E7D32' };
         const CAL_LBL = { cr:'Crítico', de:'Deficiente', pa:'Parcial' };
