@@ -122,8 +122,8 @@ for (tid, fname) in ali_fns:
 check('a11', 'div#alimentos-view',     'id="alimentos-view"' in src, 'Presente', 'FALTANTE')
 check('a12', 'ali-grid container',     'id="ali-grid"' in src,       'Presente', 'FALTANTE')
 check('a13', 'CSS .ali-card',          '.ali-card {' in src,          'Presente', 'FALTANTE')
-check('a14', 'CSS .ali-status-btn',    '.ali-status-btn' in src,      'Presente', 'FALTANTE')
-check('a15', 'CSS .ali-temp-alert',    '.ali-temp-alert' in src,      'Presente', 'FALTANTE')
+check('a14', 'CSS .ali-ect-btn',        '.ali-ect-btn' in src,          'Presente', 'FALTANTE')
+check('a15', 'CSS ali-foto-zone',       'ali-foto-zone' in src,         'Presente', 'FALTANTE')
 check('a16', 'ALI_STATE definido',     'ALI_STATE = {' in src,        'Presente', 'FALTANTE')
 check('a17', 'aliState en saveSession','aliState:' in src,             'Presente', 'FALTANTE')
 check('a18', 'aliState en loadSession','saved.aliState' in src,        'Presente', 'FALTANTE')
@@ -177,8 +177,8 @@ check('g04', 'driveUploadFile()',              fn_defined(src, 'driveUploadFile'
 check('g05', 'driveBackupSession()',           fn_defined(src, 'driveBackupSession'),  'Definida',  'FALTANTE')
 check('g06', 'driveHandleOAuth en init()',     'driveHandleOAuthCallback' in src[src.find('function init()'):src.find('function init()')+600],
              'En init()', 'NO en init()')
-check('g07', 'BACKEND config definido',        'BACKEND = {' in src,                  'Presente', 'FALTANTE')
-check('g08', 'backendSyncSession()',           fn_defined(src, 'backendSyncSession'),  'Definida',  'FALTANTE')
+check('g07', 'SB Supabase config definido',    'SB = {' in src,                       'Presente', 'FALTANTE')
+check('g08', 'sbSaveAuditoria()',              fn_defined(src, 'sbSaveAuditoria'),     'Definida',  'FALTANTE')
 check('g09', 'Drive backup en saveSession',    'driveBackupSession()' in src,          'Presente', 'FALTANTE')
 
 # ══════════════════════════════════════════════════════════════════
