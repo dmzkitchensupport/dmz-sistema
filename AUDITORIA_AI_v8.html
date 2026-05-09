@@ -5284,23 +5284,26 @@ const CL2_PREGUNTAS = [
 
 const CL2_STATE = {
   colaboradores: [
-    { id: 'c1', nombre: 'Colaborador A', respuestas: {} },
-    { id: 'c2', nombre: 'Colaborador B', respuestas: {} },
-    { id: 'c3', nombre: 'Colaborador C', respuestas: {} },
-    { id: 'c4', nombre: 'Colaborador D', respuestas: {} },
-    { id: 'c5', nombre: 'Colaborador E', respuestas: {} },
-    { id: 'c6', nombre: 'Colaborador F', respuestas: {} },
-    { id: 'c7', nombre: 'Colaborador G', respuestas: {} },
-    { id: 'c8', nombre: 'Colaborador H', respuestas: {} },
-    { id: 'c9', nombre: 'Colaborador I', respuestas: {} },
+    { id: 'c1',  nombre: 'Colaborador A', respuestas: {} },
+    { id: 'c2',  nombre: 'Colaborador B', respuestas: {} },
+    { id: 'c3',  nombre: 'Colaborador C', respuestas: {} },
+    { id: 'c4',  nombre: 'Colaborador D', respuestas: {} },
+    { id: 'c5',  nombre: 'Colaborador E', respuestas: {} },
+    { id: 'c6',  nombre: 'Colaborador F', respuestas: {} },
+    { id: 'c7',  nombre: 'Colaborador G', respuestas: {} },
+    { id: 'c8',  nombre: 'Colaborador H', respuestas: {} },
+    { id: 'c9',  nombre: 'Colaborador I', respuestas: {} },
+    { id: 'c10', nombre: 'Colaborador J', respuestas: {} },
+    { id: 'c11', nombre: 'Colaborador K', respuestas: {} },
+    { id: 'c12', nombre: 'Colaborador L', respuestas: {} },
   ],
   activoId: 'c1',
   resumen: null,
   generadoEn: null,
-  meta: {},   // datos generales del documento: empresa, fecha, evaluador, puestos, panorama
+  meta: {},
 };
 
-let _cl2Counter = 10;
+let _cl2Counter = 13;
 
 /* ── Importar documento de clima laboral ─────────────────────── *
  * Formato real detectado:
@@ -5363,11 +5366,14 @@ async function climaImportarDocumento(input) {
   // ── Extraer respuestas por pregunta ───────────────────────────
   // Detectar letras de colaboradores presentes (A, B, C...)
   const letrasDetect = new Set();
-  const letraRE = /^\*?\*?([A-I])\*?\*?\s*[:|-]/gm;
+  // Detectar letras A-L en el formato | **A:** | o | A: |
+  const letraRE = /[|\s]\*?\*?([A-L])\*?\*?\s*\*?\*?\s*[:|]/gm;
   let m;
   while ((m = letraRE.exec(text)) !== null) letrasDetect.add(m[1]);
-  const letras = [...letrasDetect].sort();
-  const numColabs = letras.length || 9;
+  const letras = letrasDetect.size > 1
+    ? [...letrasDetect].sort()
+    : ['A','B','C','D','E','F','G','H','I','J','K','L'];
+  const numColabs = letras.length;
 
   // Asegurar que hay suficientes colaboradores en CL2_STATE
   while (CL2_STATE.colaboradores.length < numColabs) {
@@ -5419,9 +5425,13 @@ async function climaImportarDocumento(input) {
   });
 
   // Guardar panorama en el primer colaborador como context extra
-  if (panorama && CL2_STATE.colaboradores[0]) {
-    CL2_STATE.meta.panorama = panorama;
-  }
+  if (panorama) CL2_STATE.meta.panorama = panorama;
+
+  // Capturar Análisis de Resultados si existe en el documento
+  const fortalezasM = text.match(/Fortalezas detectadas[\s\S]*?\|([^|]+)\|/i);
+  const focosM      = text.match(/Focos rojos[^|]*[\s\S]*?\|([^|]+)\|/i);
+  if (fortalezasM) CL2_STATE.meta.fortalezas = fortalezasM[1].replace(/\*\*/g,'').trim();
+  if (focosM)      CL2_STATE.meta.focos      = focosM[1].replace(/\*\*/g,'').trim();
 
   markDirty();
   buildClima2View();
@@ -5440,10 +5450,32 @@ function buildClima2View() {
     const m = CL2_STATE.meta;
     sub.textContent = [
       m.empresa,
-      m.fecha    ? 'Fecha: ' + m.fecha    : '',
-      m.evaluador? 'Evaluador: ' + m.evaluador : '',
-      m.puestos  ? m.puestos              : '',
+      m.fecha     ? 'Fecha: ' + m.fecha     : '',
+      m.evaluador ? 'Evaluador: ' + m.evaluador : '',
+      m.puestos   ? m.puestos               : '',
     ].filter(Boolean).join(' · ');
+  }
+  // Mostrar análisis del evaluador si viene del documento
+  const resBody = document.getElementById('cl2-resumen-body');
+  if (resBody && !CL2_STATE.resumen && (CL2_STATE.meta?.fortalezas || CL2_STATE.meta?.focos)) {
+    const m = CL2_STATE.meta;
+    resBody.innerHTML =
+      '<div style="padding:1.2rem 1.4rem;display:flex;flex-direction:column;gap:1rem">' +
+      (m.fortalezas ? '<div>' +
+        '<div style="font-size:.64rem;font-weight:800;letter-spacing:.14em;color:#2E7D32;' +
+        'border-bottom:2px solid #2E7D32;padding-bottom:.3rem;margin-bottom:.6rem">' +
+        'FORTALEZAS DETECTADAS</div>' +
+        '<p style="font-size:.8rem;color:#2D3A3F;line-height:1.7;text-align:justify">' +
+        esc(m.fortalezas) + '</p></div>' : '') +
+      (m.focos ? '<div>' +
+        '<div style="font-size:.64rem;font-weight:800;letter-spacing:.14em;color:#C0392B;' +
+        'border-bottom:2px solid #C0392B;padding-bottom:.3rem;margin-bottom:.6rem">' +
+        'FOCOS ROJOS / ÁREAS DE ATENCIÓN</div>' +
+        '<p style="font-size:.8rem;color:#2D3A3F;line-height:1.7;text-align:justify">' +
+        esc(m.focos) + '</p></div>' : '') +
+      '<div style="font-size:.65rem;color:var(--mid);text-align:right;margin-top:.3rem">' +
+      'Análisis importado del documento · Presiona <strong>Generar Resumen</strong> para análisis AI</div>' +
+      '</div>';
   }
 }
 
