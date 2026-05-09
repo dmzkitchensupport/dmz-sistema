@@ -530,6 +530,31 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
   margin-top: .2rem; transition: all .15s; display: flex; align-items: center; justify-content: center;
 }
 .btn-del-note:hover { border-color: var(--red); color: var(--red); background: #fff0f0; }
+/* ── Panel de Hallazgos por foto ─────────────────────────────── */
+.hz-panel { border-top: 1px solid var(--border); padding: .65rem .7rem .5rem; display: flex; flex-direction: column; gap: .5rem; }
+.hz-panel-title { font-size: .55rem; font-weight: 700; letter-spacing: .18em; color: var(--mid); margin-bottom: .1rem; }
+.hz-sec { background: var(--off); border-radius: 4px; padding: .5rem .65rem; border: 1px solid var(--border); }
+.hz-sec-head { display: flex; align-items: center; justify-content: space-between; gap: .4rem; margin-bottom: .4rem; }
+.hz-sec-label { font-size: .62rem; font-weight: 700; color: var(--dark); }
+.hz-cal-btns { display: flex; gap: 3px; }
+.hz-cal-btn { border: 1px solid var(--border); background: #fff; border-radius: 12px; font-size: .56rem; font-weight: 700; padding: 2px 8px; cursor: pointer; color: var(--mid); transition: all .12s; white-space: nowrap; }
+.hz-cal-btn.cr.sel { background: #FCEBEB; border-color: #C0392B; color: #C0392B; }
+.hz-cal-btn.de.sel { background: #FFF3E0; border-color: #E07B00; color: #E07B00; }
+.hz-cal-btn.pa.sel { background: #F0FDF4; border-color: #2E7D32; color: #2E7D32; }
+.hz-pts { display: flex; flex-direction: column; gap: 4px; margin-bottom: .3rem; }
+.hz-pt-row { display: flex; align-items: flex-start; gap: 4px; }
+.hz-pt-ta { flex: 1; border: 1px solid var(--border); border-radius: 4px; padding: 4px 7px; font-size: .68rem; resize: none; background: #fff; color: var(--dark); line-height: 1.4; font-family: var(--f-b); min-height: 28px; }
+.hz-pt-ta:focus { outline: none; border-color: var(--gold); }
+.hz-pt-del { border: none; background: none; color: var(--mid); cursor: pointer; font-size: .9rem; padding: 3px 2px; line-height: 1; transition: color .12s; }
+.hz-pt-del:hover { color: var(--red); }
+.hz-add-btn { font-size: .58rem; color: var(--mid); background: none; border: 1px dashed var(--border); border-radius: 4px; padding: 3px 8px; cursor: pointer; width: 100%; transition: background .12s; }
+.hz-add-btn:hover { background: #fff; }
+.hz-obs-ta { width: 100%; border: 1px solid var(--border); border-radius: 4px; padding: 4px 7px; font-size: .67rem; resize: none; background: #fff; color: var(--dark); line-height: 1.4; font-family: var(--f-b); box-sizing: border-box; margin-top: .3rem; }
+.hz-obs-ta:focus { outline: none; border-color: var(--gold); }
+.hz-nivel-bar { display: flex; align-items: center; justify-content: space-between; padding: .35rem .5rem; background: var(--cream); border-radius: 4px; border: 1px solid var(--border); }
+.hz-nivel-lbl { font-size: .58rem; color: var(--mid); font-weight: 600; }
+.hz-nivel-badge { font-size: .58rem; font-weight: 700; padding: 2px 10px; border-radius: 10px; }
+
 .btn-add-note {
   width: 100%; padding: .38rem; margin-top: .25rem;
   border: 1.5px dashed var(--border); border-radius: 5px;
@@ -2144,6 +2169,7 @@ async function saveSession(silent) {
         notes:        p.notes,
         markers:      p.markers,
         aiSuggestion: p.aiSuggestion,
+        hallazgos:    p.hallazgos || {hall:{cal:null,pts:[''],obs:''},crit:{cal:null,pts:[''],obs:''},op:{cal:null,pts:[''],obs:''}},
         // NO guardamos b64 en localStorage — va a IndexedDB
       };
       saveState.areas[aId].photos.push(savedPhoto);
@@ -2222,6 +2248,7 @@ async function loadSession() {
           notes:        sp.notes || [''],
           markers:      sp.markers || [],
           aiSuggestion: sp.aiSuggestion || null,
+          hallazgos:    sp.hallazgos || {hall:{cal:null,pts:[''],obs:''},crit:{cal:null,pts:[''],obs:''},op:{cal:null,pts:[''],obs:''}},
         };
         STATE.areas[aId].photos.push(photo);
         const n = parseInt((sp.id || '').replace('p', ''));
@@ -3857,8 +3884,137 @@ function buildCard(p) {
         <div class="card-status-dot ${statusCls}"></div>
         <button class="btn-del-card" onclick="delPhoto('${p.id}')" title="Eliminar"></button>
       </div>
+      ${buildHzPanel(p)}
     </div>
   </div>`;
+}
+
+/* ── Hallazgos por foto ─────────────────────────────────────── */
+function _hzDefault() {
+  return {
+    hall: { cal: null, pts: [''], obs: '' },
+    crit: { cal: null, pts: [''], obs: '' },
+    op:   { cal: null, pts: [''], obs: '' },
+  };
+}
+
+function buildHzPanel(p) {
+  const hz = p.hallazgos || _hzDefault();
+  const secs = [
+    { key: 'hall', label: 'Hallazgos' },
+    { key: 'crit', label: 'Puntos críticos' },
+    { key: 'op',   label: 'Áreas de oportunidad' },
+  ];
+
+  const nivelInfo = _hzNivel(hz);
+
+  const secsHtml = secs.map(s => {
+    const sec = hz[s.key] || { cal: null, pts: [''], obs: '' };
+    const ptsHtml = (sec.pts.length ? sec.pts : ['']).map((pt, i) => `
+      <div class="hz-pt-row">
+        <textarea class="hz-pt-ta" rows="1"
+          oninput="hzUpdatePt('${p.id}','${s.key}',${i},this.value);autoResizeHz(this)"
+          onfocus="autoResizeHz(this)"
+          placeholder="Descripción...">${esc(pt)}</textarea>
+        ${sec.pts.length > 1
+          ? `<button class="hz-pt-del" onclick="hzDelPt('${p.id}','${s.key}',${i})">×</button>`
+          : ''}
+      </div>`).join('');
+
+    const calBtns = ['cr','de','pa'].map(c => {
+      const labels = {cr:'Crítico',de:'Deficiente',pa:'Parcial'};
+      return `<button class="hz-cal-btn ${c} ${sec.cal===c?'sel':''}"
+        onclick="hzSetCal('${p.id}','${s.key}','${c}')">${labels[c]}</button>`;
+    }).join('');
+
+    return `<div class="hz-sec">
+      <div class="hz-sec-head">
+        <span class="hz-sec-label">${s.label}</span>
+        <div class="hz-cal-btns">${calBtns}</div>
+      </div>
+      <div class="hz-pts" id="hz-pts-${p.id}-${s.key}">${ptsHtml}</div>
+      <button class="hz-add-btn" onclick="hzAddPt('${p.id}','${s.key}')">+ Agregar punto</button>
+      <textarea class="hz-obs-ta" rows="2"
+        placeholder="Observación general..."
+        oninput="hzUpdateObs('${p.id}','${s.key}',this.value)">${esc(sec.obs||'')}</textarea>
+    </div>`;
+  }).join('');
+
+  return `<div class="hz-panel">
+    <div class="hz-panel-title">HALLAZGOS · PUNTOS CRÍTICOS · ÁREAS DE OPORTUNIDAD</div>
+    ${secsHtml}
+    <div class="hz-nivel-bar">
+      <span class="hz-nivel-lbl">Nivel general de esta foto</span>
+      <span class="hz-nivel-badge" style="background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
+    </div>
+  </div>`;
+}
+
+function _hzNivel(hz) {
+  const cals = [hz.hall?.cal, hz.crit?.cal, hz.op?.cal].filter(Boolean);
+  if (!cals.length) return { label: 'Sin calificar', bg: '#F1EFE8', color: '#5F5E5A' };
+  if (cals.includes('cr')) return { label: 'Crítico',    bg: '#FCEBEB', color: '#C0392B' };
+  if (cals.includes('de')) return { label: 'Deficiente', bg: '#FFF3E0', color: '#E07B00' };
+  return { label: 'Parcial', bg: '#F0FDF4', color: '#2E7D32' };
+}
+
+function _hzGet(pid) {
+  const p = findPhoto(pid);
+  if (!p) return null;
+  if (!p.hallazgos) p.hallazgos = _hzDefault();
+  return p;
+}
+
+function hzSetCal(pid, sec, cal) {
+  const p = _hzGet(pid);
+  if (!p) return;
+  p.hallazgos[sec].cal = p.hallazgos[sec].cal === cal ? null : cal;
+  markDirty();
+  renderGrid();
+}
+
+function hzUpdatePt(pid, sec, idx, val) {
+  const p = _hzGet(pid);
+  if (!p) return;
+  p.hallazgos[sec].pts[idx] = sanitizarTexto(val);
+  markDirty();
+}
+
+function hzAddPt(pid, sec) {
+  const p = _hzGet(pid);
+  if (!p) return;
+  p.hallazgos[sec].pts.push('');
+  markDirty();
+  renderGrid();
+  // Focus en el último textarea del grupo
+  setTimeout(() => {
+    const list = document.getElementById(`hz-pts-${pid}-${sec}`);
+    if (list) {
+      const tas = list.querySelectorAll('.hz-pt-ta');
+      if (tas.length) { tas[tas.length-1].focus(); autoResizeHz(tas[tas.length-1]); }
+    }
+  }, 50);
+}
+
+function hzDelPt(pid, sec, idx) {
+  const p = _hzGet(pid);
+  if (!p) return;
+  p.hallazgos[sec].pts.splice(idx, 1);
+  if (!p.hallazgos[sec].pts.length) p.hallazgos[sec].pts = [''];
+  markDirty();
+  renderGrid();
+}
+
+function hzUpdateObs(pid, sec, val) {
+  const p = _hzGet(pid);
+  if (!p) return;
+  p.hallazgos[sec].obs = val;
+  markDirty();
+}
+
+function autoResizeHz(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
 /* Card actions */
@@ -4208,12 +4364,48 @@ function buildReport() {
       ).join('');
       const notes = p.notes.filter(n => n.trim());
       const imgSrc = p.storageB64 ? 'data:image/jpeg;base64,' + p.storageB64 : (p.displayUrl || '');
+
+      // Hallazgos en reporte
+      const hz = p.hallazgos;
+      const hzHtml = hz ? (() => {
+        const secs = [
+          { key:'hall', label:'Hallazgos' },
+          { key:'crit', label:'Puntos críticos' },
+          { key:'op',   label:'Áreas de oportunidad' },
+        ];
+        const CAL_STYLE = {
+          cr: 'background:#FCEBEB;color:#C0392B',
+          de: 'background:#FFF3E0;color:#E07B00',
+          pa: 'background:#F0FDF4;color:#2E7D32',
+        };
+        const CAL_LBL = { cr:'Crítico', de:'Deficiente', pa:'Parcial' };
+        const rows = secs.map(s => {
+          const sec = hz[s.key];
+          if (!sec || (!sec.cal && !sec.pts.some(pt => pt.trim()) && !sec.obs)) return '';
+          const badge = sec.cal
+            ? `<span style="font-size:.56rem;font-weight:700;padding:1px 7px;border-radius:10px;${CAL_STYLE[sec.cal]}">${CAL_LBL[sec.cal]}</span>`
+            : '';
+          const pts = (sec.pts||[]).filter(pt => pt.trim())
+            .map(pt => `<div style="font-size:.65rem;color:#2D3A3F;margin:.1rem 0 0 .6rem">· ${esc(pt)}</div>`).join('');
+          const obs = sec.obs ? `<div style="font-size:.63rem;color:#8A9096;font-style:italic;margin-top:.2rem">${esc(sec.obs)}</div>` : '';
+          return `<div style="margin-top:.3rem">
+            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+              <span style="font-size:.58rem;font-weight:700;letter-spacing:.08em;color:#8A9096">${s.label.toUpperCase()}</span>
+              ${badge}
+            </div>
+            ${pts}${obs}
+          </div>`;
+        }).filter(Boolean).join('');
+        return rows ? `<div style="margin-top:.4rem;padding-top:.4rem;border-top:1px solid #E5E2DC">${rows}</div>` : '';
+      })() : '';
+
       return `<div class="rpt-photo">
         <img src="${imgSrc}" alt="" loading="lazy">
         ${mkrs}
         <div class="rpt-caption">
           <span class="rpt-badge" style="background:${col}">${icon} ${lbl}</span>
           ${notes.map(n => `<div class="rpt-note">${esc(n)}</div>`).join('')}
+          ${hzHtml}
         </div>
       </div>`;
     }).join('');
