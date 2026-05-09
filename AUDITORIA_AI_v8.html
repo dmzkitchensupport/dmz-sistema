@@ -1761,7 +1761,7 @@ td:hover .hz-edit-hint { opacity: 1; }
     <div class="cl2-header">
       <div>
         <div class="cl2-title">EVALUACIÓN DE CLIMA LABORAL</div>
-        <div class="cl2-sub">CAPTURA MULTI-COLABORADOR · 13 PREGUNTAS ESTÁNDAR</div>
+        <div class="cl2-sub" id="cl2-meta-sub">CAPTURA MULTI-COLABORADOR · 13 PREGUNTAS ESTÁNDAR</div>
       </div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
         <!-- Upload documento -->
@@ -5289,144 +5289,162 @@ const CL2_STATE = {
     { id: 'c3', nombre: 'Colaborador C', respuestas: {} },
     { id: 'c4', nombre: 'Colaborador D', respuestas: {} },
     { id: 'c5', nombre: 'Colaborador E', respuestas: {} },
+    { id: 'c6', nombre: 'Colaborador F', respuestas: {} },
+    { id: 'c7', nombre: 'Colaborador G', respuestas: {} },
+    { id: 'c8', nombre: 'Colaborador H', respuestas: {} },
+    { id: 'c9', nombre: 'Colaborador I', respuestas: {} },
   ],
   activoId: 'c1',
   resumen: null,
   generadoEn: null,
+  meta: {},   // datos generales del documento: empresa, fecha, evaluador, puestos, panorama
 };
 
-let _cl2Counter = 6; // next colaborador id counter
+let _cl2Counter = 10;
 
 /* ── Importar documento de clima laboral ─────────────────────── *
- * Lee un archivo TXT/PDF y mapea el texto a las 13 preguntas
- * estándar del colaborador activo.
+ * Formato real detectado:
+ *   - Tabla DATOS GENERALES (empresa, evaluador, fecha, puestos)
+ *   - Tabla PANORAMA GENERAL (observaciones generales)
+ *   - 13 preguntas numeradas, cada una con respuestas A-I por colaborador
+ *   - Sección ANÁLISIS DE RESULTADOS al final
  *
- * FORMATO ESPERADO (TXT):
- *   Colaborador: Juan López
- *   1. Me gusta mucho mi trabajo...
- *   2. Mi jefe es...
- *   (o separado por líneas en blanco, o por "Pregunta N:")
- *
- * Si el doc no tiene numeración, reparte párrafos en orden.
+ * El parser:
+ *   1. Detecta datos generales y los guarda en CL2_STATE.meta
+ *   2. Lee cada pregunta y distribuye respuestas A-I en los colaboradores
+ *   3. Crea/renombra colaboradores según el número de respondentes detectados
+ *   4. Guarda el panorama general como observación del primer colaborador
  * ─────────────────────────────────────────────────────────────── */
 async function climaImportarDocumento(input) {
   const file = input.files[0];
   if (!file) return;
   input.value = '';
-
   showToast('Leyendo documento...');
 
   let text = '';
   try {
-    if (file.name.endsWith('.pdf')) {
-      // PDF: usar html2canvas no aplica — leer como texto plano via FileReader
-      // Para PDF real se necesitaría PDF.js; aquí extraemos el texto legible
-      text = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = e => {
-          // Intentar extraer texto del PDF (funciona para PDFs de texto, no escaneados)
-          const raw = new Uint8Array(e.target.result);
-          let str = '';
-          for (let i = 0; i < raw.length; i++) {
-            const c = raw[i];
-            if (c >= 32 && c < 127) str += String.fromCharCode(c);
-            else if (c === 10 || c === 13) str += '\n';
-          }
-          // Filtrar ruido de PDF y extraer texto legible
-          str = str.replace(/[^\x20-\x7E\n\xC0-\xFF\u00C0-\u017E]+/g, ' ')
-                   .replace(/\s{3,}/g, '\n').trim();
-          res(str);
-        };
-        r.onerror = rej;
-        r.readAsArrayBuffer(file);
-      });
-    } else {
-      // TXT / DOCX como texto plano
-      text = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = e => res(e.target.result);
-        r.onerror = rej;
-        r.readAsText(file, 'UTF-8');
-      });
-    }
+    text = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result);
+      r.onerror = rej;
+      // TXT directo; para DOCX leer como texto (el contenido ya viene como texto plano del upload)
+      r.readAsText(file, 'UTF-8');
+    });
   } catch(e) {
-    showToast('Error al leer el archivo: ' + e.message);
+    showToast('Error al leer: ' + e.message);
     return;
   }
 
-  if (!text.trim()) { showToast('El documento está vacío o no se pudo leer'); return; }
+  if (!text.trim()) { showToast('Documento vacío'); return; }
 
-  // ── Parser de texto ───────────────────────────────────────────
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  // ── Extraer datos generales ────────────────────────────────────
+  const meta = {};
+  const empresaM = text.match(/Empresa\s*\/\s*Unidad[:\s|]+([^\n|]+)/i);
+  const fechaM   = text.match(/Fecha de evaluaci[oó]n[:\s|]+([^\n|]+)/i);
+  const evaluM   = text.match(/Evaluador[:\s|]+([^\n|]+)/i);
+  const puestosM = text.match(/Puesto\(s\) evaluado\(s\)[:\s|]+([^\n|]+)/i);
+  if (empresaM) meta.empresa  = empresaM[1].trim();
+  if (fechaM)   meta.fecha    = fechaM[1].trim();
+  if (evaluM)   meta.evaluador= evaluM[1].trim();
+  if (puestosM) meta.puestos  = puestosM[1].trim();
+  CL2_STATE.meta = meta;
 
-  // Detectar nombre de colaborador si viene indicado
-  let nombreColaborador = '';
-  const nombreMatch = lines.find(l => /^colaborador[:\s]/i.test(l));
-  if (nombreMatch) nombreColaborador = nombreMatch.replace(/^colaborador[:\s]*/i, '').trim();
-
-  // Intentar mapear respuestas por número (1. / 1: / Pregunta 1)
-  const respuestasPorNum = {};
-  let currentNum = null;
-  let currentText = [];
-
-  lines.forEach(line => {
-    // Detectar línea de pregunta numerada: "1.", "1:", "Pregunta 1:", "P1."
-    const numMatch = line.match(/^(?:pregunta\s*)?(\d{1,2})[.:)]\s*(.*)/i);
-    if (numMatch) {
-      if (currentNum !== null && currentText.length) {
-        respuestasPorNum[currentNum] = currentText.join(' ').trim();
-      }
-      currentNum = parseInt(numMatch[1]);
-      currentText = numMatch[2] ? [numMatch[2]] : [];
-    } else if (currentNum !== null && !/^colaborador[:\s]/i.test(line)) {
-      currentText.push(line);
-    }
-  });
-  if (currentNum !== null && currentText.length) {
-    respuestasPorNum[currentNum] = currentText.join(' ').trim();
+  // Actualizar campo cliente si está vacío
+  if (meta.empresa && !STATE.client) {
+    STATE.client = meta.empresa;
+    const el = document.getElementById('inp-client');
+    if (el) el.value = meta.empresa;
   }
 
-  // Si no hay numeración, repartir párrafos en orden
-  const hasParsed = Object.keys(respuestasPorNum).length > 0;
-  if (!hasParsed) {
-    const parrafos = text.split(/\n{2,}/).map(p => p.replace(/\n/g,' ').trim()).filter(Boolean);
-    parrafos.forEach((p, i) => {
-      if (i < CL2_PREGUNTAS.length) respuestasPorNum[i + 1] = p;
+  // ── Extraer panorama general ───────────────────────────────────
+  const panoramaM = text.match(/Comportamiento general observado[^:]*:([\s\S]*?)(?=PREGUNTAS DE CLIMA|$)/i);
+  const panorama  = panoramaM ? panoramaM[1].replace(/\|/g,' ').trim() : '';
+
+  // ── Extraer respuestas por pregunta ───────────────────────────
+  // Detectar letras de colaboradores presentes (A, B, C...)
+  const letrasDetect = new Set();
+  const letraRE = /^\*?\*?([A-I])\*?\*?\s*[:|-]/gm;
+  let m;
+  while ((m = letraRE.exec(text)) !== null) letrasDetect.add(m[1]);
+  const letras = [...letrasDetect].sort();
+  const numColabs = letras.length || 9;
+
+  // Asegurar que hay suficientes colaboradores en CL2_STATE
+  while (CL2_STATE.colaboradores.length < numColabs) {
+    const idx = CL2_STATE.colaboradores.length;
+    const letra = String.fromCharCode(65 + idx);
+    CL2_STATE.colaboradores.push({
+      id: 'c' + (idx+1),
+      nombre: 'Colaborador ' + letra,
+      respuestas: {}
     });
   }
 
-  if (!Object.keys(respuestasPorNum).length) {
-    showToast('No se detectaron respuestas en el documento');
-    return;
-  }
+  // Parsear bloque por pregunta numerada
+  // Cada pregunta: "N. ¿texto?" seguido de respuestas A: ... B: ...
+  const preguntaBlocks = text.split(/(?=\*?\*?\d{1,2}\.\s+¿)/);
 
-  // ── Aplicar al colaborador activo ────────────────────────────
-  const colabId = CL2_STATE.activeColabId || CL2_STATE.colaboradores[0]?.id;
-  const colab   = CL2_STATE.colaboradores.find(c => c.id === colabId);
-  if (!colab) { showToast('Sin colaborador activo'); return; }
+  preguntaBlocks.forEach(block => {
+    const numM = block.match(/^(\d{1,2})\.\s+/);
+    if (!numM) return;
+    const qIdx = parseInt(numM[1]) - 1;
+    if (qIdx < 0 || qIdx >= CL2_PREGUNTAS.length) return;
 
-  // Actualizar nombre si se detectó
-  if (nombreColaborador) colab.nombre = nombreColaborador;
+    // Extraer respuesta por letra: "A: texto" hasta la siguiente letra
+    letras.forEach((letra, li) => {
+      const letraNext = letras[li + 1];
+      // Regex que captura desde "Letra:" hasta la siguiente letra o fin de bloque
+      const rgx = letraNext
+        ? new RegExp(`\\*?\\*?${letra}\\*?\\*?\\s*[:\\|]\\s*([\\s\\S]*?)(?=\\*?\\*?${letraNext}\\*?\\*?\\s*[:\\|])`, 'i')
+        : new RegExp(`\\*?\\*?${letra}\\*?\\*?\\s*[:\\|]\\s*([\\s\\S]*?)(?=Observaciones|$)`, 'i');
+      const respM = block.match(rgx);
+      if (!respM) return;
 
-  // Mapear respuestas — índice 1-based → pregunta
-  Object.entries(respuestasPorNum).forEach(([num, resp]) => {
-    const idx = parseInt(num) - 1;
-    if (idx >= 0 && idx < CL2_PREGUNTAS.length) {
-      if (!colab.respuestas) colab.respuestas = {};
-      colab.respuestas[idx] = resp;
-    }
+      let resp = respM[1]
+        .replace(/\|\s*/g, ' ')
+        .replace(/\*\*/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
+      if (!resp) return;
+
+      // Guardar en el colaborador correspondiente
+      const colabIdx = letras.indexOf(letra);
+      if (colabIdx >= 0 && colabIdx < CL2_STATE.colaboradores.length) {
+        const colab = CL2_STATE.colaboradores[colabIdx];
+        if (!colab.respuestas) colab.respuestas = {};
+        colab.respuestas[qIdx] = resp;
+      }
+    });
   });
 
-  const total = Object.keys(respuestasPorNum).length;
+  // Guardar panorama en el primer colaborador como context extra
+  if (panorama && CL2_STATE.colaboradores[0]) {
+    CL2_STATE.meta.panorama = panorama;
+  }
+
   markDirty();
   buildClima2View();
-  showToast(`Documento importado — ${total} respuesta${total !== 1 ? 's' : ''} mapeadas a ${colab.nombre}`);
+
+  const total = letras.length;
+  showToast(`Documento importado — ${total} colaboradores · ${CL2_PREGUNTAS.length} preguntas mapeadas`);
 }
 
 function buildClima2View() {
   renderCl2Tabs();
   renderCl2Panel(CL2_STATE.activoId);
   if (CL2_STATE.resumen) renderCl2Resumen(CL2_STATE.resumen);
+  // Mostrar datos del documento importado
+  const sub = document.getElementById('cl2-meta-sub');
+  if (sub && CL2_STATE.meta?.empresa) {
+    const m = CL2_STATE.meta;
+    sub.textContent = [
+      m.empresa,
+      m.fecha    ? 'Fecha: ' + m.fecha    : '',
+      m.evaluador? 'Evaluador: ' + m.evaluador : '',
+      m.puestos  ? m.puestos              : '',
+    ].filter(Boolean).join(' · ');
+  }
 }
 
 function renderCl2Tabs() {
