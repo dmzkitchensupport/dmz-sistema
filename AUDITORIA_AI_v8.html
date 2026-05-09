@@ -1764,6 +1764,15 @@ td:hover .hz-edit-hint { opacity: 1; }
         <div class="cl2-sub" id="cl2-meta-sub">CAPTURA MULTI-COLABORADOR · 13 PREGUNTAS ESTÁNDAR</div>
       </div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+        <!-- Toggle vista -->
+        <div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+          <button id="btn-vista-individual" onclick="cl2SetVista('individual')"
+            style="padding:.35rem .75rem;font-size:.65rem;font-weight:700;border:none;cursor:pointer;
+            background:var(--dark);color:#fff;transition:all .15s">Por colaborador</button>
+          <button id="btn-vista-pregunta" onclick="cl2SetVista('pregunta')"
+            style="padding:.35rem .75rem;font-size:.65rem;font-weight:700;border:none;cursor:pointer;
+            background:transparent;color:var(--mid);transition:all .15s">Por pregunta</button>
+        </div>
         <!-- Upload documento -->
         <label class="btn btn-outline" style="font-size:.65rem;cursor:pointer;display:flex;align-items:center;gap:.35rem"
           title="Carga un documento TXT o PDF con las respuestas y se mapean automáticamente">
@@ -5507,6 +5516,87 @@ function saveCl2CurrentPanel() {
   });
   const nameEl = document.getElementById('cl2-nombre-input');
   if (nameEl) c.nombre = nameEl.value.trim() || c.nombre;
+}
+
+let _cl2Vista = 'individual';
+
+function cl2SetVista(vista) {
+  _cl2Vista = vista;
+  // Update toggle buttons
+  const bInd = document.getElementById('btn-vista-individual');
+  const bPre = document.getElementById('btn-vista-pregunta');
+  if (bInd) { bInd.style.background = vista === 'individual' ? 'var(--dark)' : 'transparent'; bInd.style.color = vista === 'individual' ? '#fff' : 'var(--mid)'; }
+  if (bPre) { bPre.style.background = vista === 'pregunta'   ? 'var(--dark)' : 'transparent'; bPre.style.color = vista === 'pregunta'   ? '#fff' : 'var(--mid)'; }
+
+  const tabsWrap  = document.getElementById('cl2-tabs-wrap');
+  const pregWrap  = document.getElementById('cl2-pregunta-wrap');
+
+  if (vista === 'pregunta') {
+    if (tabsWrap) tabsWrap.style.display = 'none';
+    if (!pregWrap) {
+      const div = document.createElement('div');
+      div.id = 'cl2-pregunta-wrap';
+      tabsWrap.parentNode.insertBefore(div, tabsWrap.nextSibling);
+    }
+    renderCl2VistaPregunta();
+  } else {
+    if (tabsWrap) tabsWrap.style.display = '';
+    const pw = document.getElementById('cl2-pregunta-wrap');
+    if (pw) pw.innerHTML = '';
+    renderCl2Panel(CL2_STATE.activoId);
+  }
+}
+
+function renderCl2VistaPregunta() {
+  const wrap = document.getElementById('cl2-pregunta-wrap');
+  if (!wrap) return;
+
+  const colabs = CL2_STATE.colaboradores;
+  // Solo mostrar colaboradores con al menos 1 respuesta
+  const activos = colabs.filter(c => Object.values(c.respuestas).some(r => r?.trim()));
+  const todos   = activos.length ? activos : colabs;
+
+  const html = CL2_PREGUNTAS.map((q, qi) => {
+    const respRows = todos.map(c => {
+      const resp = c.respuestas[qi]?.trim();
+      if (!resp) return '';
+      // Extraer letra del nombre (Colaborador A → A, Ingrid (Cocinera) → inicial)
+      const letraM = c.nombre.match(/Colaborador\s+([A-L])/i);
+      const letra  = letraM ? letraM[1] : c.nombre.charAt(0).toUpperCase();
+      const nombreCorto = c.nombre.replace(/Colaborador\s+[A-L]\s*[-–]?\s*/i, '').trim() || c.nombre;
+      return `<div style="display:flex;gap:.75rem;padding:.65rem 0;border-bottom:1px solid var(--border);align-items:flex-start">
+        <div style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--gold);
+          color:#fff;font-size:.62rem;font-weight:800;display:flex;align-items:center;
+          justify-content:center;margin-top:2px">${letra}</div>
+        <div style="flex:1">
+          <div style="font-size:.68rem;font-weight:700;color:var(--mid);margin-bottom:.15rem">
+            ${esc(c.nombre)}
+          </div>
+          <div style="font-size:.8rem;color:var(--dark);line-height:1.55;text-align:justify">
+            ${esc(resp)}
+          </div>
+        </div>
+      </div>`;
+    }).filter(Boolean).join('');
+
+    if (!respRows) return '';
+
+    return `<div style="background:#fff;border-radius:var(--r);border:1px solid var(--border);
+      margin-bottom:1rem;overflow:hidden">
+      <div style="background:var(--dark);padding:.6rem 1.1rem;display:flex;align-items:center;gap:.6rem">
+        <span style="background:var(--gold);color:#fff;font-size:.65rem;font-weight:800;
+          width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
+          justify-content:center;flex-shrink:0">${qi+1}</span>
+        <span style="font-size:.82rem;font-weight:700;color:#fff;letter-spacing:.02em">
+          ${esc(q)}
+        </span>
+      </div>
+      <div style="padding:.3rem 1.1rem">${respRows}</div>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  wrap.innerHTML = html || `<div style="padding:2rem;text-align:center;color:var(--mid)">
+    Sin respuestas cargadas. Carga el documento primero.</div>`;
 }
 
 function renderCl2Panel(id) {
