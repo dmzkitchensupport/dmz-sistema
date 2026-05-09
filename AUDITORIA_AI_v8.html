@@ -568,9 +568,10 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
   display: flex; align-items: center; justify-content: space-between;
   padding: .45rem .6rem;
   border-top: 1px solid var(--border);
-  margin: 0 -.6rem -.6rem;  /* sangra hasta los bordes del card-body */
+  margin: 0 -.6rem -.6rem;
   gap: .5rem;
   background: var(--cream);
+  position: relative;
 }
 .card-fname { font-size: .66rem; color: var(--mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .card-status-dot {
@@ -580,7 +581,32 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
 .card-status-dot.confirmed { background: var(--green); }
 .card-status-dot.ai-ready  { background: var(--ai); }
 .card-status-dot.pending   { background: var(--amber); }
-.btn-del-card {
+.btn-move-card {
+  border: 1px solid var(--border); background: #fff; color: var(--mid);
+  padding: .22rem .55rem; border-radius: 4px;
+  font-size: .62rem; font-weight: 600; letter-spacing: .04em;
+  cursor: pointer; transition: all .15s; flex-shrink: 0;
+}
+.btn-move-card:hover { background: #EEF4FF; border-color: #378ADD; color: #185FA5; }
+.move-menu {
+  position: absolute; bottom: 2.2rem; right: .5rem;
+  background: #fff; border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12); z-index: 200;
+  min-width: 180px; overflow: hidden;
+}
+.move-menu-title {
+  font-size: .56rem; font-weight: 700; letter-spacing: .14em;
+  color: var(--mid); padding: .4rem .7rem .25rem;
+  border-bottom: 1px solid var(--border); background: var(--cream);
+}
+.move-menu-item {
+  display: block; width: 100%; text-align: left;
+  padding: .42rem .7rem; font-size: .7rem; color: var(--dark);
+  background: none; border: none; cursor: pointer; transition: background .1s;
+  font-family: var(--f-b);
+}
+.move-menu-item:hover { background: var(--off); color: var(--gold); }
+
   border: 1px solid var(--border); background: #fff; color: var(--mid);
   padding: .22rem .55rem; border-radius: 4px;
   font-size: .62rem; font-weight: 600; letter-spacing: .04em;
@@ -3889,6 +3915,10 @@ function buildCard(p) {
         <button class="btn-del-card" onclick="delPhoto('${p.id}')" title="Eliminar foto">
           Eliminar
         </button>
+        <button class="btn-move-card" onclick="toggleMoveMenu('${p.id}', this)" title="Mover a otra área">
+          Mover
+        </button>
+        <div class="move-menu" id="move-menu-${p.id}" style="display:none"></div>
       </div>
     </div>
   </div>`;
@@ -4112,6 +4142,64 @@ function delNote(pid, idx) {
   if (!p || p.notes.length <= 1) return;
   p.notes.splice(idx, 1);
   refreshCard(pid);
+}
+
+function toggleMoveMenu(pid, btn) {
+  // Cerrar cualquier menú abierto
+  document.querySelectorAll('.move-menu').forEach(m => {
+    if (m.id !== 'move-menu-' + pid) { m.style.display = 'none'; }
+  });
+
+  const menu = document.getElementById('move-menu-' + pid);
+  if (!menu) return;
+
+  if (menu.style.display === 'block') {
+    menu.style.display = 'none';
+    return;
+  }
+
+  // Construir lista de áreas destino (todas menos la actual)
+  const destAreas = AREAS.filter(a => a.id !== STATE.currentArea);
+  if (!destAreas.length) {
+    showToast('No hay otras áreas disponibles');
+    return;
+  }
+
+  menu.innerHTML = `<div class="move-menu-title">MOVER A</div>` +
+    destAreas.map(a =>
+      `<button class="move-menu-item" onclick="movePhoto('${pid}','${a.id}')">${esc(a.name)}</button>`
+    ).join('');
+
+  menu.style.display = 'block';
+
+  // Cerrar al hacer clic fuera
+  const close = e => {
+    if (!menu.contains(e.target) && e.target !== btn) {
+      menu.style.display = 'none';
+      document.removeEventListener('click', close);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', close), 10);
+}
+
+function movePhoto(pid, destAreaId) {
+  // Encontrar la foto en el área actual
+  const srcAreaId = STATE.currentArea;
+  const srcPhotos = STATE.areas[srcAreaId].photos;
+  const idx = srcPhotos.findIndex(p => p.id === pid);
+  if (idx < 0) return;
+
+  // Mover al área destino
+  const [photo] = srcPhotos.splice(idx, 1);
+  STATE.areas[destAreaId].photos.push(photo);
+
+  const destArea = AREAS.find(a => a.id === destAreaId);
+  showToast(`Foto movida a ${destArea ? destArea.name : destAreaId}`);
+  markDirty();
+  renderGrid();
+  renderAreaNav();
+  updateProgress();
+  updateAnalyzeBtn();
 }
 
 function delPhoto(pid) {
