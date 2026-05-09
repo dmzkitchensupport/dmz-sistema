@@ -581,11 +581,13 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
 .card-status-dot.ai-ready  { background: var(--ai); }
 .card-status-dot.pending   { background: var(--amber); }
 .btn-del-card {
-  border: none; background: none; color: var(--mid);
-  padding: .25rem .5rem; border-radius: 4px;
-  font-size: .78rem; transition: all .15s;
+  border: 1px solid var(--border); background: #fff; color: var(--mid);
+  padding: .22rem .55rem; border-radius: 4px;
+  font-size: .62rem; font-weight: 600; letter-spacing: .04em;
+  cursor: pointer; transition: all .15s; flex-shrink: 0;
+  display: flex; align-items: center; gap: 3px;
 }
-.btn-del-card:hover { background: #fee; color: var(--red); }
+.btn-del-card:hover { background: #FCEBEB; border-color: var(--red); color: var(--red); }
 
 /* Empty state */
 .empty-state {
@@ -3884,7 +3886,9 @@ function buildCard(p) {
       <div class="card-foot" style="margin-top:auto;border-radius:0 0 6px 0;">
         <span class="card-fname">${esc(p.name)}</span>
         <div class="card-status-dot ${statusCls}"></div>
-        <button class="btn-del-card" onclick="delPhoto('${p.id}')" title="Eliminar"></button>
+        <button class="btn-del-card" onclick="delPhoto('${p.id}')" title="Eliminar foto">
+          Eliminar
+        </button>
       </div>
     </div>
   </div>`;
