@@ -5865,23 +5865,31 @@ async function generarResumenClima2() {
     return;
   }
 
-  const prompt = `Eres un consultor experto en gestión de equipos de restaurantes de De La Mora Zumarán (DMZ) Kitchen Support.
+  const prompt = `Eres un auditor senior de calidad y estándares en operaciones de Food & Beverage, especialista en clima laboral y cultura organizacional para De La Mora Zumarán (DMZ) Kitchen Support. Llevas más de 15 años auditando restaurantes en México y Estados Unidos.
 
-A continuación están las respuestas de ${CL2_STATE.colaboradores.length} colaboradores a ${CL2_PREGUNTAS.length} preguntas de evaluación de clima laboral:
+Se realizó una evaluación de clima laboral a ${CL2_STATE.colaboradores.length} colaboradores (identificados como A–L) del establecimiento. A continuación están sus respuestas organizadas por pregunta:
 
 ${consolidado}
 
-Genera un RESUMEN GENERAL consolidado. Para cada pregunta, sintetiza las respuestas en 2-4 oraciones que capturen los puntos en común, diferencias notables y patrones importantes.
+INSTRUCCIONES:
+Para cada pregunta genera un resumen ejecutivo que cumpla con los siguientes criterios:
+- Redacción clara, objetiva y en tercera persona (estilo informe de auditoría)
+- Identifica patrones dominantes, desviaciones y hallazgos relevantes para la operación F&B
+- Usa terminología de industria cuando aplique (mise en place, línea, turno, briefing, estándar, protocolo, etc.)
+- Señala áreas de oportunidad o riesgo operativo cuando el patrón de respuestas lo indique
+- Extensión: 3 a 5 oraciones por pregunta, párrafo continuo sin bullets
+- No menciones letras de colaboradores ni hagas referencias personales
+- Tono: profesional, directo, sin ambigüedades
 
-Responde ÚNICAMENTE con JSON minificado sin markdown ni texto previo, con este formato exacto:
+Responde ÚNICAMENTE con JSON sin markdown ni texto adicional:
 {
   "resumenes": [
-    { "pregunta": 1, "titulo": "texto de la pregunta", "resumen": "síntesis consolidada de todas las respuestas" },
+    { "pregunta": 1, "titulo": "¿Te gusta tu trabajo?", "resumen": "La mayoría del equipo..." },
     ...
   ]
 }
 
-Incluye todas las preguntas que tengan al menos una respuesta. Responde en español profesional y directo.`;
+Incluye todas las preguntas con al menos una respuesta. Español profesional estándar mexicano.`;
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
