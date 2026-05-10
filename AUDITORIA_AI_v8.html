@@ -929,6 +929,76 @@ textarea.note-ta, .cl-section-body,
 }
 .cl2-title { font-family: var(--f-t); font-size: 1.3rem; font-weight: 800; letter-spacing: .05em; color: var(--dark); }
 .cl2-sub { font-size: .6rem; color: var(--mid); letter-spacing: .1em; margin-top: .15rem; }
+/* ── SISTEMA DE PRESENCIA EN TIEMPO REAL ─────────────────────── */
+.section-lock-overlay {
+  position:fixed; inset:0; z-index:9000;
+  background:rgba(26,37,51,.72); backdrop-filter:blur(3px);
+  display:flex; align-items:center; justify-content:center;
+  animation:fadeIn .2s ease;
+}
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.section-lock-card {
+  background:#fff; border-radius:12px; padding:2rem 2.5rem;
+  max-width:420px; width:90%; text-align:center;
+  box-shadow:0 24px 64px rgba(0,0,0,.3);
+  border-top:4px solid var(--gold);
+}
+.section-lock-icon {
+  font-size:2.4rem; margin-bottom:.75rem; display:block;
+}
+.section-lock-title {
+  font-size:1rem; font-weight:800; color:var(--dark);
+  letter-spacing:.04em; margin-bottom:.4rem;
+}
+.section-lock-msg {
+  font-size:.78rem; color:var(--mid); line-height:1.6;
+  margin-bottom:1.2rem;
+}
+.section-lock-user {
+  display:inline-flex; align-items:center; gap:.5rem;
+  background:var(--cream); border:1px solid var(--border);
+  border-radius:20px; padding:.3rem .9rem;
+  font-size:.72rem; font-weight:700; color:var(--dark);
+  margin-bottom:1.2rem;
+}
+.section-lock-dot {
+  width:7px; height:7px; border-radius:50%;
+  background:#27ae60; animation:pulse 1.4s ease infinite;
+}
+@keyframes pulse {
+  0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:.5;transform:scale(1.3)}
+}
+.section-lock-wait {
+  font-size:.65rem; color:var(--mid); letter-spacing:.08em;
+}
+.section-lock-btn {
+  margin-top:1rem; background:var(--dark); color:#fff;
+  border:none; border-radius:6px; padding:.5rem 1.2rem;
+  font-size:.7rem; font-weight:700; cursor:pointer;
+  letter-spacing:.06em;
+}
+.mode-btn.locked-by-other {
+  opacity:.45; cursor:not-allowed; position:relative;
+}
+.mode-btn.locked-by-other::after {
+  content:'🔒'; font-size:.55rem;
+  position:absolute; top:2px; right:4px;
+}
+.presence-bar {
+  display:flex; gap:.5rem; align-items:center;
+  padding:.3rem .8rem; font-size:.6rem; color:var(--mid);
+}
+.presence-pill {
+  display:inline-flex; align-items:center; gap:.3rem;
+  background:rgba(39,174,96,.1); border:1px solid rgba(39,174,96,.3);
+  border-radius:10px; padding:.15rem .55rem;
+  font-size:.6rem; font-weight:700; color:#27ae60;
+}
+.presence-pill-dot {
+  width:5px; height:5px; border-radius:50%; background:#27ae60;
+  animation:pulse 1.4s ease infinite;
+}
 .cl2-metodologia {
   background:#fffdf5; border-left:4px solid var(--gold);
   border-radius:var(--r); padding:1rem 1.3rem;
@@ -1701,6 +1771,10 @@ td:hover .hz-edit-hint { opacity: 1; }
       <button class="mode-btn"        id="btn-rep"       onclick="setMode('rep')">REPORTE</button>
       <button class="mode-btn"        id="btn-hist"      onclick="setMode('hist')">HISTORIAL</button>
       <button class="mode-btn"        id="btn-racreaa"   onclick="setMode('racreaa')">RACREAA</button>
+    </div>
+    <div class="presence-bar" id="presence-bar" style="display:none">
+      <span style="letter-spacing:.08em">EN LÍNEA:</span>
+      <div id="presence-pills"></div>
     </div>
     <!-- Save indicator -->
     <div class="save-wrap">
@@ -6717,6 +6791,283 @@ const HZ_STATE = {
 
 //  START
 init();
+
+/* ── SISTEMA DE PRESENCIA EN TIEMPO REAL ─────────────────────── *
+ * Usa Supabase Realtime para saber qué secciones están ocupadas
+ * Cuando alguien entra a una sección, todos los demás ven el lock
+ * ─────────────────────────────────────────────────────────────── */
+
+const PRESENCE = {
+  channel:     null,
+  currentMode: null,
+  otherUsers:  {},   // { userId: { email, mode, name } }
+  lockOverlay: null,
+  enabled:     false,
+};
+
+// Nombres de sección para mostrar en UI
+const SECTION_NAMES = {
+  cap:     'Captura de fotos',
+  dash:    'Dashboard',
+  ali:     'Alimentos',
+  hz:      'Hallazgos',
+  clima2:  'Clima Laboral',
+  rep:     'Reporte',
+  hist:    'Historial',
+  racreaa: 'RACREAA',
+};
+
+async function presenceInit() {
+  if (!SB.ready || !SB.token) return;
+  if (PRESENCE.channel) {
+    PRESENCE.channel.unsubscribe();
+    PRESENCE.channel = null;
+  }
+
+  // Obtener email del usuario actual
+  let userEmail = localStorage.getItem('dmz_sb_email') || 'Usuario';
+  const userName = userEmail.split('@')[0];
+
+  // Conectar al canal de presencia via Supabase Realtime (WebSocket)
+  const wsUrl = SB.url.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SB.anon + '&vsn=1.0.0';
+
+  PRESENCE.ws = new WebSocket(wsUrl);
+
+  PRESENCE.ws.onopen = () => {
+    PRESENCE.enabled = true;
+    // Unirse al canal dmz-presence
+    PRESENCE.ws.send(JSON.stringify({
+      topic: 'realtime:dmz-presence',
+      event: 'phx_join',
+      payload: { access_token: SB.token },
+      ref: '1'
+    }));
+  };
+
+  PRESENCE.ws.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg.event === 'presence_state' || msg.event === 'presence_diff') {
+        presenceHandleUpdate(msg.payload);
+      }
+    } catch(e) {}
+  };
+
+  PRESENCE.ws.onerror = () => { PRESENCE.enabled = false; };
+  PRESENCE.ws.onclose = () => {
+    PRESENCE.enabled = false;
+    // Reintentar en 10s
+    setTimeout(() => { if (SB.ready) presenceInit(); }, 10000);
+  };
+
+  // Usar polling como fallback (más simple y confiable sin SDK)
+  presenceStartPolling(userName, userEmail);
+}
+
+// ── Polling via tabla presence en Supabase REST ────────────────
+let _presencePollInterval = null;
+
+async function presenceStartPolling(userName, userEmail) {
+  if (_presencePollInterval) clearInterval(_presencePollInterval);
+
+  /* Estrategia: guardar presencia como registro en tabla auditorias
+   * con cliente_nombre = '__presence__' para no mezclar con auditorías reales.
+   * Cada usuario tiene 1 registro de presencia identificado por su userId.
+   * Si la tabla no tiene esa opción, usamos una clave especial en metadata. */
+
+  const PRESENCE_CLIENT = '__dmz_presence__';
+
+  const updateMyPresence = async () => {
+    if (!SB.ready) return;
+    const payload = {
+      cliente_nombre: PRESENCE_CLIENT,
+      auditor_id:     SB.userId,
+      version_app:    '10.0',
+      total_fotos:    0,
+      total_criticos: 0,
+      total_obs:      0,
+      total_correctos:0,
+      pct_cumplimiento: 0,
+      snapshot: {
+        presence: true,
+        user_name:  userName,
+        user_email: userEmail,
+        section:    PRESENCE.currentMode || 'cap',
+        updated_at: new Date().toISOString(),
+      },
+      guardada_en: new Date().toISOString(),
+    };
+    try {
+      // Buscar si ya tengo registro de presencia
+      const existing = await sbFetch('GET',
+        `/rest/v1/auditorias?cliente_nombre=eq.${PRESENCE_CLIENT}&auditor_id=eq.${SB.userId}&select=id`
+      );
+      if (existing && existing.length > 0) {
+        await sbFetch('PATCH',
+          `/rest/v1/auditorias?cliente_nombre=eq.${PRESENCE_CLIENT}&auditor_id=eq.${SB.userId}`,
+          payload, { Prefer: 'return=minimal' });
+      } else {
+        await sbFetch('POST', '/rest/v1/auditorias', payload);
+      }
+    } catch(e) {}
+  };
+
+  const readPresence = async () => {
+    if (!SB.ready) return;
+    try {
+      const cutoff = new Date(Date.now() - 25000).toISOString();
+      const rows = await sbFetch('GET',
+        `/rest/v1/auditorias?cliente_nombre=eq.${PRESENCE_CLIENT}&auditor_id=neq.${SB.userId}&guardada_en=gte.${encodeURIComponent(cutoff)}&select=auditor_id,snapshot,guardada_en`
+      );
+      PRESENCE.otherUsers = {};
+      (rows || []).forEach(r => {
+        if (!r.snapshot?.presence) return;
+        PRESENCE.otherUsers[r.auditor_id] = {
+          name:    r.snapshot.user_name || 'Colega',
+          email:   r.snapshot.user_email || '',
+          section: r.snapshot.section || 'cap',
+        };
+      });
+      presenceUpdateUI();
+    } catch(e) {}
+  };
+
+  await updateMyPresence();
+  await readPresence();
+
+  _presencePollInterval = setInterval(async () => {
+    await updateMyPresence();
+    await readPresence();
+  }, 8000);
+}
+
+function presenceHandleUpdate(payload) {
+  // Actualizar UI con datos del payload de presencia
+  presenceUpdateUI();
+}
+
+function presenceUpdateUI() {
+  const others = Object.values(PRESENCE.otherUsers);
+  const bar    = document.getElementById('presence-bar');
+  const pills  = document.getElementById('presence-pills');
+
+  if (!bar || !pills) return;
+
+  if (others.length === 0) {
+    bar.style.display = 'none';
+    // Quitar locks de todos los botones
+    document.querySelectorAll('.mode-btn.locked-by-other').forEach(b => b.classList.remove('locked-by-other'));
+    return;
+  }
+
+  bar.style.display = 'flex';
+  pills.innerHTML = others.map(u =>
+    `<span class="presence-pill">
+      <span class="presence-pill-dot"></span>
+      ${esc(u.name)} · <em style="font-weight:400">${esc(SECTION_NAMES[u.section] || u.section)}</em>
+    </span>`
+  ).join('');
+
+  // Marcar botones bloqueados
+  Object.keys(SECTION_NAMES).forEach(sec => {
+    const btn = document.getElementById('btn-' + sec);
+    if (!btn) return;
+    const occupant = others.find(u => u.section === sec);
+    btn.classList.toggle('locked-by-other', !!occupant);
+    btn.title = occupant ? `${occupant.name} está trabajando aquí` : '';
+  });
+
+  // Si el usuario está actualmente en una sección bloqueada por otro, mostrar overlay
+  const occupantOfCurrent = others.find(u => u.section === PRESENCE.currentMode);
+  if (occupantOfCurrent) {
+    presenceShowLock(occupantOfCurrent);
+  } else {
+    presenceHideLock();
+  }
+}
+
+function presenceShowLock(occupant) {
+  if (document.getElementById('section-lock-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'section-lock-overlay';
+  overlay.id = 'section-lock-overlay';
+  overlay.innerHTML = `
+    <div class="section-lock-card">
+      <span class="section-lock-icon">🔒</span>
+      <div class="section-lock-title">SECCIÓN EN USO</div>
+      <div class="section-lock-msg">
+        Esta sección está siendo utilizada por otro miembro del equipo en este momento.
+        Espera a que termine para evitar conflictos en la información.
+      </div>
+      <div class="section-lock-user">
+        <span class="section-lock-dot"></span>
+        ${esc(occupant.name)} — ${esc(SECTION_NAMES[PRESENCE.currentMode] || PRESENCE.currentMode)}
+      </div>
+      <div class="section-lock-wait">SE DESBLOQUEARÁ AUTOMÁTICAMENTE</div>
+      <button class="section-lock-btn" onclick="presenceGoBack()">← Ir a otra sección</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function presenceHideLock() {
+  const overlay = document.getElementById('section-lock-overlay');
+  if (overlay) overlay.remove();
+}
+
+function presenceGoBack() {
+  presenceHideLock();
+  setMode('cap'); // Manda a captura (siempre libre)
+}
+
+// ── Registrar sección actual al cambiar de modo ───────────────
+const _origSetMode = setMode;
+function setMode(m) {
+  // Verificar si alguien más está en esa sección
+  const occupant = Object.values(PRESENCE.otherUsers).find(u => u.section === m);
+  if (occupant && m !== 'cap') {
+    // Mostrar lock y no permitir entrar
+    PRESENCE.currentMode = m;
+    _origSetMode(m);
+    presenceShowLock(occupant);
+    return;
+  }
+  presenceHideLock();
+  PRESENCE.currentMode = m;
+  _origSetMode(m);
+  // Actualizar presencia inmediatamente
+  if (PRESENCE.enabled || SB.ready) {
+    const email = localStorage.getItem('dmz_sb_email') || 'Usuario';
+    presenceStartPolling(email.split('@')[0], email);
+  }
+}
+
+// ── Limpiar presencia al cerrar la ventana ────────────────────
+window.addEventListener('beforeunload', () => {
+  if (!SB.ready) return;
+  // Limpiar presencia: marcar como 'away' con timestamp viejo
+  try {
+    const payload = JSON.stringify({
+      guardada_en: new Date(Date.now() - 60000).toISOString(),
+      snapshot: { presence: true, section: 'away', updated_at: new Date(Date.now()-60000).toISOString() }
+    });
+    navigator.sendBeacon(
+      SB.url + '/rest/v1/auditorias?cliente_nombre=eq.__dmz_presence__&auditor_id=eq.' + SB.userId,
+      new Blob([payload], { type: 'application/json' })
+    );
+  } catch(e) {}
+  if (_presencePollInterval) clearInterval(_presencePollInterval);
+});
+
+// Guardar email al hacer login (para el nombre en presencia)
+const _origSbLogin = sbLogin;
+async function sbLogin(email, password) {
+  const result = await _origSbLogin(email, password);
+  if (result) {
+    localStorage.setItem('dmz_sb_email', email);
+    setTimeout(() => presenceInit(), 500);
+  }
+  return result;
+}
 
 //  Palabras clave para clasificación local
 const HZ_KEYS = {
