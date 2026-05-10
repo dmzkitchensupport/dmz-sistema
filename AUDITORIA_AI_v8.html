@@ -998,6 +998,16 @@ textarea.note-ta, .cl-section-body,
   letter-spacing: .14em; display: flex; align-items: center;
   justify-content: space-between;
 }
+.editable-block { position:relative; }
+.editable-block:hover .edit-controls { opacity:1; pointer-events:all; }
+.edit-controls { opacity:0; pointer-events:none; transition:opacity .18s; position:absolute; top:.3rem; right:.3rem; display:flex; gap:.3rem; z-index:10; }
+.edit-btn { background:var(--gold); color:#fff; border:none; border-radius:4px; font-size:.58rem; font-weight:700; padding:.22rem .55rem; cursor:pointer; letter-spacing:.04em; white-space:nowrap; }
+.edit-btn.secondary { background:var(--mid); }
+.edit-btn.danger    { background:var(--red); }
+.edit-btn.ok        { background:#27ae60; }
+.edit-textarea { width:100%; box-sizing:border-box; border:1.5px solid var(--gold); border-radius:5px; padding:.55rem .7rem; font-size:.76rem; line-height:1.6; color:var(--dark); resize:vertical; font-family:inherit; background:#fffdf5; min-height:80px; }
+.edit-toolbar { display:flex; gap:.4rem; align-items:center; margin-top:.35rem; flex-wrap:wrap; }
+.edit-status { font-size:.6rem; color:var(--mid); margin-left:auto; }
 .cl2-resumen-body { padding: .9rem 1.2rem; display: flex; flex-direction: column; gap: .75rem; }
 .cl2-res-item {
   border-radius: 5px; overflow: hidden;
@@ -5932,6 +5942,90 @@ Incluye todas las preguntas que tengan al menos una respuesta. Responde en espa�
   }
 }
 
+/* ── Edición inline de textos de resumen ─────────────────────── */
+
+function makeEditable(containerEl, getText, onSave) {
+  /* Convierte un elemento en editable con corrección ortográfica AI */
+  containerEl.classList.add('editable-block');
+
+  // Botón editar flotante
+  const controls = document.createElement('div');
+  controls.className = 'edit-controls';
+  controls.innerHTML = `<button class="edit-btn" onclick="this.closest('.editable-block')._startEdit()">✏️ Editar</button>`;
+  containerEl.appendChild(controls);
+
+  containerEl._startEdit = function() {
+    const currentText = getText();
+    const ta = document.createElement('textarea');
+    ta.className = 'edit-textarea';
+    ta.value = currentText;
+    ta.rows = Math.max(3, (currentText.match(/\n/g)||[]).length + 3);
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'edit-toolbar';
+    toolbar.innerHTML = `
+      <button class="edit-btn ok" onclick="this.closest('.editable-block')._saveEdit()">✓ Guardar</button>
+      <button class="edit-btn secondary" onclick="this.closest('.editable-block')._fixOrtografia()">🔤 Corregir ortografía</button>
+      <button class="edit-btn danger" onclick="this.closest('.editable-block')._cancelEdit()">✕ Cancelar</button>
+      <span class="edit-status" id="edit-status-${Date.now()}"></span>`;
+
+    // Ocultar contenido original y controles
+    containerEl._origHTML = containerEl.innerHTML;
+    containerEl.innerHTML = '';
+    containerEl.appendChild(ta);
+    containerEl.appendChild(toolbar);
+    containerEl._ta = ta;
+    controls.style.opacity = '0';
+
+    containerEl._saveEdit = function() {
+      const newText = ta.value.trim();
+      if (newText) onSave(newText);
+      markDirty && markDirty();
+    };
+
+    containerEl._cancelEdit = function() {
+      containerEl.innerHTML = containerEl._origHTML;
+      containerEl.appendChild(controls);
+    };
+
+    containerEl._fixOrtografia = async function() {
+      if (!STATE?.apiKey?.startsWith('sk-ant-')) { showToast('API Key requerida'); return; }
+      const statusEl = toolbar.querySelector('.edit-status');
+      statusEl.textContent = 'Corrigiendo…';
+      const textoActual = ta.value.trim();
+      try {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': STATE.apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1024,
+            messages: [{ role: 'user', content:
+              `Corrige la ortografía y gramática del siguiente texto en español. ` +
+              `Mantén el mismo significado, tono profesional y estructura. ` +
+              `Responde ÚNICAMENTE con el texto corregido, sin explicaciones ni comillas:\n\n${textoActual}`
+            }]
+          })
+        });
+        const data = await resp.json();
+        const corregido = data.content?.[0]?.text?.trim();
+        if (corregido) {
+          ta.value = corregido;
+          statusEl.textContent = '✓ Texto corregido';
+          setTimeout(() => statusEl.textContent = '', 3000);
+        }
+      } catch(e) {
+        statusEl.textContent = 'Error: ' + e.message;
+      }
+    };
+  };
+}
+
 function renderCl2AnalisisBlock() {
   /* Agrega fortalezas/focos al final del resumen — UNA SOLA VEZ */
   const resBody = document.getElementById('cl2-resumen-body');
@@ -5972,15 +6066,191 @@ function renderCl2Resumen(resumenes) {
   body.innerHTML = `
     <div class="cl2-resumen-body">
       <div style="font-size:.6rem;color:var(--mid);margin-bottom:.5rem">${resumenes.length} preguntas resumidas${ts ? ' · Generado ' + ts : ''} · POWERED BY DMZ</div>
-      ${resumenes.map(r => `
-        <div class="cl2-res-item">
+      ${resumenes.map((r, ri) => `
+        <div class="cl2-res-item editable-block" id="cl2-res-${ri}">
           <div class="cl2-res-head">
             <span style="background:var(--gold);color:#fff;font-size:.58rem;font-weight:800;padding:.12rem .4rem;border-radius:3px;flex-shrink:0">${r.pregunta}</span>
             <span>${esc(r.titulo)}</span>
           </div>
-          <div class="cl2-res-body">${esc(r.resumen)}</div>
+          <div class="cl2-res-body" id="cl2-res-text-${ri}">${esc(r.resumen)}</div>
+          <div class="edit-controls">
+            <button class="edit-btn" onclick="cl2EditResumen(${ri})">✏️ Editar</button>
+          </div>
         </div>`).join('')}
     </div>`;
+}
+
+/* ── Edición de resumen CLIMA por pregunta ───────────────────── */
+function cl2EditResumen(ri) {
+  const card = document.getElementById(`cl2-res-${ri}`);
+  const textEl = document.getElementById(`cl2-res-text-${ri}`);
+  if (!card || !textEl) return;
+
+  const origText = CL2_STATE.resumen[ri]?.resumen || '';
+  const origHTML = card.innerHTML;
+
+  // Reemplazar contenido con editor
+  const uid = 'est-' + ri;
+  card.innerHTML = `
+    <div class="cl2-res-head" style="margin-bottom:.4rem">
+      <span style="background:var(--gold);color:#fff;font-size:.58rem;font-weight:800;padding:.12rem .4rem;border-radius:3px">${CL2_STATE.resumen[ri]?.pregunta}</span>
+      <span>${esc(CL2_STATE.resumen[ri]?.titulo || '')}</span>
+    </div>
+    <textarea id="ta-${uid}" class="edit-textarea" rows="4">${origText}</textarea>
+    <div class="edit-toolbar">
+      <button class="edit-btn ok" onclick="cl2SaveResumen(${ri})">✓ Guardar</button>
+      <button class="edit-btn secondary" onclick="cl2CorregirResumen(${ri}, '${uid}')">🔤 Corregir ortografía</button>
+      <button class="edit-btn danger" onclick="cl2CancelResumen(${ri}, \`${origHTML.replace(/`/g,"'")}\`)">✕ Cancelar</button>
+      <span class="edit-status" id="${uid}-status"></span>
+    </div>`;
+}
+
+function cl2SaveResumen(ri) {
+  const uid = 'est-' + ri;
+  const ta = document.getElementById('ta-' + uid);
+  if (!ta) return;
+  CL2_STATE.resumen[ri].resumen = ta.value.trim();
+  markDirty();
+  renderCl2Resumen(CL2_STATE.resumen);
+  renderCl2AnalisisBlock();
+  showToast('✓ Resumen guardado');
+}
+
+function cl2CancelResumen(ri, origHTML) {
+  const card = document.getElementById(`cl2-res-${ri}`);
+  if (card) card.innerHTML = origHTML;
+}
+
+async function cl2CorregirResumen(ri, uid) {
+  if (!STATE?.apiKey?.startsWith('sk-ant-')) { showToast('API Key requerida'); return; }
+  const ta = document.getElementById('ta-' + uid);
+  const statusEl = document.getElementById(uid + '-status');
+  if (!ta) return;
+  statusEl.textContent = 'Corrigiendo…';
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': STATE.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content:
+          `Corrige la ortografía y gramática del siguiente texto en español. ` +
+          `Mantén el mismo significado, tono profesional y estructura. ` +
+          `Responde ÚNICAMENTE con el texto corregido, sin explicaciones ni comillas:\n\n${ta.value}`
+        }]
+      })
+    });
+    const data = await resp.json();
+    const corregido = data.content?.[0]?.text?.trim();
+    if (corregido) { ta.value = corregido; statusEl.textContent = '✓ Corregido'; setTimeout(()=>statusEl.textContent='',3000); }
+  } catch(e) { statusEl.textContent = 'Error: ' + e.message; }
+}
+
+/* ── Edición de items de Hallazgos ──────────────────────────── */
+function hzEditItem(cat, idx) {
+  const li = document.getElementById(`hz-item-${cat}-${idx}`);
+  if (!li) return;
+  const origText = HZ_STATE.clasificados[cat][idx];
+  const uid = `hz-${cat}-${idx}`;
+  li.innerHTML = `
+    <textarea id="ta-${uid}" class="edit-textarea" rows="2" style="margin:.2rem 0">${origText}</textarea>
+    <div class="edit-toolbar" style="margin-top:.2rem">
+      <button class="edit-btn ok" onclick="hzSaveItem('${cat}',${idx})">✓ Guardar</button>
+      <button class="edit-btn secondary" onclick="hzCorregirItem('${cat}',${idx},'${uid}')">🔤 Corregir</button>
+      <button class="edit-btn danger" onclick="renderSummaries()">✕ Cancelar</button>
+      <span class="edit-status" id="${uid}-status"></span>
+    </div>`;
+}
+
+function hzSaveItem(cat, idx) {
+  const uid = `hz-${cat}-${idx}`;
+  const ta = document.getElementById('ta-' + uid);
+  if (!ta) return;
+  HZ_STATE.clasificados[cat][idx] = ta.value.trim();
+  markDirty();
+  renderSummaries();
+  showToast('✓ Hallazgo guardado');
+}
+
+async function hzCorregirItem(cat, idx, uid) {
+  if (!STATE?.apiKey?.startsWith('sk-ant-')) { showToast('API Key requerida'); return; }
+  const ta = document.getElementById('ta-' + uid);
+  const statusEl = document.getElementById(uid + '-status');
+  if (!ta) return;
+  statusEl.textContent = 'Corrigiendo…';
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json','x-api-key':STATE.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:512,
+        messages:[{ role:'user', content:`Corrige ortografía y gramática. Solo devuelve el texto corregido:\n\n${ta.value}` }] })
+    });
+    const data = await resp.json();
+    const c = data.content?.[0]?.text?.trim();
+    if (c) { ta.value = c; statusEl.textContent = '✓'; setTimeout(()=>statusEl.textContent='',3000); }
+  } catch(e) { statusEl.textContent = 'Error'; }
+}
+
+/* ── Edición de items de Plan de Acción ─────────────────────── */
+function planEditItem(idx) {
+  const card = document.getElementById(`plan-card-${idx}`);
+  if (!card) return;
+  const item = HZ_STATE.planAccion[idx];
+  const uid = `plan-${idx}`;
+  card.innerHTML = `
+    <div style="font-size:.6rem;font-weight:800;color:var(--mid);margin-bottom:.4rem">HALLAZGO ${idx+1} · ${(item.categoria||'').toUpperCase()}</div>
+    <div style="font-size:.62rem;font-weight:700;margin-bottom:.25rem">Hallazgo</div>
+    <textarea id="ta-${uid}-h" class="edit-textarea" rows="2">${item.hallazgo||''}</textarea>
+    <div style="font-size:.62rem;font-weight:700;margin:.5rem 0 .25rem">Solución</div>
+    <textarea id="ta-${uid}-s" class="edit-textarea" rows="2">${item.solucion||''}</textarea>
+    <div style="font-size:.62rem;font-weight:700;margin:.5rem 0 .25rem">Mejora de proceso</div>
+    <textarea id="ta-${uid}-m" class="edit-textarea" rows="2">${item.mejora||''}</textarea>
+    <div class="edit-toolbar" style="margin-top:.5rem">
+      <button class="edit-btn ok" onclick="planSaveItem(${idx})">✓ Guardar</button>
+      <button class="edit-btn secondary" onclick="planCorregirItem(${idx},'${uid}')">🔤 Corregir ortografía</button>
+      <button class="edit-btn danger" onclick="renderPlanAccion()">✕ Cancelar</button>
+      <span class="edit-status" id="${uid}-status"></span>
+    </div>`;
+}
+
+function planSaveItem(idx) {
+  const uid = `plan-${idx}`;
+  HZ_STATE.planAccion[idx].hallazgo = document.getElementById(`ta-${uid}-h`)?.value.trim() || '';
+  HZ_STATE.planAccion[idx].solucion = document.getElementById(`ta-${uid}-s`)?.value.trim() || '';
+  HZ_STATE.planAccion[idx].mejora   = document.getElementById(`ta-${uid}-m`)?.value.trim() || '';
+  markDirty();
+  renderPlanAccion();
+  showToast('✓ Plan guardado');
+}
+
+async function planCorregirItem(idx, uid) {
+  if (!STATE?.apiKey?.startsWith('sk-ant-')) { showToast('API Key requerida'); return; }
+  const statusEl = document.getElementById(uid + '-status');
+  statusEl.textContent = 'Corrigiendo…';
+  const fields = ['h','s','m'];
+  for (const f of fields) {
+    const ta = document.getElementById(`ta-${uid}-${f}`);
+    if (!ta || !ta.value.trim()) continue;
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':STATE.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:512,
+          messages:[{role:'user',content:`Corrige ortografía y gramática. Solo devuelve el texto corregido:\n\n${ta.value}`}] })
+      });
+      const data = await resp.json();
+      const c = data.content?.[0]?.text?.trim();
+      if (c) ta.value = c;
+    } catch(e) {}
+  }
+  statusEl.textContent = '✓ Corregido';
+  setTimeout(()=>statusEl.textContent='',3000);
 }
 
 function buildClima2ReportSection() {
@@ -6172,7 +6442,13 @@ function renderSummaries() {
     if (!items.length) {
       ul.innerHTML = `<li class="hz-empty">Sin hallazgos en esta categoría.</li>`;
     } else {
-      ul.innerHTML = items.map(t => `<li class="hz-sum-item">${esc(t)}</li>`).join('');
+      ul.innerHTML = items.map((t, i) => `
+        <li class="hz-sum-item editable-block" id="hz-item-${key}-${i}" style="display:flex;align-items:flex-start;gap:.4rem;padding:.3rem 0">
+          <span style="flex:1">${esc(t)}</span>
+          <div class="edit-controls" style="position:static;opacity:1;pointer-events:all">
+            <button class="edit-btn" style="font-size:.55rem;padding:.15rem .4rem" onclick="hzEditItem('${key}',${i})">✏️</button>
+          </div>
+        </li>`).join('');
     }
   });
 }
@@ -6296,29 +6572,27 @@ function renderPlanAccion() {
     const tcol = TCOL[item.tiempo] || '#888';
     const ccol = CCOL[item.categoria] || '#888';
     const idx  = i;
-    return `<tr>
+    return `<tr id="plan-card-${i}">
       <td style="text-align:center;font-weight:700;color:var(--mid);font-size:.65rem;width:3%">${i+1}</td>
       <td style="width:22%">
         <div class="hz-editable" contenteditable="true"
-          onblur="updatePlanField(${idx},'hallazgo',this.innerText)"
-          title="Clic para editar">${esc(item.hallazgo)}</div>
+          onblur="updatePlanField(${idx},'hallazgo',this.innerText)">${esc(item.hallazgo)}</div>
         <span class="tc-pri" style="background:${ccol}">${CLbl[item.categoria]||item.categoria}</span>
-        <div class="hz-edit-hint"> clic para editar</div>
       </td>
-      <td style="width:27%">
+      <td style="width:26%">
         <div class="hz-editable" contenteditable="true"
-          onblur="updatePlanField(${idx},'solucion',this.innerText)"
-          title="Clic para editar">${esc(item.solucion)}</div>
-        <div class="hz-edit-hint"> clic para editar</div>
+          onblur="updatePlanField(${idx},'solucion',this.innerText)">${esc(item.solucion)}</div>
       </td>
-      <td style="width:27%;color:var(--mid);font-style:italic">
+      <td style="width:26%;color:var(--mid);font-style:italic">
         <div class="hz-editable" contenteditable="true"
-          onblur="updatePlanField(${idx},'mejora',this.innerText)"
-          title="Clic para editar">${esc(item.mejora)}</div>
-        <div class="hz-edit-hint"> clic para editar</div>
+          onblur="updatePlanField(${idx},'mejora',this.innerText)">${esc(item.mejora)}</div>
       </td>
-      <td style="text-align:center;width:10%"><span class="tc-pri" style="background:${tcol}">${esc(item.tiempo)}</span></td>
-      <td style="text-align:center;width:11%"><span class="tc-turn">${esc(item.turno)}</span></td>
+      <td style="text-align:center;width:9%"><span class="tc-pri" style="background:${tcol}">${esc(item.tiempo)}</span></td>
+      <td style="text-align:center;width:9%"><span class="tc-turn">${esc(item.turno)}</span></td>
+      <td style="text-align:center;width:5%">
+        <button class="edit-btn secondary" style="font-size:.52rem;padding:.15rem .35rem"
+          onclick="planCorregirFila(${idx})" title="Corregir ortografía">🔤</button>
+      </td>
     </tr>`;
   }).join('');
 
@@ -6327,16 +6601,17 @@ function renderPlanAccion() {
       <tr>
         <th style="width:3%;text-align:center">#</th>
         <th style="width:22%">HALLAZGO</th>
-        <th style="width:27%">SOLUCIÓN A IMPLEMENTAR</th>
-        <th style="width:27%">MEJORA SUGERIDA</th>
-        <th style="width:10%;text-align:center">TIEMPO EST.</th>
-        <th style="width:11%;text-align:center">TURNO</th>
+        <th style="width:26%">SOLUCIÓN A IMPLEMENTAR</th>
+        <th style="width:26%">MEJORA SUGERIDA</th>
+        <th style="width:9%;text-align:center">TIEMPO EST.</th>
+        <th style="width:9%;text-align:center">TURNO</th>
+        <th style="width:5%;text-align:center">🔤</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
   </table>
   <div style="padding:.6rem 1rem;font-size:.62rem;color:var(--mid);border-top:1px solid var(--border);display:flex;align-items:center;gap:.4rem">
-    <span style="color:var(--gold)"></span> Puedes editar cualquier texto haciendo clic directamente sobre él. Los cambios se guardan automáticamente.
+    ✏️ Haz clic en cualquier texto para editar · 🔤 Corrige ortografía por fila
   </div>`;
 
   const ts = new Date(HZ_STATE.generadoEn).toLocaleString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
@@ -6348,6 +6623,33 @@ function updatePlanField(idx, field, value) {
   if (!HZ_STATE.planAccion || !HZ_STATE.planAccion[idx]) return;
   HZ_STATE.planAccion[idx][field] = value.trim();
   markDirty();
+}
+
+async function planCorregirFila(idx) {
+  if (!STATE?.apiKey?.startsWith('sk-ant-')) { showToast('API Key requerida'); return; }
+  const item = HZ_STATE.planAccion[idx];
+  if (!item) return;
+  showToast('Corrigiendo ortografía…');
+  const campos = ['hallazgo','solucion','mejora'];
+  for (const campo of campos) {
+    if (!item[campo]?.trim()) continue;
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':STATE.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:512,
+          messages:[{role:'user',content:`Corrige ortografía y gramática en español. Mantén el mismo significado. Solo devuelve el texto corregido:
+
+${item[campo]}`}] })
+      });
+      const data = await resp.json();
+      const c = data.content?.[0]?.text?.trim();
+      if (c) item[campo] = c;
+    } catch(e) {}
+  }
+  markDirty();
+  renderPlanAccion();
+  showToast('✓ Fila corregida');
 }
 
 function buildHallazgosReportSection() {
