@@ -6368,28 +6368,297 @@ function buildClima2ReportSection() {
 }
 
 async function exportClima2PDF() {
-  if (typeof html2pdf === 'undefined') { showToast('Libreria PDF no disponible'); return; }
+  if (typeof html2pdf === 'undefined') { showToast('Librería PDF no disponible'); return; }
   saveCl2CurrentPanel();
-  const el = document.getElementById('clima2-view');
-  if (!el) return;
-  const btns = el.querySelectorAll('button, .cl2-tabs-bar, .cl2-progress-bar, .cl2-counter, .cl2-colab-header');
-  btns.forEach(b => b.style.display = 'none');
-  const client  = (STATE.client || 'clima').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
-  const dateStr = new Date().toISOString().slice(0,10);
+
+  const meta      = CL2_STATE.meta    || {};
+  const resumen   = CL2_STATE.resumen || [];
+  const col       = CL2_STATE.colaboradores || [];
+  const client    = meta.empresa || STATE.client || 'Cliente';
+  const fecha     = meta.fecha     || new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'});
+  const evaluador = meta.evaluador || '';
+  const puestos   = meta.puestos   || '';
+  const dateStr   = new Date().toISOString().slice(0,10);
+  const logoB64   = STATE.logoB64 || '';
+
+  // ── Helpers ──────────────────────────────────────────────────
+  const e = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const toBulletList = txt => (txt||'').split('\n').filter(Boolean)
+    .map(b => `<li>${e(b)}</li>`).join('');
+
+  const colOrdenados = [...col].sort((a,b) => {
+    const la = (a.nombre.match(/Colaborador\s+([A-L])/i)||[])[1]||'Z';
+    const lb = (b.nombre.match(/Colaborador\s+([A-L])/i)||[])[1]||'Z';
+    return la.localeCompare(lb);
+  });
+  const letra = c => (c.nombre.match(/Colaborador\s+([A-L])/i)||['','?'])[1];
+
+  // ── CSS ───────────────────────────────────────────────────────
+  const css = `
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Helvetica Neue',Arial,sans-serif; color:#1a2533; background:#fff; font-size:9pt; }
+
+    /* ── PORTADA ── */
+    .cover {
+      background:#1a2533; color:#fff;
+      padding:42px 40px 36px; min-height:220px;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:24px; margin-bottom:28px; border-radius:6px;
+      page-break-after: avoid;
+    }
+    .cover-left { flex:1; }
+    .cover-logo { height:38px; max-width:120px; object-fit:contain; margin-bottom:10px; filter:brightness(1.2); display:block; }
+    .cover-brand { font-size:13pt; font-weight:800; letter-spacing:.12em; color:#fff; margin-bottom:2px; }
+    .cover-brand span { color:#c9952a; }
+    .cover-ks { font-size:6pt; letter-spacing:.22em; color:#c9952a; font-weight:700; margin-bottom:12px; }
+    .cover-sep { width:32px; height:2px; background:#c9952a; margin:10px 0; }
+    .cover-lbl { font-size:6pt; letter-spacing:.2em; color:#a0aab5; font-weight:600; }
+    .cover-title { font-size:16pt; font-weight:800; letter-spacing:.04em; color:#fff; line-height:1.15; margin-top:2px; }
+    .cover-sub { font-size:7pt; letter-spacing:.14em; color:#c9952a; font-weight:700; margin-top:4px; }
+    .cover-meta { margin-top:14px; display:flex; flex-direction:column; gap:3px; }
+    .cover-meta-row { font-size:7.5pt; color:#cdd5de; }
+    .cover-meta-row strong { color:#fff; }
+    .cover-right { text-align:right; }
+    .cover-badge { background:rgba(201,149,42,.15); border:1.5px solid #c9952a; border-radius:6px; padding:14px 18px; min-width:110px; }
+    .cover-badge-n { font-size:22pt; font-weight:800; color:#c9952a; line-height:1; }
+    .cover-badge-l { font-size:6pt; letter-spacing:.15em; color:#a0aab5; font-weight:700; margin-top:3px; }
+
+    /* ── HEADER por sección ── */
+    .section-header {
+      background:#1a2533; color:#fff; padding:9px 14px;
+      font-size:7pt; font-weight:800; letter-spacing:.18em;
+      margin-bottom:14px; margin-top:24px; border-radius:4px;
+      page-break-after: avoid;
+    }
+    .section-header.gold { background:#c9952a; }
+
+    /* ── METODOLOGÍA ── */
+    .metodologia-wrap {
+      border:1px solid #dde2e8; border-radius:5px; padding:14px 16px;
+      margin-bottom:20px; page-break-inside: avoid;
+    }
+    .metodologia-titulo { font-size:8pt; font-weight:800; color:#1a2533; letter-spacing:.08em; margin-bottom:8px; }
+    .metodologia-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .metodologia-campo { border-bottom:1px solid #dde2e8; padding-bottom:6px; }
+    .metodologia-label { font-size:6.5pt; font-weight:700; color:#6b7a8d; letter-spacing:.1em; margin-bottom:3px; }
+    .metodologia-valor { font-size:8pt; color:#1a2533; min-height:16px; }
+    .metodologia-full { grid-column:1/-1; border-bottom:1px solid #dde2e8; padding-bottom:6px; }
+    .metodologia-area { border:1px dashed #c9952a; border-radius:4px; min-height:32px; padding:4px 8px; font-size:8pt; color:#1a2533; }
+
+    /* ── ANÁLISIS DE RESULTADOS ── */
+    .analisis-wrap { margin-bottom:20px; page-break-inside: avoid; }
+    .analisis-bloque { margin-bottom:14px; page-break-inside: avoid; }
+    .analisis-tipo {
+      font-size:6.5pt; font-weight:800; letter-spacing:.14em;
+      padding-left:8px; margin-bottom:7px;
+      border-left:3px solid #27ae60; color:#27ae60;
+    }
+    .analisis-tipo.rojo { border-color:#c0392b; color:#c0392b; }
+    .analisis-lista { padding-left:16px; }
+    .analisis-lista li { font-size:8.5pt; color:#1a2533; line-height:1.6; margin-bottom:4px; }
+
+    /* ── RESUMEN POR PREGUNTA ── */
+    .pregunta-card {
+      border:1px solid #dde2e8; border-radius:5px;
+      margin-bottom:14px; overflow:hidden;
+      page-break-inside: avoid;
+    }
+    .pregunta-head {
+      background:#f4f6f8; padding:7px 12px;
+      display:flex; align-items:center; gap:8px;
+      border-bottom:1px solid #dde2e8;
+    }
+    .pregunta-num {
+      background:#c9952a; color:#fff;
+      font-size:7pt; font-weight:800;
+      padding:2px 7px; border-radius:3px; flex-shrink:0;
+    }
+    .pregunta-titulo { font-size:8pt; font-weight:700; color:#1a2533; }
+    .pregunta-body { padding:10px 12px; font-size:8.5pt; color:#1a2533; line-height:1.65; text-align:justify; }
+
+    /* ── RESPUESTAS INDIVIDUALES ── */
+    .resp-table { width:100%; border-collapse:collapse; font-size:8pt; margin-bottom:14px; }
+    .resp-table th { background:#1a2533; color:#fff; padding:6px 10px; font-size:6.5pt; letter-spacing:.1em; font-weight:700; }
+    .resp-table td { padding:6px 10px; border-bottom:1px solid #f0f2f4; vertical-align:top; line-height:1.5; }
+    .resp-table tr:nth-child(even) td { background:#fafbfc; }
+    .resp-question-row td { background:#f4f6f8 !important; font-size:7pt; font-weight:800; letter-spacing:.08em; color:#1a2533; }
+    .resp-letter { font-size:7pt; font-weight:800; color:#6b7a8d; white-space:nowrap; width:80px; }
+
+    /* ── PIE DE PÁGINA ── */
+    .page-footer {
+      margin-top:28px; padding-top:10px;
+      border-top:1px solid #dde2e8;
+      display:flex; justify-content:space-between; align-items:center;
+      page-break-inside: avoid;
+    }
+    .footer-brand { font-size:6pt; letter-spacing:.18em; color:#a0aab5; font-weight:700; }
+    .footer-brand span { color:#c9952a; }
+    .footer-conf { font-size:6pt; color:#a0aab5; }
+
+    /* ── SALTOS ── */
+    .page-break { page-break-before: always; }
+    .keep-together { page-break-inside: avoid; }
+  `;
+
+  // ── PORTADA ──────────────────────────────────────────────────
+  const coverHtml = `
+    <div class="cover">
+      <div class="cover-left">
+        ${logoB64
+          ? `<img src="${logoB64}" class="cover-logo">`
+          : `<div class="cover-brand"><span>D</span>ELA<span>M</span>ORA<span>Z</span>UMARÁN</div>`}
+        <div class="cover-ks">KITCHEN SUPPORT</div>
+        <div class="cover-sep"></div>
+        <div class="cover-lbl">CLIENTE</div>
+        <div class="cover-title">${e(client.toUpperCase())}</div>
+        <div class="cover-sub">EVALUACIÓN DE CLIMA LABORAL · ${new Date().getFullYear()}</div>
+        <div class="cover-meta">
+          ${fecha     ? `<div class="cover-meta-row"><strong>Fecha:</strong> ${e(fecha)}</div>` : ''}
+          ${evaluador ? `<div class="cover-meta-row"><strong>Evaluador:</strong> ${e(evaluador)}</div>` : ''}
+          ${puestos   ? `<div class="cover-meta-row"><strong>Áreas evaluadas:</strong> ${e(puestos)}</div>` : ''}
+        </div>
+      </div>
+      <div class="cover-right">
+        <div class="cover-badge">
+          <div class="cover-badge-n">${col.length}</div>
+          <div class="cover-badge-l">COLABORADORES</div>
+        </div>
+      </div>
+    </div>`;
+
+  // ── METODOLOGÍA ──────────────────────────────────────────────
+  const metodologiaHtml = `
+    <div class="section-header">I · METODOLOGÍA DE TRABAJO</div>
+    <div class="metodologia-wrap keep-together">
+      <div class="metodologia-titulo">INSTRUMENTO DE EVALUACIÓN · USO EXCLUSIVO DEL EVALUADOR</div>
+      <div class="metodologia-grid">
+        <div class="metodologia-campo">
+          <div class="metodologia-label">EMPRESA / UNIDAD</div>
+          <div class="metodologia-valor">${e(client)}</div>
+        </div>
+        <div class="metodologia-campo">
+          <div class="metodologia-label">FECHA DE EVALUACIÓN</div>
+          <div class="metodologia-valor">${e(fecha)}</div>
+        </div>
+        <div class="metodologia-campo">
+          <div class="metodologia-label">EVALUADOR</div>
+          <div class="metodologia-valor">${e(evaluador)}</div>
+        </div>
+        <div class="metodologia-campo">
+          <div class="metodologia-label">NO. DE PARTICIPANTES</div>
+          <div class="metodologia-valor">${col.length}</div>
+        </div>
+        <div class="metodologia-campo">
+          <div class="metodologia-label">PUESTO(S) EVALUADO(S)</div>
+          <div class="metodologia-valor">${e(puestos)}</div>
+        </div>
+        <div class="metodologia-campo">
+          <div class="metodologia-label">NO. DE PREGUNTAS</div>
+          <div class="metodologia-valor">${CL2_PREGUNTAS.length} preguntas estándar</div>
+        </div>
+        <div class="metodologia-full">
+          <div class="metodologia-label">METODOLOGÍA / OBSERVACIONES DEL EVALUADOR</div>
+          <div class="metodologia-area"></div>
+        </div>
+        <div class="metodologia-full">
+          <div class="metodologia-label">HALLAZGOS GENERALES / CONTEXTO OPERATIVO</div>
+          <div class="metodologia-area"></div>
+        </div>
+      </div>
+    </div>`;
+
+  // ── ANÁLISIS DE RESULTADOS ────────────────────────────────────
+  const analisisHtml = `
+    <div class="section-header">II · ANÁLISIS DE RESULTADOS</div>
+    <div class="analisis-wrap">
+      ${meta.fortalezas ? `
+      <div class="analisis-bloque">
+        <div class="analisis-tipo">FORTALEZAS DETECTADAS</div>
+        <ul class="analisis-lista">${toBulletList(meta.fortalezas)}</ul>
+      </div>` : ''}
+      ${meta.focos ? `
+      <div class="analisis-bloque">
+        <div class="analisis-tipo rojo">FOCOS ROJOS / ÁREAS DE ATENCIÓN</div>
+        <ul class="analisis-lista">${toBulletList(meta.focos)}</ul>
+      </div>` : ''}
+    </div>`;
+
+  // ── RESUMEN IA POR PREGUNTA ───────────────────────────────────
+  const resumenHtml = resumen.length ? `
+    <div class="section-header page-break">III · RESUMEN GENERAL POR PREGUNTA · POWERED BY DMZ</div>
+    ${resumen.map(r => `
+      <div class="pregunta-card">
+        <div class="pregunta-head">
+          <span class="pregunta-num">${r.pregunta}</span>
+          <span class="pregunta-titulo">${e(r.titulo)}</span>
+        </div>
+        <div class="pregunta-body">${e(r.resumen)}</div>
+      </div>`).join('')}
+  ` : '';
+
+  // ── RESPUESTAS INDIVIDUALES ───────────────────────────────────
+  let respRows = '';
+  CL2_PREGUNTAS.forEach((q, i) => {
+    const resps = colOrdenados.filter(c => c.respuestas[i]?.trim());
+    if (!resps.length) return;
+    respRows += `<tr class="resp-question-row"><td colspan="2">${i+1}. ${e(q)}</td></tr>`;
+    resps.forEach(c => {
+      respRows += `<tr>
+        <td class="resp-letter">Colaborador ${e(letra(c))}</td>
+        <td>${e(c.respuestas[i])}</td>
+      </tr>`;
+    });
+  });
+
+  const respuestasHtml = respRows ? `
+    <div class="section-header page-break">IV · RESPUESTAS INDIVIDUALES POR COLABORADOR</div>
+    <table class="resp-table">
+      <thead><tr>
+        <th style="width:15%">COLABORADOR</th>
+        <th>RESPUESTA</th>
+      </tr></thead>
+      <tbody>${respRows}</tbody>
+    </table>
+  ` : '';
+
+  // ── PIE DE PÁGINA ─────────────────────────────────────────────
+  const footerHtml = `
+    <div class="page-footer">
+      <div class="footer-brand">POWERED BY <span>DMZ</span> · DE LA MORA ZUMARÁN · KITCHEN SUPPORT</div>
+      <div class="footer-conf">DOCUMENTO CONFIDENCIAL · USO EXCLUSIVO DEL EVALUADOR</div>
+    </div>`;
+
+  // ── HTML FINAL ────────────────────────────────────────────────
+  const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>${css}</style></head><body>
+    ${coverHtml}
+    ${metodologiaHtml}
+    ${analisisHtml}
+    ${resumenHtml}
+    ${respuestasHtml}
+    ${footerHtml}
+  </body></html>`;
+
   showToast('Generando PDF de Clima…');
   try {
+    const container = document.createElement('div');
+    container.innerHTML = fullHtml;
+    container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1';
+    document.body.appendChild(container);
+
     await html2pdf().set({
-      margin: [10,10,12,10],
-      filename: `DMZ-Clima-${client}-${dateStr}.pdf`,
-      image: { type:'jpeg', quality:.90 },
-      html2canvas: { scale:2, useCORS:true, logging:false },
-      jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
-    }).from(el).save();
-    showToast('PDF de Clima generado');
+      margin:        [12, 12, 14, 12],
+      filename:      `DMZ-Clima-${(client).toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')}-${dateStr}.pdf`,
+      image:         { type:'jpeg', quality:.92 },
+      html2canvas:   { scale:2, useCORS:true, logging:false, backgroundColor:'#ffffff' },
+      jsPDF:         { unit:'mm', format:'a4', orientation:'portrait' },
+      pagebreak:     { mode:['avoid-all','css'], before:'.page-break', avoid:['.keep-together','.pregunta-card','.analisis-bloque','.metodologia-wrap'] },
+    }).from(container.firstElementChild).save();
+
+    document.body.removeChild(container);
+    showToast('✓ PDF de Clima generado');
   } catch(e) {
     showToast('Error: ' + e.message);
-  } finally {
-    btns.forEach(b => b.style.display = '');
   }
 }
 
