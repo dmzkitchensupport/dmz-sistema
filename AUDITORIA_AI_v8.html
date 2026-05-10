@@ -8482,7 +8482,7 @@ function addAlimentoCard(data) {
   markDirty();
 }
 
-const ECT_COLORS = {1:'#C0392B',2:'#E07B00',3:'#F5C518',4:'#84CC16',5:'#2E7D32'};
+var ECT_COLORS = {1:'#C0392B',2:'#E07B00',3:'#F5C518',4:'#84CC16',5:'#2E7D32'};
 function buildAlimentosView() {
   // Migrar items del formato anterior (sin scores) al formato ECT
   ALI_STATE.items = ALI_STATE.items.map(item => {
