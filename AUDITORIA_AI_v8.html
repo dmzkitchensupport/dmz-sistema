@@ -5889,7 +5889,7 @@ Incluye todas las preguntas que tengan al menos una respuesta. Responde en espaÃ
       },
       body: JSON.stringify({
         model: CFG.model,
-        max_tokens: 2000,
+        max_tokens: 4096,
         messages: [{ role: 'user', content: prompt }],
       })
     });
@@ -5903,10 +5903,26 @@ Incluye todas las preguntas que tengan al menos una respuesta. Responde en espaÃ
     const raw    = data.content?.[0]?.text || '{}';
     let parsed   = {};
     try {
-      const m = raw.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(m ? m[0] : raw);
+      // Strip markdown fences if present
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const m = clean.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(m ? m[0] : clean);
     } catch(e) {
-      throw new Error('Respuesta con formato inesperado. Intenta de nuevo.');
+      // Try to salvage partial JSON â€” extract resumenes array
+      try {
+        const partial = raw.match(/"resumenes"\s*:\s*(\[[\s\S]*?)(?:\]\s*\}|\]\s*$)/);
+        if (partial) {
+          let arr = partial[1];
+          // Close any unclosed last object
+          if ((arr.match(/\{/g)||[]).length > (arr.match(/\}/g)||[]).length) arr += '}';
+          if (!arr.endsWith(']')) arr += ']';
+          parsed = { resumenes: JSON.parse(arr) };
+        } else {
+          throw new Error('sin array');
+        }
+      } catch(e2) {
+        throw new Error('Respuesta con formato inesperado. Intenta de nuevo.');
+      }
     }
 
     CL2_STATE.resumen     = parsed.resumenes || [];
