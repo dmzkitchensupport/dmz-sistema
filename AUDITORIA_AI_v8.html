@@ -6575,6 +6575,9 @@ Incluye todas las preguntas con al menos una respuesta. Español profesional est
     CL2_STATE.resumen     = parsed.resumenes || [];
     CL2_STATE.generadoEn  = new Date().toISOString();
     markDirty();
+    // Limpiar spinner antes de renderizar
+    const _sb = document.getElementById('cl2-resumen-body');
+    if (_sb) _sb.innerHTML = '';
     renderCl2AnalisisBlock();
     renderCl2Resumen(CL2_STATE.resumen);
     showToast('Resumen de clima generado');
