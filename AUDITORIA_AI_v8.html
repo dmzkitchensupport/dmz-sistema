@@ -8510,13 +8510,25 @@ function renderAlimentosGrid() {
   const grid = document.getElementById('ali-grid');
   if (!grid) return;
   if (!ALI_STATE.items.length) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 1rem;
-      color:var(--mid);font-size:.78rem">Presiona <strong>+ Agregar platillo</strong></div>`;
-    updateAliSummary(); return;
+    grid.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--mid);font-size:.8rem">Sin alimentos registrados. Agrega uno arriba.</div>';
+    return;
   }
-  grid.innerHTML = ALI_STATE.items.map((item, idx) => buildAliCard(item, idx)).join('');
-  updateAliSummary();
+  const _EC = {1:'#C0392B',2:'#E07B00',3:'#F5C518',4:'#84CC16',5:'#2E7D32'};
+  const niveles = ['','Deficiente','Regular','Aceptable','Bueno','Excelente'];
+  grid.innerHTML = ALI_STATE.items.map((item, idx) => {
+    const nivelCol = _EC[item.nivel] || 'var(--border)';
+    const cats = {temperatura:'Temp.',estandar:'Estándar',organoleptica:'Organoléptica'};
+    const scores = Object.entries(cats).map(([c,lbl]) => {
+      const val = item[c]||0;
+      return `<div style="text-align:center;padding:.3rem .5rem">
+        <div style="font-size:.6rem;color:var(--mid);margin-bottom:.15rem">${lbl}</div>
+        <div style="font-size:.88rem;font-weight:700;color:${val>0?_EC[val]:'var(--mid)'}">${val||'—'}</div>
+      </div>`;
+    }).join('');
+    return buildAliCard(item, idx);
+  }).join('');
 }
+
 
 function _aliPromedio(scores) {
   if (!scores || typeof scores !== 'object') return 0;
@@ -8529,7 +8541,7 @@ function buildAliCard(item, idx) {
   const prom    = _aliPromedio(item.scores);
   const promStr = prom > 0 ? prom.toFixed(1) : '—';
   const nivel   = prom >= 4.5 ? 5 : prom >= 3.5 ? 4 : prom >= 2.5 ? 3 : prom >= 1.5 ? 2 : prom > 0 ? 1 : 0;
-  const nivelCol   = ECT_COLORS[nivel]   || 'var(--border)';
+  const nivelCol   = _EC[nivel]   || 'var(--border)';
   const nivelTxt   = ECT_TEXT_COLS[nivel]|| '#fff';
   const nivelLabel = ECT_NIVELES[nivel]  || '—';
 
@@ -8540,7 +8552,7 @@ function buildAliCard(item, idx) {
       return `<button class="ali-ect-btn ${selClass}" 
         onclick="aliSetScore('${item.id}','${crit}',${n})">${n}</button>`;
     }).join('');
-    const scoreCol = val > 0 ? ECT_COLORS[val] : 'var(--mid)';
+    const scoreCol = val > 0 ? _EC[val] : 'var(--mid)';
     return `<div class="ali-ect-criterio">
       <span class="ali-ect-lbl">${crit}</span>
       <div class="ali-ect-btns">${btns}</div>
