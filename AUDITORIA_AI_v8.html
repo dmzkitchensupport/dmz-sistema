@@ -6437,6 +6437,15 @@ async function exportClima2PDF() {
       border:1px solid #dde2e8; border-radius:5px; padding:14px 16px;
       margin-bottom:20px; page-break-inside: avoid;
     }
+    .metodologia-intro {
+      border-left:3px solid #c9952a; padding:10px 14px;
+      margin-bottom:16px; background:#fffdf5; border-radius:0 4px 4px 0;
+    }
+    .metodologia-intro p {
+      font-size:8.5pt; color:#1a2533; line-height:1.7;
+      text-align:justify; margin-bottom:8px;
+    }
+    .metodologia-intro p:last-child { margin-bottom:0; }
     .metodologia-titulo { font-size:8pt; font-weight:800; color:#1a2533; letter-spacing:.08em; margin-bottom:8px; }
     .metodologia-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .metodologia-campo { border-bottom:1px solid #dde2e8; padding-bottom:6px; }
@@ -6528,9 +6537,13 @@ async function exportClima2PDF() {
 
   // ── METODOLOGÍA ──────────────────────────────────────────────
   const metodologiaHtml = `
-    <div class="section-header">I · METODOLOGÍA DE TRABAJO</div>
+    <div class="section-header">I · METODOLOGÍA DE TRABAJO Y ANÁLISIS DEL STAFF</div>
     <div class="metodologia-wrap keep-together">
-      <div class="metodologia-titulo">INSTRUMENTO DE EVALUACIÓN · USO EXCLUSIVO DEL EVALUADOR</div>
+      <div class="metodologia-intro">
+        <p>El levantamiento del clima laboral se realizó de manera aleatoria y bajo un mismo conjunto de preguntas para todo el personal, con el objetivo de obtener una visión clara y objetiva sobre cómo se sienten los colaboradores, así como su percepción hacia la empresa y sus funciones.</p>
+        <p>Es importante destacar que la información recabada es completamente confidencial, lo que permitió que el equipo pudiera expresarse con libertad, transparencia y apertura respecto a su experiencia dentro de la organización.</p>
+      </div>
+      <div class="metodologia-titulo">DATOS GENERALES DEL INSTRUMENTO</div>
       <div class="metodologia-grid">
         <div class="metodologia-campo">
           <div class="metodologia-label">EMPRESA / UNIDAD</div>
@@ -6557,11 +6570,11 @@ async function exportClima2PDF() {
           <div class="metodologia-valor">${CL2_PREGUNTAS.length} preguntas estándar</div>
         </div>
         <div class="metodologia-full">
-          <div class="metodologia-label">METODOLOGÍA / OBSERVACIONES DEL EVALUADOR</div>
+          <div class="metodologia-label">OBSERVACIONES DEL EVALUADOR</div>
           <div class="metodologia-area"></div>
         </div>
         <div class="metodologia-full">
-          <div class="metodologia-label">HALLAZGOS GENERALES / CONTEXTO OPERATIVO</div>
+          <div class="metodologia-label">CONTEXTO OPERATIVO / HALLAZGOS GENERALES</div>
           <div class="metodologia-area"></div>
         </div>
       </div>
