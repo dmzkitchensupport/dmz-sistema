@@ -929,6 +929,56 @@ textarea.note-ta, .cl-section-body,
 }
 .cl2-title { font-family: var(--f-t); font-size: 1.3rem; font-weight: 800; letter-spacing: .05em; color: var(--dark); }
 .cl2-sub { font-size: .6rem; color: var(--mid); letter-spacing: .1em; margin-top: .15rem; }
+// ── Restaurar desde backup de emergencia ──────────────────────
+function restoreEmergencyBackup() {
+  const raw = localStorage.getItem('dmz_emergency_backup');
+  if (!raw) { showToast('No hay backup de emergencia disponible'); return; }
+  if (!confirm('¿Restaurar desde el backup de emergencia? Se perderán los cambios actuales.')) return;
+  try {
+    const backup = JSON.parse(raw);
+    if (backup.cl2State)       Object.assign(CL2_STATE, backup.cl2State);
+    if (backup.hallazgosState) Object.assign(HZ_STATE,  backup.hallazgosState);
+    if (backup.aliState?.items) ALI_STATE.items = backup.aliState.items;
+    if (backup.client) {
+      STATE.client = backup.client;
+      const el = document.getElementById('inp-client');
+      if (el) el.value = backup.client;
+    }
+    showToast('✅ Backup de emergencia restaurado');
+    buildClima2View();
+  } catch(e) {
+    showToast('Error al restaurar: ' + e.message);
+  }
+}
+
+// ── Restaurar desde versión histórica ─────────────────────────
+function restoreHistoricalBackup(slot) {
+  const key = slot === 1 ? 'dmz_audit_v4_h1' : slot === 2 ? 'dmz_audit_v4_h2' : 'dmz_audit_v4_h3';
+  const ts  = localStorage.getItem(key + '_ts');
+  const raw = localStorage.getItem(key);
+  if (!raw) { showToast('No hay versión histórica en ese slot'); return; }
+  const when = ts ? new Date(ts).toLocaleString('es-MX') : 'fecha desconocida';
+  if (!confirm(`¿Restaurar la versión del ${when}? Se perderán los cambios actuales.`)) return;
+  localStorage.setItem('dmz_audit_v4', raw);
+  location.reload();
+}
+
+// ── Panel de estado de respaldo ────────────────────────────────
+function updateBackupStatus() {
+  const el = document.getElementById('backup-status');
+  if (!el) return;
+  const layers = [];
+  if (localStorage.getItem('dmz_audit_v4'))          layers.push('Local');
+  if (localStorage.getItem('dmz_emergency_backup'))  layers.push('Emergencia');
+  if (SB.ready)                                       layers.push('Supabase ☁');
+  if (DRIVE_CONFIG.connected)                         layers.push('Drive ☁');
+  if (localStorage.getItem('dmz_audit_v4_h1'))       layers.push('v.Históricas');
+  el.textContent = layers.length
+    ? '✅ ' + layers.length + ' capas: ' + layers.join(' · ')
+    : '⚠️ Sin respaldo activo';
+  el.style.color = layers.length >= 2 ? '#27ae60' : layers.length === 1 ? 'var(--gold)' : 'var(--red)';
+}
+
 /* ── SISTEMA DE PRESENCIA EN TIEMPO REAL ─────────────────────── */
 .section-lock-overlay {
   position:fixed; inset:0; z-index:9000;
@@ -2385,6 +2435,9 @@ async function saveSession(silent) {
     if (DRIVE_CONFIG.connected) driveBackupSession().catch(() => {});
     // Sincronización con Supabase si hay sesión activa
     if (SB.ready) sbSaveAuditoria().catch(() => {});
+    // Rotar snapshot histórico cada 10 guardados
+    _saveCount = (_saveCount || 0) + 1;
+    if (_saveCount % 10 === 0) backupRotatingSnapshot();
   } catch(e) {
     if (dot) dot.className = 'save-dot err';
     const lbl = document.getElementById('save-label');
@@ -2570,9 +2623,73 @@ function showToast(msg) {
 
 //  Auto-save cada 60 segundos (solo si hay cambios)
 function startAutoSave() {
+  // Guardar cada 30s siempre que haya sesión activa
   _saveTimer = setInterval(async () => {
-    if (_unsaved) await saveSession(true);
-  }, 60000);
+    await saveSession(true);
+  }, 30000);
+
+  // Guardar también cuando el usuario cambia de pestaña o minimiza
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'hidden') {
+      await saveSession(true);
+      backupRotatingSnapshot();
+    }
+  });
+
+  // Guardar antes de cerrar la ventana
+  window.addEventListener('beforeunload', (e) => {
+    // Guardar síncronamente en localStorage como último recurso
+    try {
+      const emergency = {
+        savedAt: new Date().toISOString(),
+        version: '10.0-emergency',
+        client:  STATE.client,
+        cl2State: CL2_STATE,
+        hallazgosState: HZ_STATE,
+        aliState: { items: ALI_STATE.items },
+        areas: Object.fromEntries(
+          Object.entries(STATE.areas).map(([k,v]) => [k, {
+            photos: v.photos.map(p => ({ id:p.id, name:p.name, alert:p.alert, state:p.state, notes:p.notes, markers:p.markers })),
+            hallazgos: v.hallazgos
+          }])
+        ),
+      };
+      localStorage.setItem('dmz_emergency_backup', JSON.stringify(emergency));
+      localStorage.setItem('dmz_emergency_ts', new Date().toISOString());
+    } catch(e) {}
+  });
+}
+
+// ── Rotación de snapshots históricos (últimas 5 versiones) ──────
+function backupRotatingSnapshot() {
+  try {
+    const raw = localStorage.getItem('dmz_audit_v4');
+    if (!raw) return;
+    // Rotar: mover v4 → v4_h1 → v4_h2 → v4_h3 (mantener 3 versiones históricas)
+    const h2 = localStorage.getItem('dmz_audit_v4_h1');
+    const h3 = localStorage.getItem('dmz_audit_v4_h2');
+    if (h2) localStorage.setItem('dmz_audit_v4_h2', h2);
+    if (h3) localStorage.setItem('dmz_audit_v4_h3', h3);
+    localStorage.setItem('dmz_audit_v4_h1', raw);
+    localStorage.setItem('dmz_audit_v4_h1_ts', new Date().toISOString());
+  } catch(e) {}
+}
+
+// ── Verificar y mostrar alerta si hay backup de emergencia ──────
+function checkEmergencyBackup() {
+  const raw = localStorage.getItem('dmz_emergency_backup');
+  const ts  = localStorage.getItem('dmz_emergency_ts');
+  if (!raw || !ts) return;
+  const age = Date.now() - new Date(ts).getTime();
+  if (age > 3600000) return; // ignorar si tiene más de 1 hora
+  const backup = JSON.parse(raw);
+  const diff = Math.round(age / 1000 / 60);
+  // Mostrar toast solo si es reciente (< 10 min)
+  if (diff < 10 && backup.client) {
+    setTimeout(() => {
+      showToast(`⚡ Respaldo de emergencia disponible (${diff}min) — sesión de ${backup.client}`);
+    }, 3000);
+  }
 }
 
 
@@ -3113,7 +3230,8 @@ function updateSbStatus(logged) {
   if (logged) {
     strip.innerHTML = `
       <span style="color:#22C55E;font-weight:700;font-size:.62rem">SUPABASE CONECTADO</span>
-      <span style="color:#64748B;font-size:.62rem">— Las auditorias se guardan en la nube automaticamente</span>
+      <span style="color:#64748B;font-size:.62rem">— Las auditorías se guardan en la nube</span>
+      <span id="backup-status" style="font-size:.62rem;color:var(--gold);margin-left:.4rem">· verificando…</span>
       <button onclick="sbOpenAuditorias()" class="btn btn-outline"
         style="font-size:.6rem;padding:.2rem .6rem;margin-left:.5rem">Mis auditorias</button>
       <button onclick="sbLogout().then(()=>{updateSbStatus(false);showToast('Sesion cerrada')})"
@@ -3482,8 +3600,12 @@ function init() {
   });
   STATE.client = document.getElementById('inp-client').value;
 
-  // Auto-guardado cada 60 s
+  // Auto-guardado cada 30s con capas de respaldo
   startAutoSave();
+  checkEmergencyBackup();
+  // Actualizar indicador de respaldo cada 15s
+  setInterval(updateBackupStatus, 15000);
+  setTimeout(updateBackupStatus, 2000);
 
   if (restored) {
     showToast('Sesion restaurada — ' + Object.values(STATE.areas).reduce((s,a) => s + a.photos.length, 0) + ' fotos cargadas');
