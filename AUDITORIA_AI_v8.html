@@ -929,6 +929,23 @@ textarea.note-ta, .cl-section-body,
 }
 .cl2-title { font-family: var(--f-t); font-size: 1.3rem; font-weight: 800; letter-spacing: .05em; color: var(--dark); }
 .cl2-sub { font-size: .6rem; color: var(--mid); letter-spacing: .1em; margin-top: .15rem; }
+.cl2-metodologia {
+  background:#fffdf5; border-left:4px solid var(--gold);
+  border-radius:var(--r); padding:1rem 1.3rem;
+  box-shadow:var(--shadow);
+  display:flex; flex-direction:column; gap:.55rem;
+}
+.cl2-metodologia-titulo {
+  font-size:.58rem; font-weight:800; letter-spacing:.16em;
+  color:var(--gold); margin-bottom:.1rem;
+}
+.cl2-metodologia-texto {
+  font-size:.78rem; color:var(--dark); line-height:1.7;
+  text-align:justify;
+}
+.cl2-metodologia-sep {
+  height:1px; background:var(--border); margin:.2rem 0;
+}
 .cl2-tabs-wrap {
   background: #fff; border-radius: var(--r); box-shadow: var(--shadow);
   border: 1px solid var(--border); overflow: hidden;
@@ -1811,6 +1828,18 @@ td:hover .hz-edit-hint { opacity: 1; }
         </label>
         <button class="btn btn-gold" id="btn-gen-clima2" onclick="generarResumenClima2()">Generar Resumen</button>
         <button class="btn btn-outline" onclick="exportClima2PDF()" style="font-size:.65rem">PDF Clima</button>
+      </div>
+    </div>
+
+    <!-- Metodología de trabajo -->
+    <div class="cl2-metodologia">
+      <div class="cl2-metodologia-titulo">METODOLOGÍA DE TRABAJO Y ANÁLISIS DEL STAFF</div>
+      <div class="cl2-metodologia-texto">
+        El levantamiento del clima laboral se realizó de manera aleatoria y bajo un mismo conjunto de preguntas para todo el personal, con el objetivo de obtener una visión clara y objetiva sobre cómo se sienten los colaboradores, así como su percepción hacia la empresa y sus funciones.
+      </div>
+      <div class="cl2-metodologia-sep"></div>
+      <div class="cl2-metodologia-texto">
+        Es importante destacar que la información recabada es completamente confidencial, lo que permitió que el equipo pudiera expresarse con libertad, transparencia y apertura respecto a su experiencia dentro de la organización.
       </div>
     </div>
 
