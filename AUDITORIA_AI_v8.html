@@ -7797,16 +7797,10 @@ const HZ_STATE = {
 //  START
 init();
 
-/* ── SISTEMA DE PRESENCIA EN TIEMPO REAL ─────────────────────── *
- * Usa Supabase Realtime para saber qué secciones están ocupadas
- * Cuando alguien entra a una sección, todos los demás ven el lock
- * ─────────────────────────────────────────────────────────────── */
-
+/* ── PRESENCIA EN TIEMPO REAL — solo indicador visual, sin bloqueos ── */
 const PRESENCE = {
-  channel:     null,
   currentMode: null,
-  otherUsers:  {},   // { userId: { email, mode, name } }
-  lockOverlay: null,
+  otherUsers:  {},
   enabled:     false,
 };
 
@@ -7824,49 +7818,8 @@ const SECTION_NAMES = {
 
 async function presenceInit() {
   if (!SB.ready || !SB.token) return;
-  if (PRESENCE.channel) {
-    PRESENCE.channel.unsubscribe();
-    PRESENCE.channel = null;
-  }
-
-  // Obtener email del usuario actual
-  let userEmail = localStorage.getItem('dmz_sb_email') || 'Usuario';
-  const userName = userEmail.split('@')[0];
-
-  // Conectar al canal de presencia via Supabase Realtime (WebSocket)
-  const wsUrl = SB.url.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SB.anon + '&vsn=1.0.0';
-
-  PRESENCE.ws = new WebSocket(wsUrl);
-
-  PRESENCE.ws.onopen = () => {
-    PRESENCE.enabled = true;
-    // Unirse al canal dmz-presence
-    PRESENCE.ws.send(JSON.stringify({
-      topic: 'realtime:dmz-presence',
-      event: 'phx_join',
-      payload: { access_token: SB.token },
-      ref: '1'
-    }));
-  };
-
-  PRESENCE.ws.onmessage = (ev) => {
-    try {
-      const msg = JSON.parse(ev.data);
-      if (msg.event === 'presence_state' || msg.event === 'presence_diff') {
-        presenceHandleUpdate(msg.payload);
-      }
-    } catch(e) {}
-  };
-
-  PRESENCE.ws.onerror = () => { PRESENCE.enabled = false; };
-  PRESENCE.ws.onclose = () => {
-    PRESENCE.enabled = false;
-    // Reintentar en 10s
-    setTimeout(() => { if (SB.ready) presenceInit(); }, 10000);
-  };
-
-  // Usar polling como fallback (más simple y confiable sin SDK)
-  presenceStartPolling(userName, userEmail);
+  const email = localStorage.getItem('dmz_sb_email') || 'usuario@dmz';
+  presenceStartPolling(email.split('@')[0], email);
 }
 
 // ── Polling via tabla presence en Supabase REST ────────────────
@@ -7955,40 +7908,16 @@ function presenceUpdateUI() {
   const others = Object.values(PRESENCE.otherUsers);
   const bar    = document.getElementById('presence-bar');
   const pills  = document.getElementById('presence-pills');
-
   if (!bar || !pills) return;
-
-  if (others.length === 0) {
-    bar.style.display = 'none';
-    // Quitar locks de todos los botones
-    document.querySelectorAll('.mode-btn.locked-by-other').forEach(b => b.classList.remove('locked-by-other'));
-    return;
-  }
-
+  if (!others.length) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
+  // SOLO mostrar quién está en línea — nunca bloquear botones
   pills.innerHTML = others.map(u =>
     `<span class="presence-pill">
       <span class="presence-pill-dot"></span>
       ${esc(u.name)} · <em style="font-weight:400">${esc(SECTION_NAMES[u.section] || u.section)}</em>
     </span>`
   ).join('');
-
-  // Marcar botones bloqueados
-  Object.keys(SECTION_NAMES).forEach(sec => {
-    const btn = document.getElementById('btn-' + sec);
-    if (!btn) return;
-    const occupant = others.find(u => u.section === sec);
-    btn.classList.toggle('locked-by-other', !!occupant);
-    btn.title = occupant ? `${occupant.name} está trabajando aquí` : '';
-  });
-
-  // Si el usuario está actualmente en una sección bloqueada por otro, mostrar overlay
-  const occupantOfCurrent = others.find(u => u.section === PRESENCE.currentMode);
-  if (occupantOfCurrent) {
-    presenceShowLock(occupantOfCurrent);
-  } else {
-    presenceHideLock();
-  }
 }
 
 function presenceShowLock(occupant) {
@@ -8025,30 +7954,8 @@ function presenceGoBack() {
 }
 
 // ── Registrar sección actual al cambiar de modo ───────────────
-const _origSetMode = setMode;
-function setMode(m) {
-  // Si PRESENCE no está inicializado, navegar directamente
-  if (typeof PRESENCE === 'undefined' || !PRESENCE.enabled) {
-    presenceHideLock && presenceHideLock();
-    _origSetMode(m);
-    return;
-  }
-  // Verificar si alguien más está en esa sección
-  const occupant = Object.values(PRESENCE.otherUsers || {}).find(u => u.section === m);
-  if (occupant && m !== 'cap') {
-    PRESENCE.currentMode = m;
-    _origSetMode(m);
-    presenceShowLock(occupant);
-    return;
-  }
-  presenceHideLock();
-  PRESENCE.currentMode = m;
-  _origSetMode(m);
-  if (PRESENCE.enabled && SB.ready) {
-    const email = localStorage.getItem('dmz_sb_email') || 'Usuario';
-    presenceStartPolling(email.split('@')[0], email);
-  }
-}
+// _origSetMode removed
+// setMode presence override removed — see original setMode
 
 // ── Limpiar presencia al cerrar la ventana ────────────────────
 window.addEventListener('beforeunload', () => {
