@@ -5488,12 +5488,18 @@ function buildClima2View() {
   }
 }
 
+function cl2LetraColab(c) {
+  /* Extrae la letra A-L del colaborador para mostrar en lugar del nombre real */
+  const m = c.nombre.match(/Colaborador\s+([A-L])/i);
+  return m ? m[1] : c.nombre.charAt(0).toUpperCase();
+}
+
 function renderCl2Tabs() {
   const bar = document.getElementById('cl2-tabs-bar');
   if (!bar) return;
   bar.innerHTML = CL2_STATE.colaboradores.map(c => `
     <button class="cl2-tab ${c.id === CL2_STATE.activoId ? 'active' : ''}"
-      onclick="switchCl2Tab('${c.id}')">${esc(c.nombre)}</button>`
+      onclick="switchCl2Tab('${c.id}')" title="Colaborador ${cl2LetraColab(c)}">${cl2LetraColab(c)}</button>`
   ).join('') +
   `<button class="cl2-tab-add" onclick="addCl2Colaborador()">+ Agregar</button>`;
 }
@@ -5514,8 +5520,7 @@ function saveCl2CurrentPanel() {
     const ta = document.getElementById(`cl2-ta-${i}`);
     if (ta) c.respuestas[i] = ta.value;
   });
-  const nameEl = document.getElementById('cl2-nombre-input');
-  if (nameEl) c.nombre = nameEl.value.trim() || c.nombre;
+  // Nombre interno preservado como "Colaborador X" — no se expone en UI
 }
 
 let _cl2Vista = 'individual';
@@ -5552,25 +5557,28 @@ function renderCl2VistaPregunta() {
   if (!wrap) return;
 
   const colabs = CL2_STATE.colaboradores;
+  // Ordenar A-L según la letra extraída del nombre
+  const coLabsOrdenados = [...colabs].sort((a, b) => {
+    const lA = cl2LetraColab(a);
+    const lB = cl2LetraColab(b);
+    return lA.localeCompare(lB);
+  });
   // Solo mostrar colaboradores con al menos 1 respuesta
-  const activos = colabs.filter(c => Object.values(c.respuestas).some(r => r?.trim()));
-  const todos   = activos.length ? activos : colabs;
+  const activos = coLabsOrdenados.filter(c => Object.values(c.respuestas).some(r => r?.trim()));
+  const todos   = activos.length ? activos : coLabsOrdenados;
 
   const html = CL2_PREGUNTAS.map((q, qi) => {
     const respRows = todos.map(c => {
       const resp = c.respuestas[qi]?.trim();
       if (!resp) return '';
-      // Extraer letra del nombre (Colaborador A → A, Ingrid (Cocinera) → inicial)
-      const letraM = c.nombre.match(/Colaborador\s+([A-L])/i);
-      const letra  = letraM ? letraM[1] : c.nombre.charAt(0).toUpperCase();
-      const nombreCorto = c.nombre.replace(/Colaborador\s+[A-L]\s*[-–]?\s*/i, '').trim() || c.nombre;
+      const letra = cl2LetraColab(c);
       return `<div style="display:flex;gap:.75rem;padding:.65rem 0;border-bottom:1px solid var(--border);align-items:flex-start">
         <div style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--gold);
           color:#fff;font-size:.62rem;font-weight:800;display:flex;align-items:center;
           justify-content:center;margin-top:2px">${letra}</div>
         <div style="flex:1">
           <div style="font-size:.68rem;font-weight:700;color:var(--mid);margin-bottom:.15rem">
-            ${esc(c.nombre)}
+            Colaborador ${letra}
           </div>
           <div style="font-size:.8rem;color:var(--dark);line-height:1.55;text-align:justify">
             ${esc(resp)}
@@ -5607,13 +5615,16 @@ function renderCl2Panel(id) {
 
   const filled = CL2_PREGUNTAS.filter((_, i) => c.respuestas[i]?.trim()).length;
   const pct    = Math.round(filled / CL2_PREGUNTAS.length * 100);
+  const letra  = cl2LetraColab(c);
 
   panels.innerHTML = `<div class="cl2-panel active">
     <div class="cl2-colab-header">
-      <input class="cl2-colab-name-input" id="cl2-nombre-input"
-        type="text" value="${esc(c.nombre)}"
-        onblur="saveCl2CurrentPanel();renderCl2Tabs();markDirty()"
-        placeholder="Nombre del colaborador">
+      <div style="display:flex;align-items:center;gap:.75rem;flex:1">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--gold);color:#fff;
+          font-size:.88rem;font-weight:800;display:flex;align-items:center;justify-content:center;
+          flex-shrink:0">${letra}</div>
+        <div style="font-size:.78rem;font-weight:700;color:var(--dark)">Colaborador ${letra}</div>
+      </div>
       ${CL2_STATE.colaboradores.length > 1 ? `
         <button class="cl2-del-colab" onclick="deleteCl2Colaborador('${c.id}')">Eliminar colaborador</button>
       ` : ''}
@@ -5631,7 +5642,7 @@ function renderCl2Panel(id) {
             <span class="cl2-q-num">${i+1}</span>${esc(q)}
           </div>
           <textarea class="cl2-q-ta" id="cl2-ta-${i}" rows="2"
-            placeholder="Respuesta de ${esc(c.nombre)}…"
+            placeholder="Respuesta de Colaborador ${letra}…"
             oninput="updateCl2Counter()"
           >${esc(c.respuestas[i] || '')}</textarea>
         </div>`).join('')}
@@ -5689,16 +5700,16 @@ async function generarResumenClima2() {
   const body = document.getElementById('cl2-resumen-body');
   body.innerHTML = `<div class="cl2-spinner-wrap"><div class="spinner" style="border-color:rgba(201,149,42,.2);border-top-color:var(--gold)"></div>Consolidando respuestas y generando resumen…</div>`;
 
-  // Build consolidated data por pregunta
+  // Build consolidated data por pregunta — ordenado A-L, etiqueta solo letra
   let consolidado = '';
+  const colOrdenados = [...CL2_STATE.colaboradores].sort((a, b) => cl2LetraColab(a).localeCompare(cl2LetraColab(b)));
   CL2_PREGUNTAS.forEach((q, i) => {
-    const resps = CL2_STATE.colaboradores
-      .map(c => c.respuestas[i]?.trim())
-      .filter(Boolean);
+    const resps = colOrdenados.filter(c => c.respuestas[i]?.trim());
     if (!resps.length) return;
     consolidado += `\nPREGUNTA ${i+1}: ${q}\n`;
-    resps.forEach((r, ri) => {
-      consolidado += `  ${CL2_STATE.colaboradores[ri]?.nombre || 'Colab.'}: ${r}\n`;
+    resps.forEach(c => {
+      const letra = cl2LetraColab(c);
+      consolidado += `  Colaborador ${letra}: ${c.respuestas[i].trim()}\n`;
     });
   });
 
@@ -5811,17 +5822,20 @@ function buildClima2ReportSection() {
     </div>`;
   }
 
-  // Tabla de respuestas individuales
+  // Tabla de respuestas individuales — ordenar A-L, mostrar solo letra
   let respRows = '';
+  const colOrdenados = [...col].sort((a, b) => cl2LetraColab(a).localeCompare(cl2LetraColab(b)));
   CL2_PREGUNTAS.forEach((q, i) => {
-    const resps = col.filter(c => c.respuestas[i]?.trim());
+    const resps = colOrdenados.filter(c => c.respuestas[i]?.trim());
     if (!resps.length) return;
     respRows += `<tr><td colspan="2" style="background:var(--cream);font-size:.56rem;font-weight:800;letter-spacing:.1em;padding:.35rem .6rem;color:var(--dark)">${i+1}. ${esc(q)}</td></tr>`;
     resps.forEach(c => {
+      const letra = cl2LetraColab(c);
       respRows += `<tr>
-        <td style="width:16%;font-size:.66rem;font-weight:600;color:var(--mid);vertical-align:top;padding:.38rem .6rem">${esc(c.nombre)}</td>
+        <td style="width:16%;font-size:.66rem;font-weight:600;color:var(--mid);vertical-align:top;padding:.38rem .6rem">Colaborador ${letra}</td>
         <td style="font-size:.68rem;color:var(--dark);line-height:1.55;text-align:justify;padding:.38rem .6rem">${esc(c.respuestas[i])}</td>
       </tr>`;
+
     });
   });
 
