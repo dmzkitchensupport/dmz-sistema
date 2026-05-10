@@ -3038,6 +3038,8 @@ function checkEmergencyBackup() {
 /* 
    STATE
  */
+const ECT_COLORS = {1:'#C0392B',2:'#E07B00',3:'#F5C518',4:'#84CC16',5:'#2E7D32'};
+
 const STATE = {
   apiKey: ['sk-ant-api03-1INQwh8eXBBCIzGRJus44-Sy','qP4vlNzdGoxutadB_q5dXrDLNSdRpqFB3LfHFzJ3au','PFYf2bc1DhW5Syf55wWA-uGqwyQAA'].join(''),
   client: '',
@@ -8482,7 +8484,6 @@ function addAlimentoCard(data) {
   markDirty();
 }
 
-var ECT_COLORS = {1:'#C0392B',2:'#E07B00',3:'#F5C518',4:'#84CC16',5:'#2E7D32'};
 function buildAlimentosView() {
   // Migrar items del formato anterior (sin scores) al formato ECT
   ALI_STATE.items = ALI_STATE.items.map(item => {
