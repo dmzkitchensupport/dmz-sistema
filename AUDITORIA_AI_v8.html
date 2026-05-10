@@ -980,6 +980,10 @@ function updateBackupStatus() {
 }
 
 /* ── SISTEMA DE PRESENCIA EN TIEMPO REAL ─────────────────────── */
+@keyframes slideUp {
+  from { transform:translateX(-50%) translateY(20px); opacity:0; }
+  to   { transform:translateX(-50%) translateY(0);    opacity:1; }
+}
 .section-lock-overlay {
   position:fixed; inset:0; z-index:9000;
   background:rgba(26,37,51,.72); backdrop-filter:blur(3px);
@@ -2428,9 +2432,42 @@ async function saveSession(silent) {
   await Promise.all(tasks);
 
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(saveState));
+    // Validar integridad antes de sobrescribir
+    const jsonStr = JSON.stringify(saveState);
+    let parsed;
+    try { parsed = JSON.parse(jsonStr); } catch(e) {
+      console.warn('Integridad JSON fallida — no se sobrescribe sesión', e);
+      showToast('⚠️ Error de integridad — sesión anterior preservada');
+      return;
+    }
+    if (!parsed.areas || !parsed.cl2State) {
+      showToast('⚠️ Datos incompletos — guardado cancelado por seguridad');
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY, jsonStr);
     updateSaveIndicator();
     if (!silent) showToast('Sesion guardada');
+
+    // Verificar cuota de almacenamiento
+    if (navigator.storage?.estimate) {
+      navigator.storage.estimate().then(({ usage, quota }) => {
+        const pct = Math.round(usage / quota * 100);
+        const usedMB = Math.round(usage / 1024 / 1024);
+        const quotaMB = Math.round(quota / 1024 / 1024);
+        const statusEl = document.getElementById('backup-status');
+        if (pct > 85) {
+          showToast(`⚠️ Almacenamiento al ${pct}% — exporta JSON como respaldo`);
+          if (statusEl) {
+            statusEl.textContent = `⚠️ Almacenamiento ${pct}% (${usedMB}/${quotaMB}MB)`;
+            statusEl.style.color = 'var(--red)';
+          }
+        } else if (pct > 60) {
+          if (statusEl) {
+            statusEl.textContent = `✅ Respaldo activo · Almacenamiento ${pct}%`;
+          }
+        }
+      }).catch(() => {});
+    }
     // Respaldo en Drive si está autenticado (asíncrono, no bloquea UI)
     if (DRIVE_CONFIG.connected) driveBackupSession().catch(() => {});
     // Sincronización con Supabase si hay sesión activa
@@ -2622,6 +2659,64 @@ function showToast(msg) {
 }
 
 //  Auto-save cada 60 segundos (solo si hay cambios)
+/* ── Detección de conexión + cola de reintento ─────────────── */
+const _offlineQueue = [];   // guardados fallidos esperando reconexión
+let   _isOffline    = false;
+
+function initNetworkMonitor() {
+  const updateStatus = (online) => {
+    _isOffline = !online;
+    const dot  = document.getElementById('save-dot');
+    const lbl  = document.getElementById('save-label');
+    if (!online) {
+      if (dot) dot.className = 'save-dot err';
+      if (lbl) lbl.textContent = 'Sin conexión — guardado local activo';
+      showToast('⚠️ Sin conexión — los cambios se guardan localmente');
+    } else {
+      if (_offlineQueue.length > 0) {
+        showToast('Conexión restaurada — sincronizando ' + _offlineQueue.length + ' cambios…');
+        _flushOfflineQueue();
+      } else {
+        if (lbl) lbl.textContent = 'Guardado';
+        updateBackupStatus();
+      }
+    }
+  };
+
+  window.addEventListener('online',  () => updateStatus(true));
+  window.addEventListener('offline', () => updateStatus(false));
+
+  // Estado inicial
+  if (!navigator.onLine) updateStatus(false);
+}
+
+async function _flushOfflineQueue() {
+  while (_offlineQueue.length > 0 && navigator.onLine) {
+    const task = _offlineQueue.shift();
+    try { await task(); } catch(e) { _offlineQueue.unshift(task); break; }
+  }
+  updateBackupStatus();
+}
+
+/* Wrapper de sbSaveAuditoria que encola si offline */
+const _origSbSave = sbSaveAuditoria;
+async function sbSaveAuditoria() {
+  if (!navigator.onLine) {
+    // Guardar en queue para reintento
+    _offlineQueue.push(() => _origSbSave());
+    return null;
+  }
+  try {
+    return await _origSbSave();
+  } catch(e) {
+    if (!navigator.onLine || e.message?.includes('network')) {
+      _offlineQueue.push(() => _origSbSave());
+      showToast('⚠️ Sin conexión — reintentando al reconectar');
+    }
+    return null;
+  }
+}
+
 function startAutoSave() {
   // Guardar cada 30s siempre que haya sesión activa
   _saveTimer = setInterval(async () => {
@@ -3606,6 +3701,7 @@ function init() {
   // Actualizar indicador de respaldo cada 15s
   setInterval(updateBackupStatus, 15000);
   setTimeout(updateBackupStatus, 2000);
+  initNetworkMonitor();
 
   if (restored) {
     showToast('Sesion restaurada — ' + Object.values(STATE.areas).reduce((s,a) => s + a.photos.length, 0) + ' fotos cargadas');
@@ -4483,15 +4579,87 @@ function movePhoto(pid, destAreaId) {
   updateAnalyzeBtn();
 }
 
+/* Papelera temporal — undo de 10 segundos antes de borrar definitivo */
+const _trashBin = {};   // { pid: { photo, aId, timer, toastEl } }
+
 function delPhoto(pid) {
-  if (!confirm('¿Eliminar esta foto?')) return;
+  // Si ya está en papelera, cancelar y borrar definitivo ahora
+  if (_trashBin[pid]) {
+    _confirmDeletePhoto(pid);
+    return;
+  }
+
   const photo = findPhoto(pid);
-  if (photo && photo.displayUrl) URL.revokeObjectURL(photo.displayUrl); // libera memoria
-  if (photo && photo.id) idbDeletePhoto(photo.id); // limpia IndexedDB
+  if (!photo) return;
+
+  // Encontrar el área donde está
+  let areaId = null;
+  for (const aId in STATE.areas) {
+    if (STATE.areas[aId].photos.find(p => p.id === pid)) { areaId = aId; break; }
+  }
+  if (!areaId) return;
+
+  // Mover a papelera temporal (ocultar de la grid pero no borrar aún)
+  photo._trashed = true;
   for (const aId in STATE.areas) {
     STATE.areas[aId].photos = STATE.areas[aId].photos.filter(p => p.id !== pid);
   }
+  renderGrid(); renderAreaNav(); updateProgress(); updateAnalyzeBtn();
+
+  // Toast con countdown y opción de deshacer
+  const toastId = 'trash-toast-' + pid;
+  const toast = document.createElement('div');
+  toast.id = toastId;
+  toast.style.cssText = `position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+    background:#1a2533;color:#fff;padding:.65rem 1.1rem;border-radius:8px;
+    display:flex;align-items:center;gap:.75rem;z-index:9999;
+    box-shadow:0 4px 20px rgba(0,0,0,.35);font-size:.76rem;min-width:260px;
+    animation:slideUp .2s ease`;
+  toast.innerHTML = `
+    <span id="${toastId}-msg">Foto eliminada · <strong id="${toastId}-cnt">10</strong>s</span>
+    <button onclick="undoDeletePhoto('${pid}')" style="background:var(--gold);border:none;
+      color:#fff;border-radius:5px;padding:.25rem .7rem;font-size:.7rem;
+      font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">↩ Deshacer</button>`;
+  document.body.appendChild(toast);
+
+  // Countdown
+  let secs = 10;
+  const interval = setInterval(() => {
+    secs--;
+    const cntEl = document.getElementById(`${toastId}-cnt`);
+    if (cntEl) cntEl.textContent = secs;
+    if (secs <= 0) {
+      clearInterval(interval);
+      _confirmDeletePhoto(pid);
+    }
+  }, 1000);
+
+  _trashBin[pid] = { photo, areaId, timer: interval, toastEl: toast };
+}
+
+function undoDeletePhoto(pid) {
+  const entry = _trashBin[pid];
+  if (!entry) return;
+  clearInterval(entry.timer);
+  // Restaurar foto al área
+  entry.photo._trashed = false;
+  STATE.areas[entry.areaId].photos.push(entry.photo);
   renderGrid(); renderAreaNav(); updateProgress(); updateAnalyzeBtn(); markDirty();
+  if (entry.toastEl) entry.toastEl.remove();
+  delete _trashBin[pid];
+  showToast('Foto restaurada');
+}
+
+function _confirmDeletePhoto(pid) {
+  const entry = _trashBin[pid];
+  if (entry) {
+    clearInterval(entry.timer);
+    if (entry.toastEl) entry.toastEl.remove();
+    if (entry.photo?.displayUrl) URL.revokeObjectURL(entry.photo.displayUrl);
+    if (entry.photo?.id) idbDeletePhoto(entry.photo.id);
+    delete _trashBin[pid];
+  }
+  markDirty();
 }
 
 function refreshCard(pid) {
