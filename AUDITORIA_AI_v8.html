@@ -6339,13 +6339,7 @@ function renderCl2VistaPregunta() {
   if (!wrap) return;
 
   const colabs = CL2_STATE.colaboradores;
-  // Ordenar A-L según la letra extraída del nombre
-  const coLabsOrdenados = [...colabs].sort((a, b) => {
-    const lA = cl2LetraColab(a);
-    const lB = cl2LetraColab(b);
-    return lA.localeCompare(lB);
-  });
-  // Solo mostrar colaboradores con al menos 1 respuesta
+  const coLabsOrdenados = [...colabs].sort((a, b) => cl2LetraColab(a).localeCompare(cl2LetraColab(b)));
   const activos = coLabsOrdenados.filter(c => Object.values(c.respuestas).some(r => r?.trim()));
   const todos   = activos.length ? activos : coLabsOrdenados;
 
@@ -6353,16 +6347,23 @@ function renderCl2VistaPregunta() {
     const respRows = todos.map(c => {
       const resp = c.respuestas[qi]?.trim();
       if (!resp) return '';
-      const letra = cl2LetraColab(c);
-      return `<div style="display:flex;gap:.75rem;padding:.65rem 0;border-bottom:1px solid var(--border);align-items:flex-start">
+      const letra  = cl2LetraColab(c);
+      const uid    = `pv-${c.id}-${qi}`;
+      return `<div id="${uid}-row" style="display:flex;gap:.75rem;padding:.65rem 0;border-bottom:1px solid var(--border);align-items:flex-start">
         <div style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--gold);
           color:#fff;font-size:.62rem;font-weight:800;display:flex;align-items:center;
           justify-content:center;margin-top:2px">${letra}</div>
         <div style="flex:1">
-          <div style="font-size:.68rem;font-weight:700;color:var(--mid);margin-bottom:.15rem">
-            Colaborador ${letra}
+          <div style="font-size:.68rem;font-weight:700;color:var(--mid);margin-bottom:.15rem;display:flex;align-items:center;justify-content:space-between">
+            <span>Colaborador ${letra}</span>
+            <div style="display:flex;gap:.25rem">
+              <button class="edit-btn secondary" style="font-size:.54rem;padding:.12rem .38rem"
+                onclick="pvEditarRespuesta('${c.id}',${qi},'${uid}')" title="Editar">✏️</button>
+              <button class="edit-btn secondary" style="font-size:.54rem;padding:.12rem .38rem"
+                onclick="pvCorregirRespuesta('${c.id}',${qi},'${uid}')" title="Corregir ortografía">🔤</button>
+            </div>
           </div>
-          <div style="font-size:.8rem;color:var(--dark);line-height:1.55;text-align:justify">
+          <div id="${uid}-text" style="font-size:.8rem;color:var(--dark);line-height:1.55;text-align:justify">
             ${esc(resp)}
           </div>
         </div>
@@ -6387,6 +6388,85 @@ function renderCl2VistaPregunta() {
 
   wrap.innerHTML = html || `<div style="padding:2rem;text-align:center;color:var(--mid)">
     Sin respuestas cargadas. Carga el documento primero.</div>`;
+}
+
+/* ── Editar respuesta inline en vista Por pregunta ─────────── */
+function pvEditarRespuesta(colabId, qi, uid) {
+  const colab = CL2_STATE.colaboradores.find(c => c.id === colabId);
+  if (!colab) return;
+  const textEl = document.getElementById(uid + '-text');
+  if (!textEl) return;
+  const actual = colab.respuestas[qi] || '';
+
+  textEl.innerHTML = `
+    <textarea class="edit-textarea" id="${uid}-ta" rows="3" style="margin:.3rem 0">${esc(actual)}</textarea>
+    <div class="edit-toolbar" style="margin-top:.3rem">
+      <button class="edit-btn ok" onclick="pvGuardarRespuesta('${colabId}',${qi},'${uid}')">✓ Guardar</button>
+      <button class="edit-btn secondary" onclick="pvCorregirInline('${colabId}',${qi},'${uid}')">🔤 Corregir</button>
+      <button class="edit-btn danger" onclick="renderCl2VistaPregunta()">✕ Cancelar</button>
+      <span class="edit-status" id="${uid}-status"></span>
+    </div>`;
+  document.getElementById(uid + '-ta')?.focus();
+}
+
+function pvGuardarRespuesta(colabId, qi, uid) {
+  const ta = document.getElementById(uid + '-ta');
+  if (!ta) return;
+  const colab = CL2_STATE.colaboradores.find(c => c.id === colabId);
+  if (!colab) return;
+  colab.respuestas[qi] = ta.value.trim();
+  markDirty();
+  renderCl2VistaPregunta();
+  showToast('✓ Respuesta guardada');
+}
+
+async function pvCorregirRespuesta(colabId, qi, uid) {
+  if (!STATE?.apiKey?.startsWith('sk-ant-')) { showToast('API Key requerida'); return; }
+  const colab = CL2_STATE.colaboradores.find(c => c.id === colabId);
+  if (!colab?.respuestas[qi]?.trim()) return;
+  const textEl = document.getElementById(uid + '-text');
+  if (textEl) textEl.style.opacity = '.5';
+  showToast('Corrigiendo…');
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':STATE.apiKey,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:512,
+        messages:[{role:'user',content:`Corrige ortografía y gramática en español. Mantén el mismo significado. Solo devuelve el texto corregido:\n\n${colab.respuestas[qi]}`}] })
+    });
+    const data = await resp.json();
+    const c = data.content?.[0]?.text?.trim();
+    if (c) {
+      colab.respuestas[qi] = c;
+      markDirty();
+      renderCl2VistaPregunta();
+      showToast('✓ Respuesta corregida');
+    }
+  } catch(e) {
+    if (textEl) textEl.style.opacity = '1';
+    showToast('Error: ' + e.message);
+  }
+}
+
+async function pvCorregirInline(colabId, qi, uid) {
+  if (!STATE?.apiKey?.startsWith('sk-ant-')) { showToast('API Key requerida'); return; }
+  const ta = document.getElementById(uid + '-ta');
+  const statusEl = document.getElementById(uid + '-status');
+  if (!ta) return;
+  statusEl.textContent = 'Corrigiendo…';
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':STATE.apiKey,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:512,
+        messages:[{role:'user',content:`Corrige ortografía y gramática. Solo el texto:\n\n${ta.value}`}] })
+    });
+    const data = await resp.json();
+    const c = data.content?.[0]?.text?.trim();
+    if (c) { ta.value = c; statusEl.textContent = '✓'; setTimeout(()=>statusEl.textContent='',3000); }
+  } catch(e) { statusEl.textContent = 'Error'; }
 }
 
 function renderCl2Panel(id) {
