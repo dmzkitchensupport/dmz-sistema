@@ -5333,11 +5333,26 @@ async function climaImportarDocumento(input) {
 
   let text = '';
   try {
+    // El archivo exportado desde DOCX usa encoding Mac legacy y \r como salto de línea
+    // Leer como ArrayBuffer para decodificar correctamente con windows-1252/latin-1
     text = await new Promise((res, rej) => {
       const r = new FileReader();
-      r.onload = e => res(e.target.result);
+      r.onload = e => {
+        const buf = e.target.result;
+        let decoded = '';
+        try {
+          decoded = new TextDecoder('utf-8', { fatal: true }).decode(buf);
+        } catch(e1) {
+          try {
+            decoded = new TextDecoder('windows-1252').decode(buf);
+          } catch(e2) {
+            decoded = new TextDecoder('iso-8859-1').decode(buf);
+          }
+        }
+        res(decoded);
+      };
       r.onerror = rej;
-      r.readAsText(file, 'UTF-8');
+      r.readAsArrayBuffer(file);
     });
   } catch(e) {
     showToast('Error al leer: ' + e.message);
@@ -5347,8 +5362,7 @@ async function climaImportarDocumento(input) {
   if (!text.trim()) { showToast('Documento vacío'); return; }
 
   // ── Limpieza global del texto ──────────────────────────────────
-  // El "?" al inicio de línea es artefacto del DOCX→TXT (separador de celda)
-  // Lo eliminamos solo cuando está solo o al inicio antes de contenido
+  // Normalizar saltos de línea: \r\n (Windows), \r (Mac CR), \n (Unix)
   const cleanText = text
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n');
