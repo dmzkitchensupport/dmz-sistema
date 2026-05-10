@@ -2701,40 +2701,23 @@ async function loadSession() {
       }
     }
 
-    // Carga fotos desde IndexedDB en paralelo (no bloquea UI)
+    // LAZY LOAD — solo cargar fotos del área activa, no todas al iniciar
+    // Esto evita congelar el browser con muchas fotos en memoria
     openIDB().then(() => {
-      const photoTasks = [];
+      // Solo marcar que las fotos existen, sin cargar b64 aún
       for (const aId in STATE.areas) {
         for (const photo of STATE.areas[aId].photos) {
-          photoTasks.push(
-            idbGetPhoto(photo.id).then(b64 => {
-              if (b64) {
-                photo.storageB64  = b64;
-                photo.displayUrl  = b64ToObjectURL(b64);
-                photo._idbSaved   = true;
-              } else {
-                // Fallback: si no está en IDB, busca en el JSON guardado (compatibilidad v9.1)
-                const sp = (saved.areas[aId]?.photos || []).find(x => x.id === photo.id);
-                if (sp && sp.storageB64) {
-                  photo.storageB64 = sp.storageB64;
-                  photo.displayUrl = b64ToObjectURL(sp.storageB64);
-                  // Migra a IDB automáticamente
-                  idbPutPhoto(photo.id, sp.storageB64);
-                  photo._idbSaved = true;
-                } else {
-                  photo.state = 'empty';
-                  photo.name  = (photo.name || '') + ' (imagen no disponible)';
-                }
-              }
-            })
-          );
+          photo._lazyPending = true;  // bandera: cargar cuando se necesite
+          photo.displayUrl   = null;
+          photo.storageB64   = null;
+          photo._idbSaved    = false;
         }
       }
-      Promise.all(photoTasks).then(() => {
+      // Cargar solo el área activa inmediatamente
+      lazyLoadAreaPhotos(STATE.currentArea || 'fachada', saved).then(() => {
         renderGrid();
         renderAreaNav();
         updateProgress();
-        showToast('Fotos restauradas');
       });
     }).catch(e => console.warn('IDB load error:', e));
 
@@ -2886,6 +2869,38 @@ async function sbSaveAuditoria() {
     }
     return null;
   }
+}
+
+/* ── Lazy load: carga fotos de un área solo cuando se necesita ── */
+async function lazyLoadAreaPhotos(aId, savedRef) {
+  if (!STATE.areas[aId]) return;
+  const pending = STATE.areas[aId].photos.filter(p => p._lazyPending);
+  if (!pending.length) return;
+
+  const tasks = pending.map(photo =>
+    idbGetPhoto(photo.id).then(b64 => {
+      photo._lazyPending = false;
+      if (b64) {
+        photo.storageB64 = b64;
+        photo.displayUrl = b64ToObjectURL(b64);
+        photo._idbSaved  = true;
+      } else if (savedRef) {
+        // Fallback al JSON guardado (compatibilidad)
+        const sp = (savedRef.areas?.[aId]?.photos || []).find(x => x.id === photo.id);
+        if (sp?.storageB64) {
+          photo.storageB64 = sp.storageB64;
+          photo.displayUrl = b64ToObjectURL(sp.storageB64);
+          idbPutPhoto(photo.id, sp.storageB64);
+          photo._idbSaved  = true;
+        } else {
+          photo.state = 'empty';
+        }
+      } else {
+        photo.state = 'empty';
+      }
+    })
+  );
+  await Promise.all(tasks);
 }
 
 function startAutoSave() {
@@ -4056,6 +4071,13 @@ function updateAnalyzeBtn() {
 }
 
 function switchArea(id) {
+  // Lazy load fotos del área al entrar por primera vez
+  if (STATE.areas[id]?.photos?.some(p => p._lazyPending)) {
+    lazyLoadAreaPhotos(id).then(() => {
+      renderGrid();
+      updateProgress();
+    });
+  }
   STATE.currentArea = id;
   const area = AREAS.find(a => a.id === id);
   document.getElementById('area-title').textContent = area.name;
