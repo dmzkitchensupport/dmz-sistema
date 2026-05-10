@@ -908,6 +908,54 @@ textarea.note-ta, .cl-section-body,
 .ani-edit-btn:hover { color: var(--gold); background: rgba(201,149,42,.1); }
 .ani-del-btn { color: var(--mid); }
 .ani-del-btn:hover { color: var(--red); background: rgba(192,57,43,.1); }
+/* Drag & drop áreas */
+.ani[draggable] { cursor: grab; }
+.ani[draggable]:active { cursor: grabbing; }
+.ani.drag-target { border: 2px dashed var(--gold) !important; background: #fffdf5 !important; }
+.ani.dragging { opacity: .4; }
+.ani-drag-handle {
+  color: var(--mid); font-size: .75rem; cursor: grab;
+  padding: 0 2px; flex-shrink: 0; user-select: none;
+}
+/* Módulos personalizados */
+.hz-custom-mod {
+  border: 1.5px solid var(--border); border-radius: 8px;
+  margin-top: .75rem; overflow: hidden;
+}
+.hz-custom-mod-head {
+  background: var(--cream); padding: .5rem .75rem;
+  display: flex; align-items: center; gap: .5rem;
+}
+.hz-custom-mod-title {
+  flex: 1; font-size: .72rem; font-weight: 700; color: var(--dark);
+  border: none; background: transparent; outline: none;
+  font-family: inherit;
+}
+.hz-custom-mod-title::placeholder { color: var(--mid); font-weight: 400; }
+.hz-custom-mod-del {
+  background: none; border: none; color: var(--mid);
+  cursor: pointer; font-size: .8rem; line-height: 1; padding: 0 2px;
+}
+.hz-custom-mod-del:hover { color: var(--red); }
+.hz-custom-mod-body {
+  padding: .5rem .75rem;
+}
+.hz-custom-mod-ta {
+  width: 100%; box-sizing: border-box; border: none;
+  background: transparent; outline: none; resize: vertical;
+  font-size: .76rem; color: var(--dark); line-height: 1.6;
+  font-family: inherit; min-height: 56px;
+}
+.hz-custom-mod-ta::placeholder { color: var(--mid); }
+.hz-add-module-btn {
+  display: flex; align-items: center; gap: .4rem;
+  background: none; border: 1px dashed var(--border); border-radius: 6px;
+  color: var(--mid); font-size: .68rem; font-weight: 600;
+  padding: .45rem .8rem; cursor: pointer; width: 100%;
+  margin-top: .75rem; justify-content: center;
+  transition: all .15s;
+}
+.hz-add-module-btn:hover { border-color: var(--gold); color: var(--gold); background: #fffdf5; }
 .sb-reorder-hint {
   font-size: .54rem; color: var(--mid); text-align: center;
   padding: .3rem .5rem; letter-spacing: .06em; cursor: pointer;
@@ -4017,14 +4065,22 @@ function onKeyInput() {
 
 function renderAreaNav() {
   const nav = document.getElementById('area-nav');
-  nav.innerHTML = AREAS.map(a => {
+  nav.innerHTML = AREAS.map((a, i) => {
     const photos = STATE.areas[a.id].photos;
     const col    = areaColor(photos);
     const cnt    = photos.length;
     const conf   = photos.filter(p => p.state === 'confirmed').length;
     const active = a.id === STATE.currentArea;
     const badge  = cnt ? `<span class="ani-badge" style="background:${col}">${conf}/${cnt}</span>` : '';
-    return `<div class="ani ${active ? 'active' : ''}" onclick="switchArea('${a.id}')" data-area="${a.id}">
+    return `<div class="ani ${active ? 'active' : ''}" data-area="${a.id}" data-idx="${i}"
+      draggable="true"
+      onclick="switchArea('${a.id}')"
+      ondragstart="areaDragStart(event,${i})"
+      ondragover="areaDragOver(event,${i})"
+      ondragleave="areaDragLeave(event)"
+      ondrop="areaDrop(event,${i})"
+      ondragend="areaDragEnd()">
+      <span class="ani-drag-handle" title="Arrastrar para reordenar">⠿</span>
       <div class="ani-dot" style="background:${col}"></div>
       <div class="ani-info">
         <div style="display:flex;align-items:center;gap:2px;">
@@ -4036,10 +4092,49 @@ function renderAreaNav() {
       </div>
     </div>`;
   }).join('');
-  // Reorder hint
   nav.innerHTML += `<div class="sb-reorder-hint" onclick="openReorderAreas()">↕ Reordenar áreas</div>`;
   updateGlobalStats();
   if (document.getElementById('dash-view').style.display !== 'none') buildDash();
+}
+
+/* ── Drag & drop para reordenar áreas ─────────────────────────── */
+let _dragIdx = null;
+
+function areaDragStart(e, idx) {
+  _dragIdx = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => {
+    document.querySelectorAll('.ani')[idx]?.classList.add('dragging');
+  }, 0);
+}
+
+function areaDragOver(e, idx) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.ani').forEach(el => el.classList.remove('drag-target'));
+  if (idx !== _dragIdx) document.querySelectorAll('.ani')[idx]?.classList.add('drag-target');
+}
+
+function areaDragLeave(e) {
+  e.currentTarget.classList.remove('drag-target');
+}
+
+function areaDrop(e, toIdx) {
+  e.preventDefault();
+  if (_dragIdx === null || _dragIdx === toIdx) return;
+  const moved = AREAS.splice(_dragIdx, 1)[0];
+  AREAS.splice(toIdx, 0, moved);
+  _dragIdx = null;
+  markDirty();
+  renderAreaNav();
+  showToast('Área reordenada');
+}
+
+function areaDragEnd() {
+  _dragIdx = null;
+  document.querySelectorAll('.ani').forEach(el => {
+    el.classList.remove('dragging', 'drag-target');
+  });
 }
 
 function areaColor(photos) {
@@ -4626,12 +4721,68 @@ function buildHzPanelHtml(aId, hz) {
     </div>`;
   }).join('');
 
+  // Módulos personalizados del área
+  const mods = hz.customModules || [];
+  const modsHtml = mods.map((m, mi) => `
+    <div class="hz-custom-mod" id="custom-mod-${aId}-${mi}">
+      <div class="hz-custom-mod-head">
+        <input class="hz-custom-mod-title" type="text"
+          value="${esc(m.title||'')}"
+          placeholder="Título del módulo…"
+          oninput="hzCustomModUpdate('${aId}',${mi},'title',this.value)">
+        <button class="hz-custom-mod-del"
+          onclick="hzCustomModDelete('${aId}',${mi})" title="Eliminar módulo">✕</button>
+      </div>
+      <div class="hz-custom-mod-body">
+        <textarea class="hz-custom-mod-ta" rows="3"
+          placeholder="Escribe aquí el contenido del módulo…"
+          oninput="hzCustomModUpdate('${aId}',${mi},'text',this.value)">${esc(m.text||'')}</textarea>
+      </div>
+    </div>`).join('');
+
   return `<div class="hz-panel-title">HALLAZGOS DEL ÁREA</div>
     ${secsHtml}
+    ${modsHtml}
+    <button class="hz-add-module-btn" onclick="hzCustomModAdd('${aId}')">
+      + Agregar módulo personalizado
+    </button>
     <div class="hz-nivel-bar">
       <span class="hz-nivel-lbl">Nivel general del área</span>
       <span class="hz-nivel-badge" style="background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
     </div>`;
+}
+
+/* ── Módulos personalizados por área ─────────────────────────── */
+function hzCustomModAdd(aId) {
+  const hz = _hzGetArea(aId);
+  if (!hz) return;
+  if (!hz.customModules) hz.customModules = [];
+  hz.customModules.push({ title: '', text: '' });
+  markDirty();
+  renderHzPanel();
+  // Focus en el título del nuevo módulo
+  setTimeout(() => {
+    const mods = document.querySelectorAll('.hz-custom-mod-title');
+    mods[mods.length - 1]?.focus();
+  }, 50);
+}
+
+function hzCustomModUpdate(aId, mi, field, val) {
+  const hz = _hzGetArea(aId);
+  if (!hz?.customModules?.[mi]) return;
+  hz.customModules[mi][field] = val;
+  markDirty();
+}
+
+function hzCustomModDelete(aId, mi) {
+  const hz = _hzGetArea(aId);
+  if (!hz?.customModules?.[mi]) return;
+  const titulo = hz.customModules[mi].title || 'este módulo';
+  if (!confirm(`¿Eliminar el módulo "${titulo}"? Esta acción no se puede deshacer.`)) return;
+  hz.customModules.splice(mi, 1);
+  markDirty();
+  renderHzPanel();
+  showToast('Módulo eliminado');
 }
 
 function _hzGetArea(aId) {
