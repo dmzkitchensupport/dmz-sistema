@@ -5315,17 +5315,22 @@ const CL2_STATE = {
 let _cl2Counter = 13;
 
 /* ── Importar documento de clima laboral ─────────────────────── *
- * Formato real detectado:
- *   - Tabla DATOS GENERALES (empresa, evaluador, fecha, puestos)
- *   - Tabla PANORAMA GENERAL (observaciones generales)
- *   - 13 preguntas numeradas, cada una con respuestas A-I por colaborador
- *   - Sección ANÁLISIS DE RESULTADOS al final
+ * Formato REAL del documento DMZ:
  *
- * El parser:
- *   1. Detecta datos generales y los guarda en CL2_STATE.meta
- *   2. Lee cada pregunta y distribuye respuestas A-I en los colaboradores
- *   3. Crea/renombra colaboradores según el número de respondentes detectados
- *   4. Guarda el panorama general como observación del primer colaborador
+ *   DATOS GENERALES (tabs como separadores)
+ *   PANORAMA GENERAL — lista A. Nombre / Puesto / Antigüedad / Sueldo
+ *   PREGUNTAS DE CLIMA LABORAL
+ *     1.  ¿Pregunta?
+ *     A:  [tab] Respuesta texto libre
+ *     B:  [tab] Respuesta texto libre
+ *     ...
+ *     L:  [tab] Respuesta texto libre
+ *     Observaciones / Focos de atención: ___
+ *   ANÁLISIS DE RESULTADOS
+ *     Fortalezas detectadas  (bullets •)
+ *     Focos rojos (bullets •)
+ *
+ * Letras: A-L con formato  "X:" o "X\t" al inicio de línea
  * ─────────────────────────────────────────────────────────────── */
 async function climaImportarDocumento(input) {
   const file = input.files[0];
@@ -5339,7 +5344,6 @@ async function climaImportarDocumento(input) {
       const r = new FileReader();
       r.onload = e => res(e.target.result);
       r.onerror = rej;
-      // TXT directo; para DOCX leer como texto (el contenido ya viene como texto plano del upload)
       r.readAsText(file, 'UTF-8');
     });
   } catch(e) {
@@ -5349,16 +5353,19 @@ async function climaImportarDocumento(input) {
 
   if (!text.trim()) { showToast('Documento vacío'); return; }
 
-  // ── Extraer datos generales ────────────────────────────────────
+  // ── 1. Datos generales ─────────────────────────────────────────
   const meta = {};
-  const empresaM = text.match(/Empresa\s*\/\s*Unidad[:\s|]+([^\n|]+)/i);
-  const fechaM   = text.match(/Fecha de evaluaci[oó]n[:\s|]+([^\n|]+)/i);
-  const evaluM   = text.match(/Evaluador[:\s|]+([^\n|]+)/i);
-  const puestosM = text.match(/Puesto\(s\) evaluado\(s\)[:\s|]+([^\n|]+)/i);
-  if (empresaM) meta.empresa  = empresaM[1].trim();
-  if (fechaM)   meta.fecha    = fechaM[1].trim();
-  if (evaluM)   meta.evaluador= evaluM[1].trim();
-  if (puestosM) meta.puestos  = puestosM[1].trim();
+  // Formato: "Campo:\tValor" o "Campo:\t\tValor"
+  const empresaM = text.match(/Empresa\s*\/\s*Unidad\s*:?\s*[\t]+([^\t\n]+)/i);
+  const fechaM   = text.match(/Fecha de evaluaci[oó]n\s*:?\s*[\t]+([^\t\n]+)/i);
+  const evaluM   = text.match(/Evaluador\s*:?\s*[\t\n]+\s*([^\t\n]+)/i);
+  const puestosM = text.match(/Puesto\(s\) evaluado\(s\)\s*:?\s*[\t\n]+\s*([^\t\n]+)/i);
+  const partM    = text.match(/No\.\s*de\s*participantes\s*:?\s*[\t\n]+\s*(\d+)/i);
+  if (empresaM) meta.empresa   = empresaM[1].trim();
+  if (fechaM)   meta.fecha     = fechaM[1].trim();
+  if (evaluM)   meta.evaluador = evaluM[1].trim();
+  if (puestosM) meta.puestos   = puestosM[1].trim();
+  if (partM)    meta.numPartic = partM[1].trim();
   CL2_STATE.meta = meta;
 
   // Actualizar campo cliente si está vacío
@@ -5368,85 +5375,108 @@ async function climaImportarDocumento(input) {
     if (el) el.value = meta.empresa;
   }
 
-  // ── Extraer panorama general ───────────────────────────────────
-  const panoramaM = text.match(/Comportamiento general observado[^:]*:([\s\S]*?)(?=PREGUNTAS DE CLIMA|$)/i);
-  const panorama  = panoramaM ? panoramaM[1].replace(/\|/g,' ').trim() : '';
+  // ── 2. Panorama general — perfiles A-L ────────────────────────
+  // Captura el bloque entre "PANORAMA GENERAL" y "PREGUNTAS DE CLIMA"
+  const panoramaBlkM = text.match(/PANORAMA GENERAL[\s\S]*?(?=PREGUNTAS DE CLIMA)/i);
+  const panoramaBlk  = panoramaBlkM ? panoramaBlkM[0] : '';
 
-  // ── Extraer respuestas por pregunta ───────────────────────────
-  // Detectar letras de colaboradores presentes (A, B, C...)
-  const letrasDetect = new Set();
-  // Detectar letras A-L en el formato | **A:** | o | A: |
-  const letraRE = /[|\s]\*?\*?([A-L])\*?\*?\s*\*?\*?\s*[:|]/gm;
-  let m;
-  while ((m = letraRE.exec(text)) !== null) letrasDetect.add(m[1]);
-  const letras = letrasDetect.size > 1
-    ? [...letrasDetect].sort()
-    : ['A','B','C','D','E','F','G','H','I','J','K','L'];
-  const numColabs = letras.length;
-
-  // Asegurar que hay suficientes colaboradores en CL2_STATE
-  while (CL2_STATE.colaboradores.length < numColabs) {
-    const idx = CL2_STATE.colaboradores.length;
-    const letra = String.fromCharCode(65 + idx);
-    CL2_STATE.colaboradores.push({
-      id: 'c' + (idx+1),
-      nombre: 'Colaborador ' + letra,
-      respuestas: {}
-    });
+  // Extraer líneas tipo "A.\tIngrid Valentina / Cocinera / ..."
+  const perfiles = {};
+  const perfilRE = /^([A-L])\.\s+(.+)$/gm;
+  let pm;
+  while ((pm = perfilRE.exec(panoramaBlk)) !== null) {
+    perfiles[pm[1]] = pm[2].trim();
   }
 
-  // Parsear bloque por pregunta numerada
-  // Cada pregunta: "N. ¿texto?" seguido de respuestas A: ... B: ...
-  const preguntaBlocks = text.split(/(?=\*?\*?\d{1,2}\.\s+¿)/);
+  // ── 3. Sección de preguntas ────────────────────────────────────
+  const pregSecM = text.match(/PREGUNTAS DE CLIMA LABORAL([\s\S]*?)(?=ANÁLISIS DE RESULTADOS|$)/i);
+  const pregSec  = pregSecM ? pregSecM[1] : text;
 
-  preguntaBlocks.forEach(block => {
-    const numM = block.match(/^(\d{1,2})\.\s+/);
+  // Inicializar colaboradores A-L (reset respuestas)
+  const LETRAS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+  CL2_STATE.colaboradores = LETRAS.map((l, i) => ({
+    id: 'c' + (i + 1),
+    nombre: 'Colaborador ' + l,
+    respuestas: {}
+  }));
+
+  // Dividir por bloque de pregunta: "N.  ¿texto?"
+  // Permite 1-2 espacios y punto o punto + espacios
+  const bloques = pregSec.split(/(?=^\s*\d{1,2}\.[\s\t]+¿)/m);
+
+  bloques.forEach(bloque => {
+    // Número de pregunta
+    const numM = bloque.match(/^\s*(\d{1,2})\.[\s\t]+¿/m);
     if (!numM) return;
     const qIdx = parseInt(numM[1]) - 1;
     if (qIdx < 0 || qIdx >= CL2_PREGUNTAS.length) return;
 
-    // Extraer respuesta por letra: "A: texto" hasta la siguiente letra
-    letras.forEach((letra, li) => {
-      const letraNext = letras[li + 1];
-      // Regex que captura desde "Letra:" hasta la siguiente letra o fin de bloque
-      const rgx = letraNext
-        ? new RegExp(`\\*?\\*?${letra}\\*?\\*?\\s*[:\\|]\\s*([\\s\\S]*?)(?=\\*?\\*?${letraNext}\\*?\\*?\\s*[:\\|])`, 'i')
-        : new RegExp(`\\*?\\*?${letra}\\*?\\*?\\s*[:\\|]\\s*([\\s\\S]*?)(?=Observaciones|$)`, 'i');
-      const respM = block.match(rgx);
-      if (!respM) return;
+    // Líneas del bloque
+    const lineas = bloque.split('\n');
 
-      let resp = respM[1]
-        .replace(/\|\s*/g, ' ')
-        .replace(/\*\*/g, '')
-        .replace(/\s{2,}/g, ' ')
-        .trim();
+    // Construir mapa letra → texto acumulado
+    // Formato por línea: "X:\t texto" o "X \t texto" o "X\ttexto"
+    // La regex captura: inicio de línea, letra A-L, opcionalmente espacio, dos puntos o tab
+    const respMap = {};
+    let letraActual = null;
 
-      if (!resp) return;
-
-      // Guardar en el colaborador correspondiente
-      const colabIdx = letras.indexOf(letra);
-      if (colabIdx >= 0 && colabIdx < CL2_STATE.colaboradores.length) {
-        const colab = CL2_STATE.colaboradores[colabIdx];
-        if (!colab.respuestas) colab.respuestas = {};
-        colab.respuestas[qIdx] = resp;
+    for (const linea of lineas) {
+      // ¿Empieza con letra de colaborador?
+      // Acepta: "A:", "A :", "A\t", "A:\t", "A " + tab, etc.
+      const inicioM = linea.match(/^\s*([A-L])\s*:?\s*[\t:]\s*(.*)/);
+      if (inicioM) {
+        letraActual = inicioM[1];
+        const texto = inicioM[2].trim();
+        respMap[letraActual] = texto;
+        continue;
       }
+      // Línea de continuación (sin letra al inicio) — concatenar a la última letra
+      if (letraActual) {
+        const cont = linea.trim();
+        // Parar si es "Observaciones" o línea en blanco larga
+        if (/^Observaciones/i.test(cont)) { letraActual = null; continue; }
+        if (cont) respMap[letraActual] += ' ' + cont;
+      }
+    }
+
+    // Guardar en colaboradores en orden A-L
+    LETRAS.forEach((letra, li) => {
+      const resp = (respMap[letra] || '').trim();
+      if (!resp) return;
+      CL2_STATE.colaboradores[li].respuestas[qIdx] = resp;
     });
   });
 
-  // Guardar panorama en el primer colaborador como context extra
-  if (panorama) CL2_STATE.meta.panorama = panorama;
+  // ── 4. Análisis de resultados (bullets •) ─────────────────────
+  const analisisM = text.match(/ANÁLISIS DE RESULTADOS([\s\S]*)$/i);
+  if (analisisM) {
+    const analisis = analisisM[1];
 
-  // Capturar Análisis de Resultados si existe en el documento
-  const fortalezasM = text.match(/Fortalezas detectadas[\s\S]*?\|([^|]+)\|/i);
-  const focosM      = text.match(/Focos rojos[^|]*[\s\S]*?\|([^|]+)\|/i);
-  if (fortalezasM) CL2_STATE.meta.fortalezas = fortalezasM[1].replace(/\*\*/g,'').trim();
-  if (focosM)      CL2_STATE.meta.focos      = focosM[1].replace(/\*\*/g,'').trim();
+    // Fortalezas: bullets entre "Fortalezas detectadas" y "Focos rojos"
+    const fortBlkM = analisis.match(/Fortalezas detectadas([\s\S]*?)(?=Focos rojos|$)/i);
+    if (fortBlkM) {
+      const bullets = [...fortBlkM[1].matchAll(/[•\-]\s*(.+)/g)].map(m => m[1].trim());
+      if (bullets.length) meta.fortalezas = bullets.join('\n');
+    }
+
+    // Focos rojos: bullets hasta fin
+    const focosBlkM = analisis.match(/Focos rojos[^\n]*([\s\S]*)$/i);
+    if (focosBlkM) {
+      const bullets = [...focosBlkM[1].matchAll(/[•\-]\s*(.+)/g)].map(m => m[1].trim());
+      if (bullets.length) meta.focos = bullets.join('\n');
+    }
+  }
+
+  // Guardar perfiles en meta para referencia interna (sin exponer nombres en UI)
+  if (Object.keys(perfiles).length) meta.perfiles = perfiles;
 
   markDirty();
   buildClima2View();
 
-  const total = letras.length;
-  showToast(`Documento importado — ${total} colaboradores · ${CL2_PREGUNTAS.length} preguntas mapeadas`);
+  const conResp = CL2_STATE.colaboradores.filter(
+    c => Object.values(c.respuestas).some(r => r?.trim())
+  ).length;
+  showToast(`Documento importado — ${conResp} colaboradores · ${CL2_PREGUNTAS.length} preguntas mapeadas`);
 }
 
 function buildClima2View() {
