@@ -929,6 +929,144 @@ textarea.note-ta, .cl-section-body,
 }
 .cl2-title { font-family: var(--f-t); font-size: 1.3rem; font-weight: 800; letter-spacing: .05em; color: var(--dark); }
 .cl2-sub { font-size: .6rem; color: var(--mid); letter-spacing: .1em; margin-top: .15rem; }
+// ── Panel de recuperación visible ─────────────────────────────
+function openRecoveryPanel() {
+  if (document.getElementById('recovery-panel')) return;
+
+  const slots = [
+    { key: 'dmz_audit_v4',    tsKey: null,                label: 'Sesión actual',        icon: '💾' },
+    { key: 'dmz_emergency_backup', tsKey: 'dmz_emergency_ts', label: 'Backup emergencia', icon: '⚡' },
+    { key: 'dmz_audit_v4_h1', tsKey: 'dmz_audit_v4_h1_ts', label: 'Versión histórica 1', icon: '🕐' },
+    { key: 'dmz_audit_v4_h2', tsKey: null,                label: 'Versión histórica 2',  icon: '🕑' },
+    { key: 'dmz_audit_v4_h3', tsKey: null,                label: 'Versión histórica 3',  icon: '🕒' },
+  ];
+
+  const slotsHtml = slots.map((s, i) => {
+    const raw = localStorage.getItem(s.key);
+    if (!raw) return `
+      <div class="recovery-slot" style="opacity:.4">
+        <div class="recovery-slot-info">
+          <div class="recovery-slot-label">${s.icon} ${s.label}</div>
+          <div class="recovery-slot-ts">Sin datos</div>
+        </div>
+      </div>`;
+
+    let parsed = {};
+    try { parsed = JSON.parse(raw); } catch(e) {}
+    const ts    = s.tsKey ? localStorage.getItem(s.tsKey) : parsed.savedAt;
+    const when  = ts ? new Date(ts).toLocaleString('es-MX', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Fecha desconocida';
+    const kb    = Math.round(raw.length / 1024);
+    const client = parsed.client || parsed.cl2State?.meta?.empresa || '—';
+    const nAreas = Object.keys(parsed.areas || {}).length;
+    const nFotos = Object.values(parsed.areas || {}).reduce((s,a)=>s+(a.photos||[]).length,0);
+
+    return `
+      <div class="recovery-slot">
+        <div class="recovery-slot-info">
+          <div class="recovery-slot-label">${s.icon} ${s.label}</div>
+          <div class="recovery-slot-ts">${when} · ${client}</div>
+          <div class="recovery-slot-size">${kb} KB · ${nAreas} áreas · ${nFotos} fotos</div>
+        </div>
+        <div class="recovery-slot-btns">
+          ${i > 0 ? `<button class="recovery-btn primary" onclick="recoverFromSlot('${s.key}','${s.tsKey||''}')">Restaurar</button>` : ''}
+          <button class="recovery-btn neutral" onclick="recoverPreview('${s.key}')">Ver</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Estado de Supabase
+  const sbStatus = SB.ready
+    ? `<div style="padding:.6rem .8rem;background:#f0fdf4;border-radius:6px;font-size:.7rem;color:#27ae60;margin-bottom:.8rem">
+        ☁ Supabase conectado — snapshot en la nube disponible
+        <button class="recovery-btn neutral" style="margin-left:.5rem" onclick="sbRestoreLatest()">Restaurar desde nube</button>
+      </div>`
+    : `<div style="padding:.6rem .8rem;background:#fff5f5;border-radius:6px;font-size:.7rem;color:var(--red);margin-bottom:.8rem">
+        ⚠ Supabase no conectado — solo respaldos locales disponibles
+      </div>`;
+
+  const panel = document.createElement('div');
+  panel.className = 'recovery-panel';
+  panel.id = 'recovery-panel';
+  panel.innerHTML = `
+    <div class="recovery-card">
+      <div class="recovery-title">
+        <span>🛡 PANEL DE RECUPERACIÓN</span>
+        <button class="recovery-btn neutral" onclick="document.getElementById('recovery-panel').remove()">✕ Cerrar</button>
+      </div>
+      ${sbStatus}
+      <div style="font-size:.65rem;font-weight:700;color:var(--mid);letter-spacing:.1em;margin-bottom:.5rem">RESPALDOS LOCALES DISPONIBLES</div>
+      ${slotsHtml}
+      <div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--border);display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="recovery-btn primary" onclick="exportSessionJSON()">⬇ Exportar JSON</button>
+        <button class="recovery-btn neutral" onclick="document.getElementById('recovery-panel').remove()">Cancelar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(panel);
+}
+
+function recoverFromSlot(key, tsKey) {
+  const raw = localStorage.getItem(key);
+  if (!raw) { showToast('No hay datos en ese slot'); return; }
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch(e) { showToast('Datos corruptos en ese slot'); return; }
+  const ts   = tsKey ? localStorage.getItem(tsKey) : parsed.savedAt;
+  const when = ts ? new Date(ts).toLocaleString('es-MX') : 'fecha desconocida';
+  if (!confirm(`¿Restaurar la versión del ${when}?\nLos cambios actuales se guardarán primero como backup de emergencia.`)) return;
+
+  // Guardar estado actual como emergencia antes de restaurar
+  try {
+    localStorage.setItem('dmz_emergency_backup', localStorage.getItem('dmz_audit_v4') || '{}');
+    localStorage.setItem('dmz_emergency_ts', new Date().toISOString());
+  } catch(e) {}
+
+  localStorage.setItem('dmz_audit_v4', raw);
+  document.getElementById('recovery-panel')?.remove();
+  showToast('Restaurando… recargando página');
+  setTimeout(() => location.reload(), 1000);
+}
+
+function recoverPreview(key) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return;
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch(e) { showToast('Datos corruptos'); return; }
+  const info = [
+    `Cliente: ${parsed.client || parsed.cl2State?.meta?.empresa || '—'}`,
+    `Guardado: ${parsed.savedAt ? new Date(parsed.savedAt).toLocaleString('es-MX') : '—'}`,
+    `Áreas: ${Object.keys(parsed.areas||{}).length}`,
+    `Fotos: ${Object.values(parsed.areas||{}).reduce((s,a)=>s+(a.photos||[]).length,0)}`,
+    `Colaboradores clima: ${(parsed.cl2State?.colaboradores||[]).length}`,
+    `Resumen AI: ${parsed.cl2State?.resumen?.length || 0} preguntas`,
+    `Hallazgos: ${(parsed.hallazgosState?.planAccion||[]).length} ítems en plan`,
+  ].join('\n');
+  alert('VISTA PREVIA DEL RESPALDO\n\n' + info);
+}
+
+async function sbRestoreLatest() {
+  if (!SB.ready) { showToast('Debes iniciar sesión en Supabase primero'); return; }
+  try {
+    const rows = await sbFetch('GET',
+      `/rest/v1/auditorias?auditor_id=eq.${SB.userId}&cliente_nombre=neq.__dmz_presence__&order=guardada_en.desc&limit=1&select=snapshot,guardada_en,cliente_nombre`
+    );
+    if (!rows || !rows.length) { showToast('No hay respaldo en Supabase'); return; }
+    const snap = rows[0];
+    const when = new Date(snap.guardada_en).toLocaleString('es-MX');
+    if (!confirm(`¿Restaurar desde Supabase?\nCliente: ${snap.cliente_nombre}\nFecha: ${when}`)) return;
+    // Guardar actual como emergencia
+    try {
+      localStorage.setItem('dmz_emergency_backup', localStorage.getItem('dmz_audit_v4')||'{}');
+      localStorage.setItem('dmz_emergency_ts', new Date().toISOString());
+    } catch(e) {}
+    // Restaurar snapshot al localStorage y recargar
+    localStorage.setItem('dmz_audit_v4', JSON.stringify(snap.snapshot));
+    document.getElementById('recovery-panel')?.remove();
+    showToast('Restaurando desde Supabase…');
+    setTimeout(() => location.reload(), 1000);
+  } catch(e) {
+    showToast('Error al restaurar desde Supabase: ' + e.message);
+  }
+}
+
 // ── Restaurar desde backup de emergencia ──────────────────────
 function restoreEmergencyBackup() {
   const raw = localStorage.getItem('dmz_emergency_backup');
@@ -1053,6 +1191,38 @@ function updateBackupStatus() {
   width:5px; height:5px; border-radius:50%; background:#27ae60;
   animation:pulse 1.4s ease infinite;
 }
+.recovery-panel {
+  position:fixed;inset:0;z-index:9500;
+  background:rgba(26,37,51,.82);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+}
+.recovery-card {
+  background:#fff;border-radius:12px;padding:1.5rem 1.8rem;
+  max-width:500px;width:94%;max-height:80vh;overflow-y:auto;
+  border-top:4px solid var(--gold);
+}
+.recovery-title {
+  font-size:.9rem;font-weight:800;color:var(--dark);
+  letter-spacing:.05em;margin-bottom:1rem;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.recovery-slot {
+  border:1px solid var(--border);border-radius:8px;
+  padding:.75rem 1rem;margin-bottom:.6rem;
+  display:flex;align-items:center;justify-content:space-between;gap:.75rem;
+}
+.recovery-slot-info { flex:1; }
+.recovery-slot-label { font-size:.7rem;font-weight:700;color:var(--dark); }
+.recovery-slot-ts { font-size:.62rem;color:var(--mid);margin-top:.15rem; }
+.recovery-slot-size { font-size:.6rem;color:var(--mid); }
+.recovery-slot-btns { display:flex;gap:.4rem; }
+.recovery-btn {
+  padding:.28rem .7rem;border-radius:5px;font-size:.65rem;
+  font-weight:700;cursor:pointer;border:none;white-space:nowrap;
+}
+.recovery-btn.primary { background:var(--gold);color:#fff; }
+.recovery-btn.danger  { background:var(--red);color:#fff; }
+.recovery-btn.neutral { background:var(--cream);color:var(--dark);border:1px solid var(--border); }
 .cl2-metodologia {
   background:#fffdf5; border-left:4px solid var(--gold);
   border-radius:var(--r); padding:1rem 1.3rem;
@@ -1836,6 +2006,7 @@ td:hover .hz-edit-hint { opacity: 1; }
       <span id="save-label">Sin guardar</span>
     </div>
     <button class="btn-save" onclick="manualSave()">Guardar</button>
+    <button class="btn-save-sm" onclick="openRecoveryPanel()" title="Panel de recuperación de datos" style="background:var(--gold);color:#fff;border-color:var(--gold)">🛡</button>
     <button class="btn-save-sm" onclick="openSessionModal()" title="Exportar / Importar / Nueva sesión">···</button>
   </div>
 </div>
@@ -3124,7 +3295,45 @@ async function sbSaveAuditoria() {
   }));
   const totAll = totC+totO+totK || 1;
 
-  // Snapshot compacto (sin imágenes base64 — están en IDB/Storage)
+  // Snapshot con thumbnails de fotos para respaldo en nube
+  // Genera miniaturas 200px para que quepan en JSONB sin exceder límites
+  const buildPhotoThumb = (b64) => new Promise(res => {
+    if (!b64) return res(null);
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 200;
+      const ratio = Math.min(MAX/img.width, MAX/img.height, 1);
+      const c = document.createElement('canvas');
+      c.width  = Math.round(img.width  * ratio);
+      c.height = Math.round(img.height * ratio);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      res(c.toDataURL('image/jpeg', 0.55));
+    };
+    img.onerror = () => res(null);
+    img.src = b64;
+  });
+
+  // Recolectar thumbnails de todas las fotos desde IndexedDB
+  const photoThumbs = {};
+  const thumbTasks  = [];
+  for (const aId in STATE.areas) {
+    for (const p of STATE.areas[aId].photos) {
+      thumbTasks.push(
+        idbGetPhoto(p.id).then(async b64 => {
+          if (b64) {
+            const thumb = await buildPhotoThumb(b64);
+            if (thumb) photoThumbs[p.id] = thumb;
+          }
+        })
+      );
+    }
+  }
+  // Esperar thumbs (max 8s para no bloquear) 
+  await Promise.race([
+    Promise.all(thumbTasks),
+    new Promise(r => setTimeout(r, 8000))
+  ]);
+
   const snapshot = {
     version:        '10.0',
     savedAt:        new Date().toISOString(),
@@ -3133,6 +3342,7 @@ async function sbSaveAuditoria() {
     cl2State:       CL2_STATE,
     hallazgosState: HZ_STATE,
     aliState:       { items: ALI_STATE.items, _cnt: ALI_STATE._cnt },
+    photoThumbs,   // miniaturas para recuperación visual
     areas:          Object.fromEntries(
       Object.entries(STATE.areas).map(([aId, aData]) => [
         aId,
@@ -3140,6 +3350,7 @@ async function sbSaveAuditoria() {
             id: p.id, name: p.name, alert: p.alert,
             state: p.state, notes: p.notes,
             markers: p.markers, aiSuggestion: p.aiSuggestion,
+            hasThumb: !!photoThumbs[p.id],
           }))
         }
       ])
@@ -3677,10 +3888,15 @@ function init() {
   const _savedLogo = localStorage.getItem('dmz_logo');
   if (_savedLogo) { STATE.logoB64 = _savedLogo; applyLogo(_savedLogo); }
 
-  // Pre-cargar API Key fija
+  // API Key: cargar desde sessionStorage si existe, sino del default
+  // sessionStorage no persiste entre pestañas ni al cerrar — más seguro
+  const _storedKey = sessionStorage.getItem('dmz_api_key');
   const _defaultKey = ['sk-ant-api03-1INQwh8eXBBCIzGRJus44-Sy','qP4vlNzdGoxutadB_q5dXrDLNSdRpqFB3LfHFzJ3au','PFYf2bc1DhW5Syf55wWA-uGqwyQAA'].join('');
+  const _activeKey = _storedKey || _defaultKey;
+  sessionStorage.setItem('dmz_api_key', _activeKey);  // persistir en session
+  STATE.apiKey = _activeKey;
   const _keyInput = document.getElementById('inp-key');
-  if (_keyInput && !_keyInput.value) { _keyInput.value = _defaultKey; onKeyInput(); }
+  if (_keyInput) { _keyInput.value = _activeKey; onKeyInput(); }
 
   // Restaura sesión guardada antes de renderizar
   const restored = loadSession();
@@ -3757,6 +3973,7 @@ function setMode(m) {
 function onKeyInput() {
   const k = document.getElementById('inp-key').value.trim();
   STATE.apiKey = k;
+  if (k.startsWith('sk-ant-')) sessionStorage.setItem('dmz_api_key', k);
   const s = document.getElementById('key-status');
   if (k.startsWith('sk-ant-')) {
     s.classList.add('ok'); s.classList.remove('err');
@@ -8839,6 +9056,7 @@ async function buildHistorial() {
       <div class="sm-val">Descarga un archivo JSON con todas las fotos y clasificaciones para respaldo o continuar en otro dispositivo.</div>
     </div>
     <div class="sm-actions">
+      <button class="sm-btn" style="background:var(--gold);color:#fff;border:none;border-radius:6px;padding:.5rem 1rem;font-size:.72rem;font-weight:700;cursor:pointer" onclick="openSessionModal();openRecoveryPanel()">🛡 Panel de Recuperación</button>
       <button class="sm-btn sm-btn-primary" onclick="exportSession()">Exportar JSON</button>
       <button class="sm-btn sm-btn-outline" onclick="document.getElementById('import-input').click()">Importar JSON</button>
       <input type="file" id="import-input" accept=".json" style="display:none" onchange="importSession(event)">
