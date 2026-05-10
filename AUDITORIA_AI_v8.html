@@ -1316,6 +1316,7 @@ function updateBackupStatus() {
 .edit-btn.secondary { background:var(--mid); }
 .edit-btn.danger    { background:var(--red); }
 .edit-btn.ok        { background:#27ae60; }
+.cl2-bloque-item:hover { border-left-color:var(--gold) !important; }
 .edit-textarea { width:100%; box-sizing:border-box; border:1.5px solid var(--gold); border-radius:5px; padding:.55rem .7rem; font-size:.76rem; line-height:1.6; color:var(--dark); resize:vertical; font-family:inherit; background:#fffdf5; min-height:80px; }
 .edit-toolbar { display:flex; gap:.4rem; align-items:center; margin-top:.35rem; flex-wrap:wrap; }
 .edit-status { font-size:.6rem; color:var(--mid); margin-left:auto; }
@@ -6418,15 +6419,39 @@ function renderCl2Panel(id) {
     </div>
     <div class="cl2-q-wrap">
       ${CL2_PREGUNTAS.map((q, i) => `
-        <div class="cl2-q-item">
-          <div class="cl2-q-label">
-            <span class="cl2-q-num">${i+1}</span>${esc(q)}
+        <div class="cl2-q-item" id="cl2-qi-${c.id}-${i}">
+          <div class="cl2-q-label" style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem">
+            <span><span class="cl2-q-num">${i+1}</span>${esc(q)}</span>
+            <div style="display:flex;gap:.3rem;flex-shrink:0">
+              <button class="edit-btn secondary" style="font-size:.54rem;padding:.15rem .4rem;opacity:.6"
+                onclick="cl2CorregirRespuesta('${c.id}',${i})" title="Corregir ortografía">🔤</button>
+            </div>
           </div>
           <textarea class="cl2-q-ta" id="cl2-ta-${i}" rows="2"
             placeholder="Respuesta de Colaborador ${letra}…"
             oninput="updateCl2Counter()"
           >${esc(c.respuestas[i] || '')}</textarea>
         </div>`).join('')}
+      <div style="margin-top:.8rem;padding-top:.8rem;border-top:1px dashed var(--border)">
+        <div style="font-size:.6rem;font-weight:700;color:var(--mid);letter-spacing:.08em;margin-bottom:.5rem">AGREGAR BLOQUE</div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          <button class="edit-btn secondary" style="font-size:.62rem" onclick="cl2InsertarBloque('${c.id}','nota')">+ Nota libre</button>
+          <button class="edit-btn secondary" style="font-size:.62rem" onclick="cl2InsertarBloque('${c.id}','observacion')">+ Observación</button>
+          <button class="edit-btn secondary" style="font-size:.62rem" onclick="cl2InsertarBloque('${c.id}','hallazgo')">+ Hallazgo</button>
+          <button class="edit-btn secondary" style="font-size:.62rem" onclick="cl2InsertarBloque('${c.id}','fortaleza')">+ Fortaleza</button>
+        </div>
+        <div id="cl2-bloques-${c.id}">
+          ${(c.bloques||[]).map((b,bi) => `
+            <div class="cl2-bloque-item" id="bl-${c.id}-${bi}" style="margin-top:.6rem;border-left:3px solid var(--gold);padding:.5rem .75rem;background:#fffdf5;border-radius:0 5px 5px 0;position:relative">
+              <div style="font-size:.58rem;font-weight:800;letter-spacing:.1em;color:var(--gold);margin-bottom:.25rem">${esc((b.tipo||'nota').toUpperCase())}</div>
+              <textarea class="edit-textarea" style="min-height:52px" onblur="cl2SaveBloque('${c.id}',${bi},this.value)">${esc(b.texto||'')}</textarea>
+              <div style="display:flex;gap:.3rem;margin-top:.3rem">
+                <button class="edit-btn secondary" style="font-size:.54rem" onclick="cl2CorregirBloqueItem('${c.id}',${bi})">🔤</button>
+                <button class="edit-btn danger" style="font-size:.54rem" onclick="cl2EliminarBloque('${c.id}',${bi})">✕ Eliminar</button>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
     </div>
   </div>`;
 }
@@ -6444,6 +6469,110 @@ function updateCl2Counter() {
   const bar = document.querySelector('.cl2-progress-fill');
   if (cnt) cnt.textContent = `${filled} / ${CL2_PREGUNTAS.length} preguntas respondidas`;
   if (bar) bar.style.width = pct + '%';
+}
+
+/* ── Corrección ortográfica de respuesta individual ─────────── */
+async function cl2CorregirRespuesta(colabId, qIdx) {
+  if (!STATE?.apiKey?.startsWith('sk-ant-')) { showToast('API Key requerida'); return; }
+  const ta = document.getElementById(`cl2-ta-${qIdx}`);
+  if (!ta || !ta.value.trim()) return;
+  showToast('Corrigiendo…');
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':STATE.apiKey,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:512,
+        messages:[{role:'user',content:`Corrige ortografía y gramática en español. Solo devuelve el texto corregido:
+
+${ta.value}`}] })
+    });
+    const data = await resp.json();
+    const c = data.content?.[0]?.text?.trim();
+    if (c) {
+      ta.value = c;
+      // Guardar en state
+      const colab = CL2_STATE.colaboradores.find(x => x.id === colabId);
+      if (colab) { colab.respuestas[qIdx] = c; markDirty(); }
+      showToast('✓ Respuesta corregida');
+    }
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+/* ── Insertar bloque adicional ───────────────────────────────── */
+function cl2InsertarBloque(colabId, tipo) {
+  const colab = CL2_STATE.colaboradores.find(c => c.id === colabId);
+  if (!colab) return;
+  if (!colab.bloques) colab.bloques = [];
+  colab.bloques.push({ tipo, texto: '' });
+  markDirty();
+  renderCl2Panel(colabId);
+  // Scroll al nuevo bloque
+  setTimeout(() => {
+    const cont = document.getElementById(`cl2-bloques-${colabId}`);
+    if (cont) cont.lastElementChild?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }, 100);
+}
+
+function cl2SaveBloque(colabId, bi, texto) {
+  const colab = CL2_STATE.colaboradores.find(c => c.id === colabId);
+  if (!colab || !colab.bloques?.[bi]) return;
+  colab.bloques[bi].texto = texto.trim();
+  markDirty();
+}
+
+function cl2EliminarBloque(colabId, bi) {
+  const colab = CL2_STATE.colaboradores.find(c => c.id === colabId);
+  if (!colab || !colab.bloques?.[bi]) return;
+  const tipo = colab.bloques[bi].tipo || 'nota';
+  if (!confirm(`¿Eliminar este bloque de "${tipo}"? Esta acción no se puede deshacer.`)) return;
+  colab.bloques.splice(bi, 1);
+  markDirty();
+  renderCl2Panel(colabId);
+  showToast('Bloque eliminado');
+}
+
+async function cl2CorregirBloqueItem(colabId, bi) {
+  if (!STATE?.apiKey?.startsWith('sk-ant-')) { showToast('API Key requerida'); return; }
+  const colab = CL2_STATE.colaboradores.find(c => c.id === colabId);
+  if (!colab?.bloques?.[bi]?.texto) return;
+  showToast('Corrigiendo…');
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':STATE.apiKey,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:512,
+        messages:[{role:'user',content:`Corrige ortografía y gramática. Solo el texto:
+
+${colab.bloques[bi].texto}`}] })
+    });
+    const data = await resp.json();
+    const c = data.content?.[0]?.text?.trim();
+    if (c) { colab.bloques[bi].texto = c; markDirty(); renderCl2Panel(colabId); showToast('✓ Bloque corregido'); }
+  } catch(e) { showToast('Error'); }
+}
+
+/* ── Alerta de seguridad mejorada al eliminar colaborador ────── */
+function deleteCl2Colaborador(id) {
+  const colab = CL2_STATE.colaboradores.find(c => c.id === id);
+  if (!colab) return;
+  const letra = cl2LetraColab(colab);
+  const nResp = Object.values(colab.respuestas).filter(r => r?.trim()).length;
+  if (!confirm(
+    `⚠️ ELIMINAR COLABORADOR ${letra}\n\n` +
+    `Este colaborador tiene ${nResp} respuestas registradas.\n` +
+    `Esta acción NO se puede deshacer.\n\n` +
+    `¿Confirmas que deseas eliminarlo?`
+  )) return;
+  saveCl2CurrentPanel();
+  const idx = CL2_STATE.colaboradores.findIndex(c => c.id === id);
+  if (idx !== -1) CL2_STATE.colaboradores.splice(idx, 1);
+  CL2_STATE.activoId = CL2_STATE.colaboradores[Math.max(0, idx-1)]?.id || CL2_STATE.colaboradores[0]?.id;
+  renderCl2Tabs();
+  renderCl2Panel(CL2_STATE.activoId);
+  markDirty();
+  showToast(`Colaborador ${letra} eliminado`);
 }
 
 function addCl2Colaborador() {
@@ -6686,15 +6815,22 @@ function renderCl2AnalisisBlock() {
   div.className = 'cl2-analisis-append';
   div.style.cssText = 'border-top:2px solid var(--gold);margin-top:1rem;padding:1.2rem 1.4rem';
   div.innerHTML = `
-    <div style="font-size:.6rem;font-weight:800;letter-spacing:.15em;color:var(--dark);margin-bottom:1rem">ANÁLISIS DE RESULTADOS</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-size:.6rem;font-weight:800;letter-spacing:.15em;color:var(--dark)">ANÁLISIS DE RESULTADOS</div>
+      <div style="display:flex;gap:.4rem">
+        <button class="edit-btn secondary" style="font-size:.58rem" onclick="cl2EditAnalisis('fortalezas')">✏️ Editar fortalezas</button>
+        <button class="edit-btn secondary" style="font-size:.58rem" onclick="cl2EditAnalisis('focos')">✏️ Editar focos</button>
+        <button class="edit-btn secondary" style="font-size:.58rem" onclick="cl2CorregirAnalisis()">🔤 Corregir</button>
+      </div>
+    </div>
     ${m.fortalezas ? `
-    <div style="margin-bottom:1rem">
+    <div style="margin-bottom:1rem" id="analisis-fortalezas-view">
       <div style="font-size:.58rem;font-weight:800;letter-spacing:.12em;color:#27ae60;
         border-left:3px solid #27ae60;padding-left:.5rem;margin-bottom:.5rem">FORTALEZAS DETECTADAS</div>
       <ul style="margin:0;padding-left:1.2rem;list-style:disc">${toBullets(m.fortalezas)}</ul>
     </div>` : ''}
     ${m.focos ? `
-    <div>
+    <div id="analisis-focos-view">
       <div style="font-size:.58rem;font-weight:800;letter-spacing:.12em;color:#c0392b;
         border-left:3px solid #c0392b;padding-left:.5rem;margin-bottom:.5rem">FOCOS ROJOS / ÁREAS DE ATENCIÓN</div>
       <ul style="margin:0;padding-left:1.2rem;list-style:disc">${toBullets(m.focos)}</ul>
@@ -6732,6 +6868,98 @@ function renderCl2Resumen(resumenes) {
 }
 
 /* ── Edición de resumen CLIMA por pregunta ───────────────────── */
+/* ── Edición de Fortalezas y Focos ──────────────────────────── */
+function cl2EditAnalisis(campo) {
+  const m = CL2_STATE.meta || {};
+  const actual = m[campo === 'fortalezas' ? 'fortalezas' : 'focos'] || '';
+  const label = campo === 'fortalezas' ? 'FORTALEZAS DETECTADAS' : 'FOCOS ROJOS / ÁREAS DE ATENCIÓN';
+  const uid = 'analisis-edit-' + campo;
+
+  // Si ya hay un editor abierto, cerrarlo
+  document.getElementById(uid)?.remove();
+
+  const div = document.createElement('div');
+  div.id = uid;
+  div.style.cssText = 'margin:8px 0;padding:10px;background:#fffdf5;border:1.5px solid var(--gold);border-radius:6px';
+  div.innerHTML = `
+    <div style="font-size:.6rem;font-weight:800;letter-spacing:.1em;color:var(--mid);margin-bottom:.4rem">${label}</div>
+    <div style="font-size:.62rem;color:var(--mid);margin-bottom:.4rem">Un punto por línea</div>
+    <textarea id="ta-${uid}" class="edit-textarea" rows="6" style="min-height:100px">${actual}</textarea>
+    <div class="edit-toolbar">
+      <button class="edit-btn ok" onclick="cl2SaveAnalisis('${campo}','${uid}')">✓ Guardar</button>
+      <button class="edit-btn secondary" onclick="cl2CorregirCampoAnalisis('${campo}','${uid}')">🔤 Corregir ortografía</button>
+      <button class="edit-btn danger" onclick="document.getElementById('${uid}')?.remove()">✕ Cancelar</button>
+      <span class="edit-status" id="${uid}-status"></span>
+    </div>`;
+
+  const target = document.getElementById('analisis-' + campo + '-view')
+    || document.querySelector('.cl2-analisis-append');
+  if (target) target.insertAdjacentElement('afterend', div);
+  else document.getElementById('cl2-resumen-body')?.appendChild(div);
+  document.getElementById('ta-' + uid)?.focus();
+}
+
+function cl2SaveAnalisis(campo, uid) {
+  const ta = document.getElementById('ta-' + uid);
+  if (!ta) return;
+  if (!CL2_STATE.meta) CL2_STATE.meta = {};
+  CL2_STATE.meta[campo] = ta.value.trim();
+  markDirty();
+  document.getElementById(uid)?.remove();
+  renderCl2AnalisisBlock();
+  if (CL2_STATE.resumen?.length) renderCl2Resumen(CL2_STATE.resumen);
+  showToast('✓ ' + (campo === 'fortalezas' ? 'Fortalezas' : 'Focos') + ' guardados');
+}
+
+async function cl2CorregirCampoAnalisis(campo, uid) {
+  if (!STATE?.apiKey?.startsWith('sk-ant-')) { showToast('API Key requerida'); return; }
+  const ta = document.getElementById('ta-' + uid);
+  const statusEl = document.getElementById(uid + '-status');
+  if (!ta) return;
+  statusEl.textContent = 'Corrigiendo…';
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':STATE.apiKey,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1024,
+        messages:[{role:'user',content:`Corrige ortografía y gramática de cada línea. Mantén una línea por punto. Devuelve solo el texto corregido:
+
+${ta.value}`}] })
+    });
+    const data = await resp.json();
+    const c = data.content?.[0]?.text?.trim();
+    if (c) { ta.value = c; statusEl.textContent = '✓ Corregido'; setTimeout(()=>statusEl.textContent='',3000); }
+  } catch(e) { statusEl.textContent = 'Error'; }
+}
+
+async function cl2CorregirAnalisis() {
+  if (!CL2_STATE.meta) return;
+  if (CL2_STATE.meta.fortalezas) await cl2CorregirCampoAnalisisDirecto('fortalezas');
+  if (CL2_STATE.meta.focos)      await cl2CorregirCampoAnalisisDirecto('focos');
+  renderCl2AnalisisBlock();
+  if (CL2_STATE.resumen?.length) renderCl2Resumen(CL2_STATE.resumen);
+  showToast('✓ Análisis corregido');
+}
+
+async function cl2CorregirCampoAnalisisDirecto(campo) {
+  if (!STATE?.apiKey?.startsWith('sk-ant-') || !CL2_STATE.meta?.[campo]) return;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':STATE.apiKey,
+        'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1024,
+        messages:[{role:'user',content:`Corrige ortografía y gramática. Mantén una línea por punto. Solo el texto:
+
+${CL2_STATE.meta[campo]}`}] })
+    });
+    const data = await resp.json();
+    const c = data.content?.[0]?.text?.trim();
+    if (c) { CL2_STATE.meta[campo] = c; markDirty(); }
+  } catch(e) {}
+}
+
 function cl2EditResumen(ri) {
   const card = document.getElementById(`cl2-res-${ri}`);
   const textEl = document.getElementById(`cl2-res-text-${ri}`);
