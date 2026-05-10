@@ -5616,52 +5616,8 @@ function buildClima2View() {
       m.puestos   ? m.puestos               : '',
     ].filter(Boolean).join(' · ');
   }
-  // Mostrar análisis — SIEMPRE al final, con o sin resumen AI
-  const resBody = document.getElementById('cl2-resumen-body');
-  if (resBody && (CL2_STATE.meta?.fortalezas || CL2_STATE.meta?.focos)) {
-    const m = CL2_STATE.meta;
-    const toBullets = (txt, color) => txt
-      ? txt.split('\n').filter(Boolean).map(b =>
-          `<li style="margin-bottom:.4rem;font-size:.78rem;color:var(--dark);line-height:1.6">${esc(b)}</li>`
-        ).join('')
-      : '';
-    resBody.innerHTML = `
-      <div style="padding:1.2rem 1.4rem;display:flex;flex-direction:column;gap:1.2rem">
-        ${m.fortalezas ? `
-        <div>
-          <div style="font-size:.6rem;font-weight:800;letter-spacing:.14em;color:#27ae60;
-            border-left:3px solid #27ae60;padding-left:.55rem;margin-bottom:.6rem">
-            FORTALEZAS DETECTADAS
-          </div>
-          <ul style="margin:0;padding-left:1.2rem;list-style:disc">
-            ${toBullets(m.fortalezas,'#27ae60')}
-          </ul>
-        </div>` : ''}
-        ${m.focos ? `
-        <div>
-          <div style="font-size:.6rem;font-weight:800;letter-spacing:.14em;color:var(--red);
-            border-left:3px solid var(--red);padding-left:.55rem;margin-bottom:.6rem">
-            FOCOS ROJOS / ÁREAS DE ATENCIÓN
-          </div>
-          <ul style="margin:0;padding-left:1.2rem;list-style:disc">
-            ${toBullets(m.focos,'var(--red)')}
-          </ul>
-        </div>` : ''}
-        ${!CL2_STATE.resumen ? `<div style="font-size:.62rem;color:var(--mid);text-align:right;border-top:1px solid var(--border);padding-top:.5rem">
-          Análisis importado del documento · Presiona <strong>Generar Resumen</strong> para análisis AI
-        </div>` : ''}
-      </div>`;
-    // If resumen already rendered, append análisis after it
-    if (CL2_STATE.resumen) {
-      const existing = resBody.querySelector('.cl2-analisis-wrap');
-      if (!existing) {
-        const div = document.createElement('div');
-        div.className = 'cl2-analisis-wrap';
-        div.innerHTML = resBody.innerHTML;
-        resBody.appendChild(div);
-      }
-    }
-  }
+  // Mostrar análisis al final — sin duplicar
+  renderCl2AnalisisBlock();
 }
 
 function cl2LetraColab(c) {
@@ -5963,11 +5919,43 @@ Incluye todas las preguntas que tengan al menos una respuesta. Responde en espa�
     CL2_STATE.generadoEn  = new Date().toISOString();
     markDirty();
     renderCl2Resumen(CL2_STATE.resumen);
+    renderCl2AnalisisBlock();
     showToast('Resumen de clima generado');
 
   } catch(err) {
     body.innerHTML = `<div style="padding:1.5rem;text-align:center;color:var(--red);font-size:.76rem;">Error: ${esc(err.message)}<br><button class="btn btn-outline" onclick="generarResumenClima2()" style="margin-top:.8rem;font-size:.65rem">Reintentar</button></div>`;
   }
+}
+
+function renderCl2AnalisisBlock() {
+  /* Agrega fortalezas/focos al final del resumen — UNA SOLA VEZ */
+  const resBody = document.getElementById('cl2-resumen-body');
+  if (!resBody) return;
+  // Eliminar cualquier bloque previo para evitar duplicados
+  resBody.querySelectorAll('.cl2-analisis-append').forEach(el => el.remove());
+  const m = CL2_STATE.meta || {};
+  if (!m.fortalezas && !m.focos) return;
+  const toBullets = txt => txt.split('\n').filter(Boolean)
+    .map(b => `<li style="margin-bottom:.4rem;font-size:.76rem;color:#2D3A3F;line-height:1.6">${esc(b)}</li>`)
+    .join('');
+  const div = document.createElement('div');
+  div.className = 'cl2-analisis-append';
+  div.style.cssText = 'border-top:2px solid var(--gold);margin-top:1rem;padding:1.2rem 1.4rem';
+  div.innerHTML = `
+    <div style="font-size:.6rem;font-weight:800;letter-spacing:.15em;color:var(--dark);margin-bottom:1rem">ANÁLISIS DE RESULTADOS</div>
+    ${m.fortalezas ? `
+    <div style="margin-bottom:1rem">
+      <div style="font-size:.58rem;font-weight:800;letter-spacing:.12em;color:#27ae60;
+        border-left:3px solid #27ae60;padding-left:.5rem;margin-bottom:.5rem">FORTALEZAS DETECTADAS</div>
+      <ul style="margin:0;padding-left:1.2rem;list-style:disc">${toBullets(m.fortalezas)}</ul>
+    </div>` : ''}
+    ${m.focos ? `
+    <div>
+      <div style="font-size:.58rem;font-weight:800;letter-spacing:.12em;color:#c0392b;
+        border-left:3px solid #c0392b;padding-left:.5rem;margin-bottom:.5rem">FOCOS ROJOS / ÁREAS DE ATENCIÓN</div>
+      <ul style="margin:0;padding-left:1.2rem;list-style:disc">${toBullets(m.focos)}</ul>
+    </div>` : ''}`;
+  resBody.appendChild(div);
 }
 
 function renderCl2Resumen(resumenes) {
