@@ -31,7 +31,7 @@
 <script>
 // Auto cache-bust: si la URL no tiene el build actual, recarga con él
 (function(){
-  var BUILD = '20260509-v4';
+  var BUILD = '20260510-v21';
   var url = new URL(window.location.href);
   if (url.searchParams.get('b') !== BUILD) {
     url.searchParams.set('b', BUILD);
