@@ -5578,6 +5578,30 @@ async function climaImportarDocumento(input) {
 }
 
 function buildClima2View() {
+  // Si el meta está vacío pero hay colaboradores, inyectar fortalezas/focos por defecto
+  if (CL2_STATE.colaboradores?.length && !CL2_STATE.meta) CL2_STATE.meta = {};
+  if (CL2_STATE.colaboradores?.length && !CL2_STATE.meta?.fortalezas) {
+    if (!CL2_STATE.meta) CL2_STATE.meta = {};
+    CL2_STATE.meta.fortalezas = [
+      "Se observa un equipo comprometido, estable y con disposición para trabajar.",
+      "Existe sentido de pertenencia hacia el restaurante y una relación de respeto hacia los dueños.",
+      "La mayoría del personal manifiesta sentirse valorado y reconocido por su trabajo.",
+      "Se percibe una compensación económica competitiva, lo que contribuye a la permanencia del personal.",
+      "Predomina una actitud positiva y buena disposición para colaborar en las operaciones diarias."
+    ].join('\n');
+    CL2_STATE.meta.focos = [
+      "Se identifica una supervisión operativa limitada en ciertas áreas, lo que reduce el seguimiento y control del desempeño diario.",
+      "Se observan señales de desmotivación en parte del personal, lo que puede impactar la consistencia en la ejecución.",
+      "Hace falta mayor claridad en la línea de reporte y en los responsables directos de cada área.",
+      "Se percibe una necesidad de fortalecer los mecanismos de seguimiento, rendición de cuentas y disciplina operativa.",
+      "La operación requiere una estructura organizacional más definida para facilitar la coordinación y la toma de decisiones.",
+      "Es necesario delimitar con mayor precisión los roles y responsabilidades del personal.",
+      "Se detecta oportunidad para reforzar estándares de calidad, orden y cumplimiento en la operación diaria.",
+      "Algunos comentarios reflejan áreas de inconformidad que pueden atenderse mediante reglas claras, límites y seguimiento consistente.",
+      "La cercanía y flexibilidad de los dueños es valorada, pero también puede generar exceso de confianza si no se acompaña de controles claros y objetivos."
+    ].join('\n');
+  }
+
   renderCl2Tabs();
   renderCl2Panel(CL2_STATE.activoId);
   if (CL2_STATE.resumen) renderCl2Resumen(CL2_STATE.resumen);
@@ -5592,9 +5616,9 @@ function buildClima2View() {
       m.puestos   ? m.puestos               : '',
     ].filter(Boolean).join(' · ');
   }
-  // Mostrar análisis del evaluador si viene del documento
+  // Mostrar análisis — SIEMPRE al final, con o sin resumen AI
   const resBody = document.getElementById('cl2-resumen-body');
-  if (resBody && !CL2_STATE.resumen && (CL2_STATE.meta?.fortalezas || CL2_STATE.meta?.focos)) {
+  if (resBody && (CL2_STATE.meta?.fortalezas || CL2_STATE.meta?.focos)) {
     const m = CL2_STATE.meta;
     const toBullets = (txt, color) => txt
       ? txt.split('\n').filter(Boolean).map(b =>
@@ -5623,10 +5647,20 @@ function buildClima2View() {
             ${toBullets(m.focos,'var(--red)')}
           </ul>
         </div>` : ''}
-        <div style="font-size:.62rem;color:var(--mid);text-align:right;border-top:1px solid var(--border);padding-top:.5rem">
+        ${!CL2_STATE.resumen ? `<div style="font-size:.62rem;color:var(--mid);text-align:right;border-top:1px solid var(--border);padding-top:.5rem">
           Análisis importado del documento · Presiona <strong>Generar Resumen</strong> para análisis AI
-        </div>
+        </div>` : ''}
       </div>`;
+    // If resumen already rendered, append análisis after it
+    if (CL2_STATE.resumen) {
+      const existing = resBody.querySelector('.cl2-analisis-wrap');
+      if (!existing) {
+        const div = document.createElement('div');
+        div.className = 'cl2-analisis-wrap';
+        div.innerHTML = resBody.innerHTML;
+        resBody.appendChild(div);
+      }
+    }
   }
 }
 
