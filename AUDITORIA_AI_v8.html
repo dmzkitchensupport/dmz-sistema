@@ -5399,9 +5399,9 @@ async function climaImportarDocumento(input) {
       }
     }
     if (/Puesto\(s\)/i.test(l) && !meta.puestos) {
-      for (let j = i+1; j < Math.min(i+4, lines.length); j++) {
+      for (let j = i+1; j < Math.min(i+8, lines.length); j++) {
         const v = lines[j].replace(/\?/g,'').trim();
-        if (v) { meta.puestos = v; break; }
+        if (v && !/Puesto|evaluado/i.test(v)) { meta.puestos = v; break; }
       }
     }
   }
