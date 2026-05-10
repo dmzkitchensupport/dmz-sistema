@@ -5619,7 +5619,6 @@ function buildClima2View() {
 
   renderCl2Tabs();
   renderCl2Panel(CL2_STATE.activoId);
-  if (CL2_STATE.resumen) renderCl2Resumen(CL2_STATE.resumen);
   // Mostrar datos del documento importado
   const sub = document.getElementById('cl2-meta-sub');
   if (sub && CL2_STATE.meta?.empresa) {
@@ -5631,8 +5630,9 @@ function buildClima2View() {
       m.puestos   ? m.puestos               : '',
     ].filter(Boolean).join(' · ');
   }
-  // Mostrar análisis al final — sin duplicar
+  // Orden: 1) Análisis de resultados  2) Resumen AI por pregunta
   renderCl2AnalisisBlock();
+  if (CL2_STATE.resumen) renderCl2Resumen(CL2_STATE.resumen);
 }
 
 function cl2LetraColab(c) {
@@ -5933,8 +5933,8 @@ Incluye todas las preguntas que tengan al menos una respuesta. Responde en espa�
     CL2_STATE.resumen     = parsed.resumenes || [];
     CL2_STATE.generadoEn  = new Date().toISOString();
     markDirty();
-    renderCl2Resumen(CL2_STATE.resumen);
     renderCl2AnalisisBlock();
+    renderCl2Resumen(CL2_STATE.resumen);
     showToast('Resumen de clima generado');
 
   } catch(err) {
@@ -6027,11 +6027,11 @@ function makeEditable(containerEl, getText, onSave) {
 }
 
 function renderCl2AnalisisBlock() {
-  /* Agrega fortalezas/focos al final del resumen — UNA SOLA VEZ */
+  /* Agrega fortalezas/focos PRIMERO — UNA SOLA VEZ */
   const resBody = document.getElementById('cl2-resumen-body');
   if (!resBody) return;
-  // Eliminar cualquier bloque previo para evitar duplicados
-  resBody.querySelectorAll('.cl2-analisis-append').forEach(el => el.remove());
+  // Limpiar bloques previos de análisis Y resumen AI para reordenar correctamente
+  resBody.querySelectorAll('.cl2-analisis-append, .cl2-resumen-ai').forEach(el => el.remove());
   const m = CL2_STATE.meta || {};
   if (!m.fortalezas && !m.focos) return;
   const toBullets = txt => txt.split('\n').filter(Boolean)
@@ -6063,7 +6063,12 @@ function renderCl2Resumen(resumenes) {
   const ts = CL2_STATE.generadoEn
     ? new Date(CL2_STATE.generadoEn).toLocaleString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
     : '';
-  body.innerHTML = `
+  // Remover resumen previo si existe (preservar bloque análisis)
+  body.querySelectorAll('.cl2-resumen-ai').forEach(el => el.remove());
+  const analisisEl = body.querySelector('.cl2-analisis-append');
+  const aiDiv = document.createElement('div');
+  aiDiv.className = 'cl2-resumen-ai';
+  aiDiv.innerHTML = `
     <div class="cl2-resumen-body">
       <div style="font-size:.6rem;color:var(--mid);margin-bottom:.5rem">${resumenes.length} preguntas resumidas${ts ? ' · Generado ' + ts : ''} · POWERED BY DMZ</div>
       ${resumenes.map((r, ri) => `
@@ -6078,6 +6083,7 @@ function renderCl2Resumen(resumenes) {
           </div>
         </div>`).join('')}
     </div>`;
+  body.appendChild(aiDiv);
 }
 
 /* ── Edición de resumen CLIMA por pregunta ───────────────────── */
@@ -6111,8 +6117,8 @@ function cl2SaveResumen(ri) {
   if (!ta) return;
   CL2_STATE.resumen[ri].resumen = ta.value.trim();
   markDirty();
-  renderCl2Resumen(CL2_STATE.resumen);
   renderCl2AnalisisBlock();
+  renderCl2Resumen(CL2_STATE.resumen);
   showToast('✓ Resumen guardado');
 }
 
