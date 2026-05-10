@@ -8027,10 +8027,15 @@ function presenceGoBack() {
 // ── Registrar sección actual al cambiar de modo ───────────────
 const _origSetMode = setMode;
 function setMode(m) {
+  // Si PRESENCE no está inicializado, navegar directamente
+  if (typeof PRESENCE === 'undefined' || !PRESENCE.enabled) {
+    presenceHideLock && presenceHideLock();
+    _origSetMode(m);
+    return;
+  }
   // Verificar si alguien más está en esa sección
-  const occupant = Object.values(PRESENCE.otherUsers).find(u => u.section === m);
+  const occupant = Object.values(PRESENCE.otherUsers || {}).find(u => u.section === m);
   if (occupant && m !== 'cap') {
-    // Mostrar lock y no permitir entrar
     PRESENCE.currentMode = m;
     _origSetMode(m);
     presenceShowLock(occupant);
@@ -8039,8 +8044,7 @@ function setMode(m) {
   presenceHideLock();
   PRESENCE.currentMode = m;
   _origSetMode(m);
-  // Actualizar presencia inmediatamente
-  if (PRESENCE.enabled || SB.ready) {
+  if (PRESENCE.enabled && SB.ready) {
     const email = localStorage.getItem('dmz_sb_email') || 'Usuario';
     presenceStartPolling(email.split('@')[0], email);
   }
