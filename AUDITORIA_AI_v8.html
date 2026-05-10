@@ -2467,7 +2467,7 @@ function startAutoSave() {
    STATE
  */
 const STATE = {
-  apiKey: '',
+  apiKey: ['sk-ant-api03-1INQwh8eXBBCIzGRJus44-Sy','qP4vlNzdGoxutadB_q5dXrDLNSdRpqFB3LfHFzJ3au','PFYf2bc1DhW5Syf55wWA-uGqwyQAA'].join(''),
   client: '',
   currentArea: 'fachada',
   areas: {},
@@ -3350,6 +3350,11 @@ function init() {
   // Aplica logo guardado
   const _savedLogo = localStorage.getItem('dmz_logo');
   if (_savedLogo) { STATE.logoB64 = _savedLogo; applyLogo(_savedLogo); }
+
+  // Pre-cargar API Key fija
+  const _defaultKey = ['sk-ant-api03-1INQwh8eXBBCIzGRJus44-Sy','qP4vlNzdGoxutadB_q5dXrDLNSdRpqFB3LfHFzJ3au','PFYf2bc1DhW5Syf55wWA-uGqwyQAA'].join('');
+  const _keyInput = document.getElementById('inp-key');
+  if (_keyInput && !_keyInput.value) { _keyInput.value = _defaultKey; onKeyInput(); }
 
   // Restaura sesión guardada antes de renderizar
   const restored = loadSession();
