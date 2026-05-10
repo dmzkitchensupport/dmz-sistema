@@ -3224,6 +3224,8 @@ async function sbLogin(email, password) {
   localStorage.setItem('dmz_sb_token',   data.access_token);
   localStorage.setItem('dmz_sb_refresh', data.refresh_token);
   localStorage.setItem('dmz_sb_user',    data.user.id);
+  localStorage.setItem('dmz_sb_email',   email);
+  setTimeout(() => { if (typeof presenceInit === 'function') presenceInit(); }, 800);
   return data.user;
 }
 
@@ -7565,16 +7567,7 @@ window.addEventListener('beforeunload', () => {
   if (_presencePollInterval) clearInterval(_presencePollInterval);
 });
 
-// Guardar email al hacer login (para el nombre en presencia)
-const _origSbLogin = sbLogin;
-async function sbLogin(email, password) {
-  const result = await _origSbLogin(email, password);
-  if (result) {
-    localStorage.setItem('dmz_sb_email', email);
-    setTimeout(() => presenceInit(), 500);
-  }
-  return result;
-}
+// presenceInit se llama desde sbLogin original — ver abajo
 
 //  Palabras clave para clasificación local
 const HZ_KEYS = {
