@@ -8409,7 +8409,6 @@ async function exportHallazgosPDF() {
 // ── MÓDULO CALIFICACIÓN DE ALIMENTOS — ECT 1-5 ────────────────
 const ECT_CRITERIOS  = ['Presentación','Temperatura','Sabor','Textura','Porción'];
 const ECT_NIVELES    = {1:'DEFICIENTE',2:'BAJO',3:'REGULAR',4:'BUENO',5:'EXCELENTE'};
-const ECT_COLORS     = {1:'#C0392B',2:'#E07B00',3:'#F5C518',4:'#84CC16',5:'#2E7D32'};
 const ECT_TEXT_COLS  = {1:'#fff',2:'#fff',3:'#000',4:'#fff',5:'#fff'};
 
 // ── CRONÓMETRO ────────────────────────────────────────────────
@@ -8483,6 +8482,7 @@ function addAlimentoCard(data) {
   markDirty();
 }
 
+const ECT_COLORS = {1:'#C0392B',2:'#E07B00',3:'#F5C518',4:'#84CC16',5:'#2E7D32'};
 function buildAlimentosView() {
   // Migrar items del formato anterior (sin scores) al formato ECT
   ALI_STATE.items = ALI_STATE.items.map(item => {
