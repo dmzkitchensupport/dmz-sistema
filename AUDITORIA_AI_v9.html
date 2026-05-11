@@ -4854,7 +4854,7 @@ function buildCard(p) {
         <button class="btn-del-card" onclick="delPhoto('${p.id}')" title="Eliminar foto">
           Eliminar
         </button>
-        <button class="btn-move-card" onclick="toggleMoveMenu('${p.id}', this)" title="Mover a otra área">
+        <button class="btn-move-card" onclick="openMoveModal('${p.id}')" title="Mover a otra área">
           Mover
         </button>
         <div class="move-menu" id="move-menu-${p.id}" style="display:none"></div>
