@@ -3304,13 +3304,24 @@ async function sbFetch(method, path, body, extra) {
 
 // ── AUTH — Login / Logout ─────────────────────────────────────────
 async function sbLogin(email, password) {
-  const resp = await fetch(SB.url + '/auth/v1/token?grant_type=password', {
-    method: 'POST',
-    headers: { 'apikey': SB.anon, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(data.error_description || data.message || 'Login fallido');
+  const ctrl  = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12000);
+  let resp;
+  try {
+    resp = await fetch(SB.url + '/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: { 'apikey': SB.anon, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+      signal: ctrl.signal,
+    });
+  } catch(e) {
+    clearTimeout(timer);
+    throw new Error(e.name === 'AbortError' ? 'Sin respuesta del servidor (timeout)' : 'Error de red: ' + e.message);
+  } finally {
+    clearTimeout(timer);
+  }
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error_description || data.message || 'Credenciales incorrectas (HTTP ' + resp.status + ')');
   SB.token  = data.access_token;
   SB.userId = data.user.id;
   SB.ready  = true;
@@ -3723,32 +3734,48 @@ async function sbDoLogin() {
   const email    = document.getElementById('sb-email').value.trim();
   const password = document.getElementById('sb-password').value;
   const errEl    = document.getElementById('sb-login-err');
-  errEl.textContent = 'Autenticando...';
+  const btn      = document.querySelector('#sb-login-modal button[onclick="sbDoLogin()"]');
+
+  if (!email || !password) { errEl.textContent = 'Ingresa correo y contraseña'; return; }
+
+  errEl.style.color = '#64748B';
+  errEl.textContent = 'Conectando con Supabase...';
+  if (btn) { btn.disabled = true; btn.textContent = 'AUTENTICANDO...'; }
+
   try {
+    errEl.textContent = 'Verificando credenciales...';
     await sbLogin(email, password);
-    document.getElementById('sb-login-modal').style.display = 'none';
+
+    errEl.textContent = 'Acceso correcto — cargando datos...';
+    const modal = document.getElementById('sb-login-modal');
+    if (modal) modal.style.display = 'none';
     updateSbStatus(true);
-    showToast('Iniciando sesion — restaurando datos...');
+
     const savedId = localStorage.getItem('dmz_sb_auditoria_id');
     if (savedId) SB._auditoriaId = savedId;
-    // Restaurar datos desde Supabase inmediatamente tras login
+
+    showToast('Sesion iniciada — cargando auditoría...');
+    errEl.textContent = 'Restaurando auditoría desde la nube...';
+
     const ok = await Promise.race([
       autoRestoreFromSupabase(),
-      new Promise(r => setTimeout(r, 10000, false))
+      new Promise(r => setTimeout(r, 12000, false))
     ]);
+
     if (ok) {
       renderAreaNav();
       updateNavBadges();
-      // Quedarse en CAPTURA — no redirigir al dash
       setMode('cap');
-      const firstArea = AREAS[0]?.id;
+      const firstArea = STATE.currentArea || AREAS[0]?.id;
       if (firstArea) switchArea(firstArea);
-      showToast('Datos restaurados — ' + email);
+      showToast('Listo — ' + Object.values(STATE.areas).reduce((s,a)=>s+a.photos.length,0) + ' fotos restauradas');
     } else {
-      showToast('Sesion iniciada — ' + email);
+      showToast('Sesion activa — sin datos en la nube aún');
     }
   } catch(e) {
+    errEl.style.color = '#C0392B';
     errEl.textContent = e.message;
+    if (btn) { btn.disabled = false; btn.textContent = 'INICIAR SESION'; }
   }
 }
 
