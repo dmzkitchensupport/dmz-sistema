@@ -2913,23 +2913,9 @@ async function _flushOfflineQueue() {
   updateBackupStatus();
 }
 
-/* Wrapper de sbSaveAuditoria que encola si offline */
-const _origSbSave = sbSaveAuditoria;
-async function sbSaveAuditoria() {
-  if (!navigator.onLine) {
-    // Guardar en queue para reintento
-    _offlineQueue.push(() => _origSbSave());
-    return null;
-  }
-  try {
-    return await _origSbSave();
-  } catch(e) {
-    if (!navigator.onLine || e.message?.includes('network')) {
-      _offlineQueue.push(() => _origSbSave());
-      showToast('⚠️ Sin conexión — reintentando al reconectar');
-    }
-    return null;
-  }
+/* Offline queue — reintentar guardado al reconectar */
+function _enqueueOfflineSave() {
+  _offlineQueue.push(() => sbSaveAuditoria());
 }
 
 /* ── Lazy load: carga fotos de un área solo cuando se necesita ── */
