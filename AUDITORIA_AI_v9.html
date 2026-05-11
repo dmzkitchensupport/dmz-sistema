@@ -6215,37 +6215,6 @@ function checkCode() {
   }
 }
 <\/script>
-
-<div id="sb-login-modal" style="position:fixed;inset:0;z-index:3000;background:rgba(45,58,63,.92);display:flex;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:8px;width:360px;max-width:96vw;padding:2rem 1.8rem;box-shadow:0 12px 48px rgba(0,0,0,.3)">
-    <div style="font-family:'Raleway',sans-serif;font-size:.65rem;letter-spacing:.3em;color:#8A9096;margin-bottom:.4rem">DE LA MORA ZUMARÁN</div>
-    <div style="font-family:'Raleway',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.08em;color:#2D3A3F;margin-bottom:1.4rem">ACCESO AL SISTEMA</div>
-    <div style="display:flex;flex-direction:column;gap:.7rem">
-      <div>
-        <label style="font-size:.6rem;font-weight:700;letter-spacing:.12em;color:#8A9096;display:block;margin-bottom:.25rem">CORREO</label>
-        <input id="sb-email" type="email" value="mario@delamorazumaran.com"
-          style="width:100%;border:1.5px solid #E5E2DC;border-radius:4px;padding:.5rem .75rem;font-size:.85rem;outline:none;box-sizing:border-box"
-          onkeydown="if(event.key==='Enter')document.getElementById('sb-password').focus()">
-      </div>
-      <div>
-        <label style="font-size:.6rem;font-weight:700;letter-spacing:.12em;color:#8A9096;display:block;margin-bottom:.25rem">CONTRASEÑA</label>
-        <input id="sb-password" type="password" placeholder="••••••••"
-          style="width:100%;border:1.5px solid #E5E2DC;border-radius:4px;padding:.5rem .75rem;font-size:.85rem;outline:none;box-sizing:border-box"
-          onkeydown="if(event.key==='Enter')sbDoLogin()">
-      </div>
-      <div id="sb-login-err" style="font-size:.68rem;color:#C0392B;min-height:1.2em"></div>
-      <button id="sb-login-btn" onclick="sbDoLogin()"
-        style="width:100%;padding:.65rem;background:#2D3A3F;color:#fff;border:none;border-radius:4px;font-size:.75rem;font-weight:700;letter-spacing:.1em;cursor:pointer">
-        INICIAR SESION
-      </button>
-      <button onclick="document.getElementById('sb-login-modal').style.display='none'"
-        style="width:100%;padding:.4rem;background:none;border:1px solid #E5E2DC;border-radius:4px;font-size:.68rem;color:#8A9096;cursor:pointer">
-        Continuar sin cuenta (modo local)
-      </button>
-    </div>
-    <div style="font-size:.58rem;color:#8A9096;text-align:center;margin-top:.8rem;letter-spacing:.06em">POWERED BY DMZ · KITCHEN SUPPORT</div>
-  </div>
-</div>
 </body>
 </html>`;
 }
@@ -9762,6 +9731,38 @@ async function buildHistorial() {
 }
 
 </script>
+
+<div id="sb-login-modal" style="position:fixed;inset:0;z-index:3000;background:rgba(45,58,63,.92);display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:8px;width:360px;max-width:96vw;padding:2rem 1.8rem;box-shadow:0 12px 48px rgba(0,0,0,.3)">
+    <div style="font-family:'Raleway',sans-serif;font-size:.65rem;letter-spacing:.3em;color:#8A9096;margin-bottom:.4rem">DE LA MORA ZUMARÁN</div>
+    <div style="font-family:'Raleway',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.08em;color:#2D3A3F;margin-bottom:1.4rem">ACCESO AL SISTEMA</div>
+    <div style="display:flex;flex-direction:column;gap:.7rem">
+      <div>
+        <label style="font-size:.6rem;font-weight:700;letter-spacing:.12em;color:#8A9096;display:block;margin-bottom:.25rem">CORREO</label>
+        <input id="sb-email" type="email" value="mario@delamorazumaran.com"
+          style="width:100%;border:1.5px solid #E5E2DC;border-radius:4px;padding:.5rem .75rem;font-size:.85rem;outline:none;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter')document.getElementById('sb-password').focus()">
+      </div>
+      <div>
+        <label style="font-size:.6rem;font-weight:700;letter-spacing:.12em;color:#8A9096;display:block;margin-bottom:.25rem">CONTRASEÑA</label>
+        <input id="sb-password" type="password" placeholder="••••••••"
+          style="width:100%;border:1.5px solid #E5E2DC;border-radius:4px;padding:.5rem .75rem;font-size:.85rem;outline:none;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter')sbDoLogin()">
+      </div>
+      <div id="sb-login-err" style="font-size:.68rem;color:#C0392B;min-height:1.2em"></div>
+      <button id="sb-login-btn" onclick="sbDoLogin()"
+        style="width:100%;padding:.65rem;background:#2D3A3F;color:#fff;border:none;border-radius:4px;font-size:.75rem;font-weight:700;letter-spacing:.1em;cursor:pointer">
+        INICIAR SESION
+      </button>
+      <button onclick="document.getElementById('sb-login-modal').style.display='none'"
+        style="width:100%;padding:.4rem;background:none;border:1px solid #E5E2DC;border-radius:4px;font-size:.68rem;color:#8A9096;cursor:pointer">
+        Continuar sin cuenta (modo local)
+      </button>
+    </div>
+    <div style="font-size:.58rem;color:#8A9096;text-align:center;margin-top:.8rem;letter-spacing:.06em">POWERED BY DMZ · KITCHEN SUPPORT</div>
+  </div>
+</div>
+
 
 
 <!-- Delivery modal -->
