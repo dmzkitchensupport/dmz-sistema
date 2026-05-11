@@ -194,6 +194,11 @@ button { cursor: pointer; font-family: var(--f-b); }
   box-shadow: 0 2px 8px rgba(201,149,42,.45);
   font-weight: 700;
 }
+.mode-btn { display:flex; flex-direction:column; align-items:center; gap:0; }
+.nav-sub {
+  display:block; font-size:.46rem; font-weight:500; letter-spacing:.04em;
+  opacity:.7; line-height:1; margin-top:1px; white-space:nowrap;
+}
 
 /*  App layout  */
 #app { display: flex; flex: 1; overflow: hidden; min-height: 0; }
@@ -2466,12 +2471,44 @@ let _unsaved   = false;        // true cuando hay cambios no guardados
 let _lastSaved = null;         // Date del último guardado exitoso
 
 // Marca que hay cambios pendientes de guardar
+function updateNavBadges() {
+  var totalFotos=0, confirmadas=0;
+  Object.values(STATE.areas).forEach(function(ar){
+    totalFotos += ar.photos.length;
+    confirmadas += ar.photos.filter(function(p){return p.state==='confirmed';}).length;
+  });
+  _setNavSub('btn-cap', totalFotos ? confirmadas+'/'+totalFotos+' fotos' : '');
+  var areasConFoto = Object.values(STATE.areas).filter(function(ar){return ar.photos.length>0;}).length;
+  _setNavSub('btn-dash', areasConFoto ? areasConFoto+' área'+(areasConFoto!==1?'s':'') : '');
+  var aliTotal = (ALI_STATE&&ALI_STATE.items) ? ALI_STATE.items.length : 0;
+  _setNavSub('btn-ali', aliTotal ? aliTotal+' ítem'+(aliTotal!==1?'s':'') : '');
+  var hzT = ((HZ_STATE&&HZ_STATE.clasificados)?
+    (HZ_STATE.clasificados.critico||[]).length+(HZ_STATE.clasificados.observacion||[]).length+(HZ_STATE.clasificados.correcto||[]).length : 0);
+  _setNavSub('btn-hz', hzT ? hzT+' hallazgo'+(hzT!==1?'s':'') : '');
+  var colabs=(CL2_STATE&&CL2_STATE.colaboradores)?CL2_STATE.colaboradores.length:0;
+  var colabsR=colabs>0?CL2_STATE.colaboradores.filter(function(co){return Object.values(co.respuestas||{}).some(function(r){return r&&r.trim();});}).length:0;
+  _setNavSub('btn-clima2', colabs ? colabsR+'/'+colabs+' colaboradores' : '');
+  try {
+    var hist=JSON.parse(localStorage.getItem('dmz_audit_history')||'[]');
+    _setNavSub('btn-hist', hist.length ? hist.length+' sesión'+(hist.length!==1?'es':'') : '');
+  } catch(e){ _setNavSub('btn-hist',''); }
+  _setNavSub('btn-racreaa',''); _setNavSub('btn-rep','');
+}
+function _setNavSub(btnId, text) {
+  var btn=document.getElementById(btnId); if(!btn) return;
+  var sub=btn.querySelector('.nav-sub');
+  if(!text){ if(sub) sub.remove(); return; }
+  if(!sub){ sub=document.createElement('span'); sub.className='nav-sub'; btn.appendChild(sub); }
+  sub.textContent=text;
+}
+
 function markDirty() {
   _unsaved = true;
   const dot = document.getElementById('save-dot');
   const lbl = document.getElementById('save-label');
   if (dot) { dot.className = 'save-dot saving'; }
   if (lbl) lbl.textContent = 'Cambios sin guardar';
+  updateNavBadges();
 }
 
 // Actualiza el indicador tras guardar
@@ -2807,6 +2844,7 @@ async function loadSession() {
 //  Guardado manual (desde botón)
 async function manualSave() {
   await saveSession(false);
+  if (SB.ready && SB.userId) sbSyncPhotosToStorage().catch(e=>console.warn('sync:',e));
 }
 
 //  Exportar sesión como JSON
@@ -4890,7 +4928,7 @@ function buildCard(p) {
         <button class="btn-del-card" onclick="delPhoto('${p.id}')" title="Eliminar foto">
           Eliminar
         </button>
-        <button class="btn-move-card" onclick="openMoveModal('${p.id}')" title="Mover a otra área">
+        <button class="btn-move-card" onclick="toggleMoveMenu('${p.id}',this)" title="Mover a otra área">
           Mover
         </button>
         <div class="move-menu" id="move-menu-${p.id}" style="display:none"></div>
@@ -6995,6 +7033,21 @@ function updateCl2Counter() {
 }
 
 /* ── Corrección ortográfica de respuesta individual ─────────── */
+function cl2EditarRespuestaIndividual(colabId, qIdx) {
+  const ta = document.getElementById('cl2-ta-'+qIdx);
+  if (!ta) return;
+  ta.focus(); ta.select();
+  const prev = ta.style.border;
+  ta.style.border = '1.5px solid var(--gold)';
+  ta.style.background = '#fffef5';
+  setTimeout(() => { ta.style.border=prev||''; ta.style.background=''; }, 2500);
+  ta.onblur = () => {
+    const colab = CL2_STATE.colaboradores.find(x => x.id===colabId);
+    if (colab) { colab.respuestas[qIdx]=ta.value; markDirty(); }
+    ta.onblur=null;
+  };
+}
+
 async function cl2CorregirRespuesta(colabId, qIdx) {
   if (!STATE?.apiKey?.startsWith('sk-ant-')) { showToast('API Key requerida'); return; }
   const ta = document.getElementById(`cl2-ta-${qIdx}`);
