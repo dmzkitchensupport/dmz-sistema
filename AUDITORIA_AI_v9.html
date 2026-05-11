@@ -4045,7 +4045,67 @@ const TC  = { INMEDIATO: '#C0392B', 'CORTO PLAZO': '#E07B00', 'MEDIO PLAZO': '#2
 /* 
    INIT
  */
-function init() {
+/* ── Restaurar desde Supabase al inicio ──────────────────────── */
+async function autoRestoreFromSupabase() {
+  try {
+    const rows = await sbFetch('GET',
+      '/rest/v1/auditorias?auditor_id=eq.' + SB.userId +
+      '&cliente_nombre=neq.__dmz_presence__&order=guardada_en.desc&limit=1&select=snapshot,cliente_nombre,guardada_en'
+    );
+    if (!rows?.length || !rows[0].snapshot?.client) return false;
+    const snap = rows[0].snapshot;
+
+    STATE.client = snap.client;
+    const el = document.getElementById('inp-client');
+    if (el) el.value = STATE.client;
+
+    if (snap.cl2State)        Object.assign(CL2_STATE, snap.cl2State);
+    if (snap.hallazgosState)  Object.assign(HZ_STATE,  snap.hallazgosState);
+    if (snap.aliState?.items) ALI_STATE.items = snap.aliState.items;
+
+    if (snap.customAreaDefs?.length) {
+      STATE.customAreaDefs = snap.customAreaDefs;
+      snap.customAreaDefs.forEach(d => {
+        if (!AREAS.find(a => a.id === d.id)) AREAS.push(d);
+        if (!STATE.areas[d.id]) STATE.areas[d.id] = { photos: [], hallazgos: _hzDefault() };
+      });
+    }
+
+    if (snap.areas) {
+      for (const aId in snap.areas) {
+        if (!STATE.areas[aId]) STATE.areas[aId] = { photos: [], hallazgos: _hzDefault() };
+        STATE.areas[aId].hallazgos = snap.areas[aId].hallazgos || _hzDefault();
+        STATE.areas[aId].photos = (snap.areas[aId].photos || []).map(p => ({
+          ...p, storageB64: null, displayUrl: null, _lazyPending: true
+        }));
+      }
+    }
+
+    // Guardar en localStorage para siguiente carga offline
+    const saveState = {
+      version: '10.0', savedAt: new Date().toISOString(),
+      client: STATE.client, customAreaDefs: STATE.customAreaDefs,
+      areas: {}, cl2State: CL2_STATE, hallazgosState: HZ_STATE, aliState: ALI_STATE,
+    };
+    for (const aId in STATE.areas) {
+      saveState.areas[aId] = {
+        hallazgos: STATE.areas[aId].hallazgos || _hzDefault(),
+        photos: STATE.areas[aId].photos.map(p => ({
+          id:p.id, name:p.name, alert:p.alert,
+          state:p.state==='loading'?'empty':p.state,
+          notes:p.notes, markers:p.markers, aiSuggestion:p.aiSuggestion,
+        }))
+      };
+    }
+    localStorage.setItem('dmz_audit_v4', JSON.stringify(saveState));
+    return true;
+  } catch(e) {
+    console.warn('autoRestoreFromSupabase:', e.message);
+    return false;
+  }
+}
+
+async function init() {
   AREAS.forEach(a => STATE.areas[a.id] = { photos: [], hallazgos: _hzDefault() });
 
   // Google Drive: interceptar callback OAuth2 y cargar token guardado
@@ -4078,7 +4138,15 @@ function init() {
   const _keyInput = document.getElementById('inp-key');
   if (_keyInput) { _keyInput.value = _activeKey; onKeyInput(); }
 
-  // Restaura sesión guardada antes de renderizar
+  // 1. Primero: conectar a Supabase con token guardado
+  await sbRestoreSession();
+
+  // 2. Si Supabase conectó, restaurar desde la nube (más reciente)
+  if (SB.ready) {
+    await autoRestoreFromSupabase();
+  }
+
+  // 3. Restaura sesión local (fallback si Supabase no tiene datos)
   const restored = loadSession();
 
   renderAreaNav();
@@ -4098,8 +4166,7 @@ function init() {
   setInterval(updateBackupStatus, 15000);
   setTimeout(updateBackupStatus, 2000);
   initNetworkMonitor();
-  // Auto-restaurar sesión desde Supabase si hay refresh token
-  setTimeout(autoRestoreSession, 800);
+  // Restauración desde Supabase ya ocurrió al inicio (ver autoRestoreFromSupabase)
 
   if (restored) {
     showToast('Sesion restaurada — ' + Object.values(STATE.areas).reduce((s,a) => s + a.photos.length, 0) + ' fotos cargadas');
@@ -7941,7 +8008,7 @@ const HZ_STATE = {
 };
 
 //  START
-init();
+init().catch(e => console.error("init error:", e));
 
 /* ── Auto-restauración de sesión al iniciar ─────────────────── */
 async function autoRestoreSession() {
