@@ -2083,7 +2083,7 @@ td:hover .hz-edit-hint { opacity: 1; }
   font-size:.67rem;flex-shrink:0;transition:background .3s;
 ">
   <span style="color:var(--mid);font-size:.62rem">Sin cuenta — datos solo en este dispositivo</span>
-  <button onclick="buildLoginModal()" class="btn btn-outline"
+  <button onclick="document.getElementById('sb-login-modal').style.display='flex';setTimeout(function(){var p=document.getElementById('sb-password');if(p)p.focus();},100)" class="btn btn-outline"
     style="font-size:.6rem;padding:.2rem .6rem;margin-left:.5rem">Iniciar sesion</button>
 </div>
 
@@ -3673,11 +3673,13 @@ async function sbCargarAuditoria(id) {
 
 // ── LOGIN UI ─────────────────────────────────────────────────────
 function buildLoginModal() {
-  const existing = document.getElementById('sb-login-modal');
-  if (existing) { existing.style.display = 'flex'; return; }
-
-  const modal = document.createElement('div');
-  modal.id = 'sb-login-modal';
+  const modal = document.getElementById('sb-login-modal');
+  if (modal) { modal.style.display = 'flex'; 
+    setTimeout(() => { const pw = document.getElementById('sb-password'); if(pw) pw.focus(); }, 100);
+    return; }
+  // fallback: crear modal dinámico
+  const _modal = document.createElement('div');
+  _modal.id = 'sb-login-modal-dyn';
   modal.style.cssText = `
     position:fixed;inset:0;z-index:3000;background:rgba(45,58,63,.92);
     display:flex;align-items:center;justify-content:center;
@@ -4176,6 +4178,11 @@ async function autoRestoreFromSupabase() {
 
 async function init() {
   AREAS.forEach(a => STATE.areas[a.id] = { photos: [], hallazgos: _hzDefault() });
+  // Ocultar modal de login si ya hay sesión guardada
+  if (localStorage.getItem('dmz_sb_token')) {
+    const m = document.getElementById('sb-login-modal');
+    if (m) m.style.display = 'none';
+  }
 
   // Google Drive: interceptar callback OAuth2 y cargar token guardado
   driveHandleOAuthCallback();
@@ -4274,9 +4281,8 @@ async function _initSupabaseBackground() {
         showToast('Datos sincronizados desde Supabase');
       }
     } else {
-      // Sin sesión activa y no hay token guardado — mostrar login
-      const hasToken = localStorage.getItem('dmz_sb_token');
-      if (!hasToken) setTimeout(buildLoginModal, 1500);
+      // Sin sesión activa y no hay token guardado — el modal ya está visible por defecto
+      // No necesita buildLoginModal — el HTML estático ya lo muestra
     }
   } catch(e) {
     console.warn('Supabase background init error:', e.message);
@@ -6312,6 +6318,58 @@ function checkCode() {
   }
 }
 <\/script>
+
+<!-- LOGIN MODAL — HTML estático, siempre disponible -->
+<div id="sb-login-modal" style="position:fixed;inset:0;z-index:3000;background:rgba(45,58,63,.92);
+  display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:8px;width:360px;max-width:96vw;
+              padding:2rem 1.8rem;box-shadow:0 12px 48px rgba(0,0,0,.3)">
+    <div style="font-family:'Raleway',sans-serif;font-size:.65rem;letter-spacing:.3em;
+                color:#8A9096;margin-bottom:.4rem">DE LA MORA ZUMARÁN</div>
+    <div style="font-family:'Raleway',sans-serif;font-size:1rem;font-weight:800;
+                letter-spacing:.08em;color:#2D3A3F;margin-bottom:1.4rem">ACCESO AL SISTEMA</div>
+    <div style="display:flex;flex-direction:column;gap:.7rem">
+      <div>
+        <label style="font-size:.6rem;font-weight:700;letter-spacing:.12em;color:#8A9096;
+                      display:block;margin-bottom:.25rem">CORREO</label>
+        <input id="sb-email" type="email" value="mario@delamorazumaran.com"
+          style="width:100%;border:1.5px solid #E5E2DC;border-radius:4px;padding:.5rem .75rem;
+                 font-size:.85rem;outline:none;font-family:inherit;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter')document.getElementById('sb-password').focus()">
+      </div>
+      <div>
+        <label style="font-size:.6rem;font-weight:700;letter-spacing:.12em;color:#8A9096;
+                      display:block;margin-bottom:.25rem">CONTRASEÑA</label>
+        <input id="sb-password" type="password" placeholder="••••••••"
+          style="width:100%;border:1.5px solid #E5E2DC;border-radius:4px;padding:.5rem .75rem;
+                 font-size:.85rem;outline:none;font-family:inherit;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter')sbDoLogin()">
+      </div>
+      <div id="sb-login-err" style="font-size:.68rem;color:#C0392B;min-height:1em"></div>
+      <button id="sb-login-btn" onclick="sbDoLogin()"
+        style="width:100%;padding:.65rem;background:#2D3A3F;color:#fff;border:none;
+               border-radius:4px;font-size:.75rem;font-weight:700;letter-spacing:.1em;
+               cursor:pointer;font-family:inherit">
+        INICIAR SESION
+      </button>
+      <button onclick="document.getElementById('sb-login-modal').style.display='none'"
+        style="width:100%;padding:.4rem;background:none;border:1px solid #E5E2DC;
+               border-radius:4px;font-size:.68rem;color:#8A9096;cursor:pointer">
+        Continuar sin cuenta (modo local)
+      </button>
+    </div>
+    <div style="font-size:.58rem;color:#8A9096;text-align:center;margin-top:.8rem;
+                letter-spacing:.06em">POWERED BY DMZ · KITCHEN SUPPORT</div>
+  </div>
+</div>
+<script>
+// Focus en password al cargar (email ya está)
+window.addEventListener('DOMContentLoaded', function() {
+  var pw = document.getElementById('sb-password');
+  if (pw) setTimeout(function(){ pw.focus(); }, 300);
+});
+</script>
+
 </body>
 </html>`;
 }
