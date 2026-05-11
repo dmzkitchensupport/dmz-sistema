@@ -31,7 +31,7 @@
 <script>
 // Auto cache-bust: si la URL no tiene el build actual, recarga con él
 (function(){
-  var BUILD = '20260510-v21';
+  var BUILD = '20260510-v22';
   var url = new URL(window.location.href);
   if (url.searchParams.get('b') !== BUILD) {
     url.searchParams.set('b', BUILD);
@@ -4103,6 +4103,8 @@ function init() {
   setInterval(updateBackupStatus, 15000);
   setTimeout(updateBackupStatus, 2000);
   initNetworkMonitor();
+  // Auto-restaurar sesión desde Supabase si hay refresh token
+  setTimeout(autoRestoreSession, 1500);
 
   if (restored) {
     showToast('Sesion restaurada — ' + Object.values(STATE.areas).reduce((s,a) => s + a.photos.length, 0) + ' fotos cargadas');
@@ -7945,6 +7947,101 @@ const HZ_STATE = {
 
 //  START
 init();
+
+/* ── Auto-restauración de sesión al iniciar ─────────────────── */
+async function autoRestoreSession() {
+  // Si ya hay datos en localStorage, no restaurar
+  const lsData = localStorage.getItem('dmz_audit_v4');
+  if (lsData) {
+    try {
+      const parsed = JSON.parse(lsData);
+      if (parsed.client && Object.keys(parsed.areas || {}).length > 0) {
+        return; // Datos locales válidos — no sobrescribir
+      }
+    } catch(e) {}
+  }
+
+  // Intentar refrescar token automáticamente
+  const refresh = localStorage.getItem('dmz_sb_refresh');
+  if (!refresh) return;
+
+  try {
+    const resp = await fetch(SB.url + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { 'apikey': SB.anon, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refresh })
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    SB.token  = data.access_token;
+    SB.userId = data.user.id;
+    SB.ready  = true;
+    localStorage.setItem('dmz_sb_token',   data.access_token);
+    localStorage.setItem('dmz_sb_refresh', data.refresh_token);
+    localStorage.setItem('dmz_sb_user',    data.user.id);
+
+    // Actualizar UI
+    const bar = document.getElementById('sb-status-bar');
+    if (bar) bar.style.display = 'flex';
+
+    // Restaurar última auditoría
+    const rows = await sbFetch('GET',
+      '/rest/v1/auditorias?auditor_id=eq.' + SB.userId +
+      '&cliente_nombre=neq.__dmz_presence__&order=guardada_en.desc&limit=1&select=snapshot,cliente_nombre'
+    );
+    if (!rows?.length) return;
+    const snap = rows[0].snapshot;
+    if (!snap?.client) return;
+
+    STATE.client = snap.client;
+    const el = document.getElementById('inp-client');
+    if (el) el.value = STATE.client;
+    if (snap.cl2State)       Object.assign(CL2_STATE, snap.cl2State);
+    if (snap.hallazgosState) Object.assign(HZ_STATE,  snap.hallazgosState);
+    if (snap.aliState?.items) ALI_STATE.items = snap.aliState.items;
+
+    if (snap.customAreaDefs?.length) {
+      STATE.customAreaDefs = snap.customAreaDefs;
+      snap.customAreaDefs.forEach(d => {
+        if (!AREAS.find(a => a.id === d.id)) AREAS.push(d);
+        if (!STATE.areas[d.id]) STATE.areas[d.id] = { photos: [], hallazgos: _hzDefault() };
+      });
+    }
+    if (snap.areas) {
+      for (const aId in snap.areas) {
+        if (!STATE.areas[aId]) STATE.areas[aId] = { photos: [], hallazgos: _hzDefault() };
+        STATE.areas[aId].hallazgos = snap.areas[aId].hallazgos || _hzDefault();
+        STATE.areas[aId].photos = (snap.areas[aId].photos || []).map(p => ({
+          ...p, storageB64:null, displayUrl:null, _lazyPending:true
+        }));
+      }
+    }
+
+    // Guardar en localStorage
+    const saveState = {
+      version:'10.0', savedAt:new Date().toISOString(),
+      client:STATE.client, customAreaDefs:STATE.customAreaDefs,
+      areas:{}, cl2State:CL2_STATE, hallazgosState:HZ_STATE, aliState:ALI_STATE,
+    };
+    for (const aId in STATE.areas) {
+      saveState.areas[aId] = {
+        hallazgos: STATE.areas[aId].hallazgos || _hzDefault(),
+        photos: STATE.areas[aId].photos.map(p => ({
+          id:p.id, name:p.name, alert:p.alert,
+          state:p.state==='loading'?'empty':p.state,
+          notes:p.notes, markers:p.markers, aiSuggestion:p.aiSuggestion,
+        }))
+      };
+    }
+    localStorage.setItem('dmz_audit_v4', JSON.stringify(saveState));
+
+    renderAreaNav();
+    const total = Object.values(STATE.areas).reduce((s,a)=>s+a.photos.length,0);
+    showToast('✅ Sesión restaurada: ' + STATE.client + ' · ' + total + ' fotos');
+  } catch(e) {
+    console.warn('autoRestoreSession error:', e.message);
+  }
+}
 
 /* ── PRESENCIA EN TIEMPO REAL — solo indicador visual, sin bloqueos ── */
 const PRESENCE = {
