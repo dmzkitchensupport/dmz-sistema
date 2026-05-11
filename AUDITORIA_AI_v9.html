@@ -2940,7 +2940,7 @@ async function lazyLoadAreaPhotos(aId, savedRef) {
   if (!pending.length) return;
 
   const tasks = pending.map(photo =>
-    idbGetPhoto(photo.id).then(b64 => {
+    idbGetPhoto(photo.id).then(async b64 => {
       photo._lazyPending = false;
       if (b64) {
         photo.storageB64 = b64;
@@ -8824,7 +8824,7 @@ async function exportReportePDF() {
     for (const p of STATE.areas[aId].photos) {
       if (!p.storageB64 && p.id) {
         photoTasks.push(
-          idbGetPhoto(p.id).then(b64 => {
+          idbGetPhoto(p.id).then(async b64 => {
             if (b64) { p.storageB64 = b64; }
             else if (p.displayUrl) {
               return resizeForStorage(p.displayUrl, 2400).then(b => {
