@@ -2933,20 +2933,26 @@ async function lazyLoadAreaPhotos(aId, savedRef) {
         photo.storageB64 = b64;
         photo.displayUrl = b64ToObjectURL(b64);
         photo._idbSaved  = true;
-      } else if (savedRef) {
-        // Fallback al JSON guardado (compatibilidad)
-        const sp = (savedRef.areas?.[aId]?.photos || []).find(x => x.id === photo.id);
+      } else {
+        // Fallback 1: JSON guardado (compatibilidad)
+        const sp = savedRef ? (savedRef.areas?.[aId]?.photos || []).find(x => x.id === photo.id) : null;
         if (sp?.storageB64) {
           photo.storageB64 = sp.storageB64;
           photo.displayUrl = b64ToObjectURL(sp.storageB64);
           idbPutPhoto(photo.id, sp.storageB64);
           photo._idbSaved  = true;
+        } else if (SB.ready && SB.userId) {
+          // Fallback 2: Supabase Storage
+          const signedUrl = await sbGetPhotoUrl(photo.id, SB.userId).catch(()=>null);
+          if (signedUrl) {
+            photo.displayUrl   = signedUrl;
+            photo._fromStorage = true;
+          } else {
+            photo.state = 'empty';
+          }
         } else {
           photo.state = 'empty';
         }
-      } else {
-        photo.state = 'empty';
-      }
     })
   );
   await Promise.all(tasks);
@@ -3459,6 +3465,100 @@ async function sbSaveAuditoria() {
 }
 
 /** Carga el listado de auditorías del auditor actual */
+/* ── Supabase Storage — subir y recuperar fotos en la nube ────── */
+async function sbUploadPhoto(photoId, b64, userId) {
+  if (!SB.ready || !b64) return null;
+  try {
+    // Convertir base64 a blob
+    const byteStr = atob(b64);
+    const ab = new ArrayBuffer(byteStr.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteStr.length; i++) ia[i] = byteStr.charCodeAt(i);
+    const blob = new Blob([ab], { type: 'image/jpeg' });
+
+    const path = `${userId}/${photoId}.jpg`;
+    const url  = `${SB.url}/storage/v1/object/dmz-photos/${path}`;
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SB.token}`,
+        'Content-Type':  'image/jpeg',
+        'x-upsert':      'true',
+      },
+      body: blob,
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    return path;
+  } catch(e) {
+    console.warn('sbUploadPhoto error:', e.message);
+    return null;
+  }
+}
+
+async function sbGetPhotoUrl(photoId, userId) {
+  if (!SB.ready) return null;
+  const path = `${userId}/${photoId}.jpg`;
+  // Generar URL firmada (válida por 1 hora)
+  try {
+    const resp = await fetch(`${SB.url}/storage/v1/object/sign/dmz-photos/${path}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SB.token}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({ expiresIn: 3600 }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return SB.url + '/storage/v1' + data.signedURL;
+  } catch(e) { return null; }
+}
+
+// Subir todas las fotos pendientes a Storage en background
+async function sbSyncPhotosToStorage() {
+  if (!SB.ready || !SB.userId) return;
+  let uploaded = 0;
+  for (const aId in STATE.areas) {
+    for (const p of STATE.areas[aId].photos) {
+      if (p._sbUploaded) continue;
+      // Obtener b64 de IDB o memoria
+      let b64 = p.storageB64;
+      if (!b64 && p.id) {
+        try { b64 = await idbGetPhoto(p.id); } catch(e) {}
+      }
+      if (!b64) continue;
+      const path = await sbUploadPhoto(p.id, b64, SB.userId);
+      if (path) { p._sbUploaded = true; uploaded++; }
+    }
+  }
+  if (uploaded > 0) {
+    markDirty();
+    showToast(`☁ ${uploaded} fotos subidas a Supabase Storage`);
+  }
+  return uploaded;
+}
+
+// Restaurar fotos desde Storage si no están en IDB
+async function sbRestorePhotosFromStorage() {
+  if (!SB.ready || !SB.userId) return 0;
+  let restored = 0;
+  for (const aId in STATE.areas) {
+    for (const p of STATE.areas[aId].photos) {
+      if (p.displayUrl && !p._lazyPending) continue; // ya tiene imagen
+      // Intentar obtener URL de Storage
+      const signedUrl = await sbGetPhotoUrl(p.id, SB.userId);
+      if (signedUrl) {
+        p.displayUrl   = signedUrl;
+        p._lazyPending = false;
+        p._fromStorage = true;
+        restored++;
+      }
+    }
+  }
+  return restored;
+}
+
 async function sbLoadAuditorias(filtro) {
   if (!SB.ready) return [];
   try {
