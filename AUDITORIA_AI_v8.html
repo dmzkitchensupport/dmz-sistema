@@ -3559,6 +3559,23 @@ async function sbRestorePhotosFromStorage() {
   return restored;
 }
 
+async function sbRefreshToken() {
+  const refresh = localStorage.getItem('dmz_sb_refresh');
+  if (!refresh || !SB.ready) return;
+  try {
+    const resp = await fetch(`${SB.url}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'apikey': SB.anon, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refresh })
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    SB.token = data.access_token;
+    localStorage.setItem('dmz_sb_token',   data.access_token);
+    localStorage.setItem('dmz_sb_refresh', data.refresh_token);
+  } catch(e) { console.warn('Token refresh error:', e.message); }
+}
+
 async function sbLoadAuditorias(filtro) {
   if (!SB.ready) return [];
   try {
