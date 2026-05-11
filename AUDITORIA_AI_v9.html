@@ -194,6 +194,19 @@ button { cursor: pointer; font-family: var(--f-b); }
   box-shadow: 0 2px 8px rgba(201,149,42,.45);
   font-weight: 700;
 }
+.mode-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+}
+.nav-sub {
+  display: block;
+  font-size: .48rem;
+  font-weight: 500;
+  letter-spacing: .04em;
+  opacity: .72;
+  line-height: 1;
+  margin-top: 1px;
+  white-space: nowrap;
+}
 
 /*  App layout  */
 #app { display: flex; flex: 1; overflow: hidden; min-height: 0; }
@@ -2472,6 +2485,7 @@ function markDirty() {
   const lbl = document.getElementById('save-label');
   if (dot) { dot.className = 'save-dot saving'; }
   if (lbl) lbl.textContent = 'Cambios sin guardar';
+  updateNavBadges();
 }
 
 // Actualiza el indicador tras guardar
@@ -2807,6 +2821,10 @@ async function loadSession() {
 //  Guardado manual (desde botón)
 async function manualSave() {
   await saveSession(false);
+  // Sync fotos a Supabase Storage en background
+  if (SB.ready && SB.userId) {
+    sbSyncPhotosToStorage().catch(e => console.warn('sbSync error:', e));
+  }
 }
 
 //  Exportar sesión como JSON
@@ -4152,6 +4170,7 @@ async function init() {
   renderAreaNav();
   switchArea('fachada');
   setupDrop();
+  updateNavBadges();
 
   document.getElementById('inp-client').addEventListener('input', e => {
     STATE.client = e.target.value;
@@ -4332,6 +4351,68 @@ function updateGlobalStats() {
   document.getElementById('gb-r').style.width = (r / t * 100) + '%';
   document.getElementById('gb-a').style.width = (a / t * 100) + '%';
   document.getElementById('gb-g').style.width = (g / t * 100) + '%';
+  updateNavBadges();
+}
+
+/* ── Contadores dinámicos en botones del menú de navegación ─── */
+function updateNavBadges() {
+  // CAPTURA: total de fotos y confirmadas
+  let totalFotos = 0, confirmadas = 0;
+  Object.values(STATE.areas).forEach(ar => {
+    totalFotos  += ar.photos.length;
+    confirmadas += ar.photos.filter(p => p.state === 'confirmed').length;
+  });
+  _setNavSub('btn-cap', totalFotos ? `${confirmadas}/${totalFotos} fotos` : '');
+
+  // DASHBOARD: áreas activas
+  const areasConFoto = Object.values(STATE.areas).filter(ar => ar.photos.length > 0).length;
+  _setNavSub('btn-dash', areasConFoto ? `${areasConFoto} área${areasConFoto !== 1 ? 's' : ''}` : '');
+
+  // ALIMENTOS: ítems registrados
+  const aliTotal = (ALI_STATE?.items?.length) || 0;
+  _setNavSub('btn-ali', aliTotal ? `${aliTotal} ítem${aliTotal !== 1 ? 's' : ''}` : '');
+
+  // HALLAZGOS: clasificados
+  const hzCrit = (HZ_STATE?.clasificados?.critico?.length) || 0;
+  const hzObs  = (HZ_STATE?.clasificados?.observacion?.length) || 0;
+  const hzOk   = (HZ_STATE?.clasificados?.correcto?.length) || 0;
+  const hzT    = hzCrit + hzObs + hzOk;
+  _setNavSub('btn-hz', hzT ? `${hzT} hallazgo${hzT !== 1 ? 's' : ''}` : '');
+
+  // CLIMA: colaboradores
+  const colabs = (CL2_STATE?.colaboradores?.length) || 0;
+  const colabsConResp = colabs > 0
+    ? CL2_STATE.colaboradores.filter(c => Object.values(c.respuestas || {}).some(r => r?.trim())).length
+    : 0;
+  _setNavSub('btn-clima2', colabs ? `${colabsConResp}/${colabs} colaboradores` : '');
+
+  // REPORTE: sin sub-label específico (se genera al momento)
+  _setNavSub('btn-rep', '');
+
+  // HISTORIAL: sesiones guardadas
+  try {
+    const hist = JSON.parse(localStorage.getItem('dmz_audit_history') || '[]');
+    _setNavSub('btn-hist', hist.length ? `${hist.length} sesión${hist.length !== 1 ? 'es' : ''}` : '');
+  } catch(e) { _setNavSub('btn-hist', ''); }
+
+  // RACREAA
+  _setNavSub('btn-racreaa', '');
+}
+
+function _setNavSub(btnId, text) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  let sub = btn.querySelector('.nav-sub');
+  if (!text) {
+    if (sub) sub.remove();
+    return;
+  }
+  if (!sub) {
+    sub = document.createElement('span');
+    sub.className = 'nav-sub';
+    btn.appendChild(sub);
+  }
+  sub.textContent = text;
 }
 
 function updateProgress() {
@@ -4543,6 +4624,12 @@ async function processFiles(files) {
         photo.storageB64 = b64;
         photo._idbSaved  = true;
         idbPutPhoto(photo.id, b64);
+        // Subir a Supabase Storage si está autenticado
+        if (SB.ready && SB.userId) {
+          sbUploadPhoto(photo.id, b64, SB.userId).then(path => {
+            if (path) photo._sbUploaded = true;
+          }).catch(e => console.warn('sbUpload inline error:', e));
+        }
       }
     });
   }
@@ -4854,7 +4941,7 @@ function buildCard(p) {
         <button class="btn-del-card" onclick="delPhoto('${p.id}')" title="Eliminar foto">
           Eliminar
         </button>
-        <button class="btn-move-card" onclick="openMoveModal('${p.id}')" title="Mover a otra área">
+        <button class="btn-move-card" onclick="toggleMoveMenu('${p.id}',this)" title="Mover a otra área">
           Mover
         </button>
         <div class="move-menu" id="move-menu-${p.id}" style="display:none"></div>
@@ -5140,17 +5227,11 @@ function delNote(pid, idx) {
 }
 
 function toggleMoveMenu(pid, btn) {
-  // Cerrar cualquier menú abierto
-  document.querySelectorAll('.move-menu').forEach(m => {
-    if (m.id !== 'move-menu-' + pid) { m.style.display = 'none'; }
-  });
-
-  const menu = document.getElementById('move-menu-' + pid);
-  if (!menu) return;
-
-  if (menu.style.display === 'block') {
-    menu.style.display = 'none';
-    return;
+  // Cerrar cualquier menú flotante previo
+  const existing = document.getElementById('dmz-move-float');
+  if (existing) {
+    existing.remove();
+    if (existing._pid === pid) return; // toggle off
   }
 
   // Construir lista de áreas destino (todas menos la actual)
@@ -5160,21 +5241,40 @@ function toggleMoveMenu(pid, btn) {
     return;
   }
 
+  // Crear menú flotante con position:fixed para escapar overflow:hidden del card
+  const menu = document.createElement('div');
+  menu.id = 'dmz-move-float';
+  menu._pid = pid;
+  menu.className = 'move-menu';
+  menu.style.cssText = 'position:fixed;z-index:9999;display:block;min-width:190px;';
   menu.innerHTML = `<div class="move-menu-title">MOVER A</div>` +
     destAreas.map(a =>
       `<button class="move-menu-item" onclick="movePhoto('${pid}','${a.id}')">${esc(a.name)}</button>`
     ).join('');
 
-  menu.style.display = 'block';
+  document.body.appendChild(menu);
+
+  // Posicionar sobre el botón
+  requestAnimationFrame(() => {
+    const r  = btn.getBoundingClientRect();
+    const mH = menu.offsetHeight;
+    const mW = menu.offsetWidth;
+    let left = r.right - mW;
+    if (left < 8) left = 8;
+    let top = r.top - mH - 6;
+    if (top < 8) top = r.bottom + 4;
+    menu.style.left = left + 'px';
+    menu.style.top  = top  + 'px';
+  });
 
   // Cerrar al hacer clic fuera
   const close = e => {
     if (!menu.contains(e.target) && e.target !== btn) {
-      menu.style.display = 'none';
-      document.removeEventListener('click', close);
+      menu.remove();
+      document.removeEventListener('click', close, true);
     }
   };
-  setTimeout(() => document.addEventListener('click', close), 10);
+  setTimeout(() => document.addEventListener('click', close, true), 10);
 }
 
 function movePhoto(pid, destAreaId) {
@@ -6880,7 +6980,9 @@ function renderCl2Panel(id) {
             <span><span class="cl2-q-num">${i+1}</span>${esc(q)}</span>
             <div style="display:flex;gap:.3rem;flex-shrink:0">
               <button class="edit-btn secondary" style="font-size:.54rem;padding:.15rem .4rem;opacity:.6"
-                onclick="cl2CorregirRespuesta('${c.id}',${i})" title="Corregir ortografía">🔤</button>
+                onclick="cl2EditarRespuestaIndividual('${c.id}',${i})" title="Editar respuesta">&#9998; Editar</button>
+              <button class="edit-btn secondary" style="font-size:.54rem;padding:.15rem .4rem;opacity:.6"
+                onclick="cl2CorregirRespuesta('${c.id}',${i})" title="Corregir ortografía">&#128288; Corregir</button>
             </div>
           </div>
           <textarea class="cl2-q-ta" id="cl2-ta-${i}" rows="2"
@@ -6928,6 +7030,28 @@ function updateCl2Counter() {
 }
 
 /* ── Corrección ortográfica de respuesta individual ─────────── */
+/* ── Editar respuesta inline en vista Por colaborador ────────── */
+function cl2EditarRespuestaIndividual(colabId, qIdx) {
+  const ta = document.getElementById(`cl2-ta-${qIdx}`);
+  if (!ta) return;
+  ta.focus();
+  ta.select();
+  // Resaltar visualmente el campo
+  const prev = ta.style.border;
+  ta.style.border = '1.5px solid var(--gold)';
+  ta.style.background = '#fffef5';
+  setTimeout(() => {
+    ta.style.border = prev || '';
+    ta.style.background = '';
+  }, 2500);
+  // Guardar al salir
+  ta.onblur = () => {
+    const colab = CL2_STATE.colaboradores.find(x => x.id === colabId);
+    if (colab) { colab.respuestas[qIdx] = ta.value; markDirty(); }
+    ta.onblur = null;
+  };
+}
+
 async function cl2CorregirRespuesta(colabId, qIdx) {
   if (!STATE?.apiKey?.startsWith('sk-ant-')) { showToast('API Key requerida'); return; }
   const ta = document.getElementById(`cl2-ta-${qIdx}`);
