@@ -3477,7 +3477,7 @@ async function sbUploadPhoto(photoId, b64, userId) {
     const blob = new Blob([ab], { type: 'image/jpeg' });
 
     const path = `${userId}/${photoId}.jpg`;
-    const url  = `${SB.url}/storage/v1/object/dmz-photos/${path}`;
+    const url  = `${SB.url}/storage/v1/object/auditoria-fotos/${path}`;
 
     const resp = await fetch(url, {
       method: 'POST',
@@ -3501,7 +3501,7 @@ async function sbGetPhotoUrl(photoId, userId) {
   const path = `${userId}/${photoId}.jpg`;
   // Generar URL firmada (válida por 1 hora)
   try {
-    const resp = await fetch(`${SB.url}/storage/v1/object/sign/dmz-photos/${path}`, {
+    const resp = await fetch(`${SB.url}/storage/v1/object/sign/auditoria-fotos/${path}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${SB.token}`,
