@@ -2661,7 +2661,9 @@ async function saveSession(silent) {
     }
   }
 
-  await Promise.all(tasks);
+  // Guardar metadatos INMEDIATAMENTE sin esperar las fotos
+  // Las fotos se procesan en background para no bloquear el guardado
+  Promise.all(tasks).catch(e => console.warn('IDB tasks error:', e));
 
   try {
     // Validar integridad antes de sobrescribir
