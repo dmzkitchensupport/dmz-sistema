@@ -25,19 +25,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="-1">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-// Auto cache-bust: si la URL no tiene el build actual, recarga con él
-(function(){
-  var BUILD = '20260511-v1';
-  var url = new URL(window.location.href);
-  if (url.searchParams.get('b') !== BUILD) {
-    url.searchParams.set('b', BUILD);
-    window.location.replace(url.toString());
-  }
-})();
+// Cache-bust eliminado — la app siempre carga la versión más reciente de GitHub
+var BUILD = '20260511-v1';
 </script>
 <title>Auditoría Operativa · DMZ Kitchen Support v10.0</title>
 <script>
@@ -4104,7 +4099,7 @@ function init() {
   setTimeout(updateBackupStatus, 2000);
   initNetworkMonitor();
   // Auto-restaurar sesión desde Supabase si hay refresh token
-  setTimeout(autoRestoreSession, 1500);
+  setTimeout(autoRestoreSession, 800);
 
   if (restored) {
     showToast('Sesion restaurada — ' + Object.values(STATE.areas).reduce((s,a) => s + a.photos.length, 0) + ' fotos cargadas');
@@ -7950,16 +7945,8 @@ init();
 
 /* ── Auto-restauración de sesión al iniciar ─────────────────── */
 async function autoRestoreSession() {
-  // Si ya hay datos en localStorage, no restaurar
-  const lsData = localStorage.getItem('dmz_audit_v4');
-  if (lsData) {
-    try {
-      const parsed = JSON.parse(lsData);
-      if (parsed.client && Object.keys(parsed.areas || {}).length > 0) {
-        return; // Datos locales válidos — no sobrescribir
-      }
-    } catch(e) {}
-  }
+  // Siempre intentar restaurar desde Supabase si hay token
+  // El localStorage puede estar vacío o con datos de sesión anterior
 
   // Intentar refrescar token automáticamente
   const refresh = localStorage.getItem('dmz_sb_refresh');
