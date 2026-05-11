@@ -1,1 +1,30 @@
-{"version": 2}
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.js",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/AUDITORIA_AI_v9.html"
+    },
+    {
+      "src": "/auditoria",
+      "dest": "/AUDITORIA_AI_v9.html"
+    },
+    {
+      "src": "/(.*)",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate"
+      },
+      "dest": "/$1"
+    }
+  ]
+}
