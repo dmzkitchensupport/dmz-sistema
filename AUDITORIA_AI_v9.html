@@ -3715,6 +3715,7 @@ function buildLoginModal() {
     </div>
   `;
   document.body.appendChild(modal);
+  // Email ya precargado — focus directo en password
   setTimeout(() => document.getElementById('sb-password').focus(), 100);
 }
 
@@ -3727,10 +3728,25 @@ async function sbDoLogin() {
     await sbLogin(email, password);
     document.getElementById('sb-login-modal').style.display = 'none';
     updateSbStatus(true);
-    showToast('Sesion iniciada — ' + email);
-    // Restaurar ID de auditoría activa si existe
+    showToast('Iniciando sesion — restaurando datos...');
     const savedId = localStorage.getItem('dmz_sb_auditoria_id');
     if (savedId) SB._auditoriaId = savedId;
+    // Restaurar datos desde Supabase inmediatamente tras login
+    const ok = await Promise.race([
+      autoRestoreFromSupabase(),
+      new Promise(r => setTimeout(r, 10000, false))
+    ]);
+    if (ok) {
+      renderAreaNav();
+      updateNavBadges();
+      // Quedarse en CAPTURA — no redirigir al dash
+      setMode('cap');
+      const firstArea = AREAS[0]?.id;
+      if (firstArea) switchArea(firstArea);
+      showToast('Datos restaurados — ' + email);
+    } else {
+      showToast('Sesion iniciada — ' + email);
+    }
   } catch(e) {
     errEl.textContent = e.message;
   }
@@ -4231,8 +4247,9 @@ async function _initSupabaseBackground() {
         showToast('Datos sincronizados desde Supabase');
       }
     } else {
-      // Sin sesión activa — mostrar login después de 1.5s
-      setTimeout(buildLoginModal, 1500);
+      // Sin sesión activa y no hay token guardado — mostrar login
+      const hasToken = localStorage.getItem('dmz_sb_token');
+      if (!hasToken) setTimeout(buildLoginModal, 1500);
     }
   } catch(e) {
     console.warn('Supabase background init error:', e.message);
