@@ -3281,11 +3281,19 @@ function sbHeaders(extra) {
 
 // ── REST helper ───────────────────────────────────────────────────
 async function sbFetch(method, path, body, extra) {
-  const resp = await fetch(SB.url + path, {
-    method,
-    headers: sbHeaders(extra || {}),
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const ctrl  = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  let resp;
+  try {
+    resp = await fetch(SB.url + path, {
+      method,
+      headers: sbHeaders(extra || {}),
+      body: body ? JSON.stringify(body) : undefined,
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!resp.ok && resp.status !== 204) {
     const err = await resp.json().catch(() => ({}));
     throw new Error(err.message || 'HTTP ' + resp.status);
@@ -4130,45 +4138,25 @@ async function init() {
   driveHandleOAuthCallback();
   driveLoadToken();
 
-  // Supabase: restaurar sesión si existe token guardado
-  sbRestoreSession().then(logged => {
-    updateSbStatus(logged);
-    if (logged) {
-      const savedId = localStorage.getItem('dmz_sb_auditoria_id');
-      if (savedId) SB._auditoriaId = savedId;
-    } else {
-      // Mostrar login al arrancar si no hay sesión
-      setTimeout(buildLoginModal, 800);
-    }
-  });
-
   // Aplica logo guardado
   const _savedLogo = localStorage.getItem('dmz_logo');
   if (_savedLogo) { STATE.logoB64 = _savedLogo; applyLogo(_savedLogo); }
 
   // API Key: cargar desde sessionStorage si existe, sino del default
-  // sessionStorage no persiste entre pestañas ni al cerrar — más seguro
   const _storedKey = sessionStorage.getItem('dmz_api_key');
   const _defaultKey = ['sk-ant-api03-1INQwh8eXBBCIzGRJus44-Sy','qP4vlNzdGoxutadB_q5dXrDLNSdRpqFB3LfHFzJ3au','PFYf2bc1DhW5Syf55wWA-uGqwyQAA'].join('');
   const _activeKey = _storedKey || _defaultKey;
-  sessionStorage.setItem('dmz_api_key', _activeKey);  // persistir en session
+  sessionStorage.setItem('dmz_api_key', _activeKey);
   STATE.apiKey = _activeKey;
   const _keyInput = document.getElementById('inp-key');
   if (_keyInput) { _keyInput.value = _activeKey; onKeyInput(); }
 
-  // 1. Primero: conectar a Supabase con token guardado
-  await sbRestoreSession();
-
-  // 2. Si Supabase conectó, restaurar desde la nube (más reciente)
-  if (SB.ready) {
-    await autoRestoreFromSupabase();
-  }
-
-  // 3. Restaura sesión local (fallback si Supabase no tiene datos)
+  // 1. Restaurar sesión local PRIMERO — nunca depende de red
   const restored = loadSession();
 
+  // 2. Renderizar UI inmediatamente con datos locales
   renderAreaNav();
-  switchArea('fachada');
+  switchArea(AREAS[0]?.id || 'fachada');
   setupDrop();
   updateNavBadges();
 
@@ -4178,18 +4166,14 @@ async function init() {
   });
   STATE.client = document.getElementById('inp-client').value;
 
-  // Auto-guardado cada 30s con capas de respaldo
   startAutoSave();
   checkEmergencyBackup();
-  // Actualizar indicador de respaldo cada 15s
   setInterval(updateBackupStatus, 15000);
   setTimeout(updateBackupStatus, 2000);
   initNetworkMonitor();
-  // Restauración desde Supabase ya ocurrió al inicio (ver autoRestoreFromSupabase)
 
   if (restored) {
     showToast('Sesion restaurada — ' + Object.values(STATE.areas).reduce((s,a) => s + a.photos.length, 0) + ' fotos cargadas');
-    // Restaura textarea y summaries de hallazgos si hay datos guardados
     if (HZ_STATE.textoOriginal) {
       const ta = document.getElementById('hz-textarea');
       if (ta) ta.value = HZ_STATE.textoOriginal;
@@ -4197,22 +4181,65 @@ async function init() {
     const hasClas = HZ_STATE.clasificados.critico.length || HZ_STATE.clasificados.observacion.length || HZ_STATE.clasificados.correcto.length;
     if (hasClas) {
       renderSummaries();
-      document.getElementById('hz-summaries-wrap').style.display = 'block';
-      document.getElementById('btn-gen-plan').disabled = false;
+      const sw = document.getElementById('hz-summaries-wrap');
+      const bg = document.getElementById('btn-gen-plan');
+      if (sw) sw.style.display = 'block';
+      if (bg) bg.disabled = false;
     }
-    if (HZ_STATE.planAccion && HZ_STATE.planAccion.length) {
+    if (HZ_STATE.planAccion?.length) {
       renderPlanAccion();
+      const pw = document.getElementById('plan-wrap');
+      if (pw) pw.style.display = 'block';
     }
-    // Restaura CL2 counters
-    if (CL2_STATE.colaboradores && CL2_STATE.colaboradores.length) {
-      const maxId = CL2_STATE.colaboradores.reduce((m, c) => {
-        const n = parseInt((c.id || '').replace('c', ''));
+    if (ALI_STATE.items?.length) renderAlimentos();
+    // Restaura contador de colaboradores CLIMA
+    if (CL2_STATE.colaboradores?.length) {
+      const maxId = CL2_STATE.colaboradores.reduce((m, co) => {
+        const n = parseInt((co.id || '').replace('c', ''));
         return isNaN(n) ? m : Math.max(m, n);
-      }, 5);
+      }, 12);
       _cl2Counter = maxId + 1;
     }
+    renderAreaNav();
+    updateNavBadges();
+  }
+
+  // 3. Supabase en background — con timeout de 6s para no bloquear nunca
+  _initSupabaseBackground();
+  return; // ← init() termina aquí, Supabase corre en background
+}
+
+async function _initSupabaseBackground() {
+  try {
+    const timeout = new Promise(r => setTimeout(r, 6000, 'timeout'));
+    const logged  = await Promise.race([sbRestoreSession(), timeout]);
+
+    updateSbStatus(logged === true);
+    if (logged === true) {
+      const savedId = localStorage.getItem('dmz_sb_auditoria_id');
+      if (savedId) SB._auditoriaId = savedId;
+
+      // Intentar sync desde Supabase — con timeout de 8s
+      const restored_cloud = await Promise.race([
+        autoRestoreFromSupabase(),
+        new Promise(r => setTimeout(r, 8000, false))
+      ]);
+      if (restored_cloud) {
+        renderAreaNav();
+        switchArea(STATE.currentArea || AREAS[0]?.id || 'fachada');
+        updateNavBadges();
+        showToast('Datos sincronizados desde Supabase');
+      }
+    } else {
+      // Sin sesión activa — mostrar login después de 1.5s
+      setTimeout(buildLoginModal, 1500);
+    }
+  } catch(e) {
+    console.warn('Supabase background init error:', e.message);
   }
 }
+
+
 
 /* 
    UI — modo, nav, progreso
