@@ -2685,7 +2685,7 @@ async function saveSession(silent) {
     areas:          {},
     cl2State:       JSON.parse(JSON.stringify(CL2_STATE)),
     hallazgosState: JSON.parse(JSON.stringify(HZ_STATE)),
-    aliState:       JSON.parse(JSON.stringify(ALI_STATE)),
+    aliState:       { items: ALI_STATE.items.map(function(it){ var x=Object.assign({},it); delete x.fotoB64; return x; }), _cnt: ALI_STATE._cnt },
   };
 
   // Fotos: guarda en IndexedDB (sin límite), solo metadatos en localStorage
@@ -2741,7 +2741,18 @@ async function saveSession(silent) {
       showToast('⚠️ Datos incompletos — guardado cancelado por seguridad');
       return;
     }
-    localStorage.setItem(STORAGE_KEY, jsonStr);
+    // Si el JSON es muy grande, truncar fotoB64 de items de alimentos
+    let finalStr = jsonStr;
+    if (finalStr.length > 3 * 1024 * 1024) { // > 3MB
+      try {
+        const obj = JSON.parse(finalStr);
+        if (obj.aliState?.items) {
+          obj.aliState.items = obj.aliState.items.map(function(it){ var x=Object.assign({},it); delete x.fotoB64; return x; });
+        }
+        finalStr = JSON.stringify(obj);
+      } catch(e) {}
+    }
+    localStorage.setItem(STORAGE_KEY, finalStr);
     updateSaveIndicator();
     if (!silent) showToast('Sesion guardada');
 
