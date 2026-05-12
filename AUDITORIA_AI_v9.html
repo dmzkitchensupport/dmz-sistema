@@ -6084,15 +6084,35 @@ function buildReport() {
         }).filter(Boolean).join('');
         // Módulos personalizados (ej. CUALIDADES)
         const customMods = (hz.customModules || []).filter(m => m.title || m.text);
-        const customModsHtml = customMods.map(m => `
-          <div style="margin-bottom:1rem">
-            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;
-              padding-bottom:.3rem;border-bottom:1px solid #E5E2DC">
-              <span style="font-size:.72rem;font-weight:800;letter-spacing:.12em;color:#5F5E5A">${esc(m.title||'MÓDULO PERSONALIZADO').toUpperCase()}</span>
+        const aIdLocal = a.id;
+        const customModsHtml = customMods.map((m, mi) => {
+          const lines = (m.text||'').split('\n').filter(l => l.trim());
+          const linesHtml = lines.map((line, li) => `
+            <li style="display:flex;align-items:flex-start;gap:.4rem;margin-bottom:.35rem;
+              padding:.25rem .35rem;border-radius:4px"
+              onmouseover="this.style.background='#f9f7f3'" onmouseout="this.style.background=''">
+              <span contenteditable="true" style="flex:1;font-size:.78rem;color:#2D3A3F;
+                line-height:1.5;outline:none;cursor:text"
+                onblur="rptEditCustomLine('${aIdLocal}',${mi},${li},this.innerText)">${esc(line)}</span>
+              <button onclick="rptDelCustomLine('${aIdLocal}',${mi},${li})"
+                style="flex-shrink:0;background:none;border:none;color:#ddd;cursor:pointer;
+                font-size:.9rem;padding:0 .2rem;line-height:1"
+                onmouseover="this.style.color='#C0392B'" onmouseout="this.style.color='#ddd'">×</button>
+            </li>`).join('');
+          return `<div style="margin-bottom:1rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;
+              margin-bottom:.4rem;padding-bottom:.3rem;border-bottom:1px solid #E5E2DC">
+              <span contenteditable="true" style="font-size:.72rem;font-weight:800;
+                letter-spacing:.12em;color:#5F5E5A;outline:none;cursor:text"
+                onblur="rptEditCustomTitle('${aIdLocal}',${mi},this.innerText)">${esc(m.title||'MÓDULO PERSONALIZADO').toUpperCase()}</span>
+              <button onclick="rptDelCustomMod('${aIdLocal}',${mi})"
+                style="font-size:.58rem;background:none;border:none;color:#bbb;cursor:pointer;
+                padding:.1rem .4rem;border-radius:3px"
+                onmouseover="this.style.color='#C0392B'" onmouseout="this.style.color='#bbb'">× Eliminar</button>
             </div>
-            <div style="font-size:.78rem;color:#2D3A3F;line-height:1.6;white-space:pre-wrap;text-align:justify">${esc(m.text||'')}</div>
-          </div>`).join('');
-
+            <ul style="list-style:disc;padding-left:1.2rem;margin:0">${linesHtml}</ul>
+          </div>`;
+        }).join('');
         if (!secsHtml && !customModsHtml) return '';
         return `<div style="padding:1.2rem 1.6rem;border-top:2px solid ${nivelInfo.color}30;background:${nivelInfo.bg}30">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;
