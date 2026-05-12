@@ -4582,8 +4582,19 @@ function switchArea(id) {
  */
 function triggerUpload() { document.getElementById('file-input').click(); }
 
+// MutationObserver — re-aplica setupDrop cuando el drop-zone se recrea
+(function() {
+  let _t = null;
+  new MutationObserver(function() {
+    const dz = document.getElementById('drop-zone');
+    if (dz && !dz._ready) { clearTimeout(_t); _t = setTimeout(setupDrop, 60); }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+})();
+
 function setupDrop() {
   const dz = document.getElementById('drop-zone');
+  if (!dz || dz._ready) return;
+  dz._ready = true;
   dz.onclick = triggerUpload;
   dz.ondragover = e => { e.preventDefault(); dz.classList.add('drag-over'); };
   dz.ondragleave = () => dz.classList.remove('drag-over');
