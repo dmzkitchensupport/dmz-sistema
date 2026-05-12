@@ -5199,12 +5199,20 @@ function buildCard(p) {
 /* ── Hallazgos por área ─────────────────────────────────────── */
 function _hzDefault() {
   return {
-    hall: { cal: null, pts: [''], obs: '' },
-    crit: { cal: null, pts: [''], obs: '' },
-    op:   { cal: null, pts: [''], obs: '' },
-    imp:  { cal: null, pts: [''], obs: '' },
-    prox: { cal: null, pts: [''], obs: '' },
+    hall: { cal: null, pts: [''], obs: '', hidden: false },
+    crit: { cal: null, pts: [''], obs: '', hidden: false },
+    op:   { cal: null, pts: [''], obs: '', hidden: false },
+    imp:  { cal: null, pts: [''], obs: '', hidden: false },
+    prox: { cal: null, pts: [''], obs: '', hidden: false },
   };
+}
+
+function hzToggleSec(aId, key) {
+  const hz = STATE.areas[aId]?.hallazgos;
+  if (!hz || !hz[key]) return;
+  hz[key].hidden = !hz[key].hidden;
+  markDirty();
+  renderHzPanel();
 }
 
 function _hzNivel(hz) {
@@ -5254,10 +5262,26 @@ function buildHzPanelHtml(aId, hz) {
     }).join('');
     const showCal = ['hall','crit','op'].includes(s.key);
 
+    const isHidden = sec.hidden === true;
+    if (isHidden) {
+      return `<div class="hz-sec hz-sec-hidden" style="opacity:.45;border-style:dashed">
+        <div class="hz-sec-head" style="cursor:pointer" onclick="hzToggleSec('${aId}','${s.key}')">
+          <span class="hz-sec-label" style="text-decoration:line-through">${s.label}</span>
+          <span style="font-size:.58rem;color:var(--mid);margin-left:.5rem">oculta — clic para mostrar</span>
+        </div>
+      </div>`;
+    }
     return `<div class="hz-sec">
       <div class="hz-sec-head">
         <span class="hz-sec-label">${s.label}</span>
-        ${showCal ? `<div class="hz-cal-btns">${calBtns}</div>` : ''}
+        <div style="display:flex;align-items:center;gap:.4rem">
+          ${showCal ? `<div class="hz-cal-btns">${calBtns}</div>` : ''}
+          <button onclick="hzToggleSec('${aId}','${s.key}')" title="Ocultar esta sección"
+            style="background:none;border:none;cursor:pointer;color:var(--mid);font-size:.9rem;
+            padding:.1rem .3rem;border-radius:3px;line-height:1" 
+            onmouseover="this.style.color='#C0392B'" 
+            onmouseout="this.style.color='var(--mid)'">✕</button>
+        </div>
       </div>
       <div class="hz-pts" id="hz-pts-${aId}-${s.key}">${ptsHtml}</div>
       <button class="hz-add-btn" onclick="hzAddPt('${aId}','${s.key}')">+ Agregar punto</button>
@@ -5952,7 +5976,8 @@ function buildReport() {
         const nivelInfo = _hzNivel(hz);
         const secsHtml = secs.map(s => {
           const sec = hz[s.key];
-          if (!sec || (!sec.cal && !sec.pts.some(p => p.trim()) && !sec.obs)) return '';
+          if (!sec || sec.hidden) return ''; // omitir secciones ocultas
+          if (!sec.cal && !sec.pts.some(p => p.trim()) && !sec.obs) return '';
           const badge = sec.cal
             ? `<span style="font-size:.6rem;font-weight:700;padding:2px 10px;border-radius:10px;background:${CAL_COL[sec.cal]}18;color:${CAL_COL[sec.cal]};border:1px solid ${CAL_COL[sec.cal]}40">${CAL_LBL[sec.cal]}</span>`
             : '';
