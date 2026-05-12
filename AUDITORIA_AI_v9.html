@@ -2739,6 +2739,7 @@ async function saveSession(silent) {
     // Sincronización con Supabase si hay sesión activa
     if (SB.ready) sbSaveAuditoria().catch(() => {});
     // Rotar snapshot histórico cada 10 guardados
+    if (typeof _saveCount === "undefined") window._saveCount = 0;
     _saveCount = (_saveCount || 0) + 1;
     if (_saveCount % 10 === 0) backupRotatingSnapshot();
   } catch(e) {
