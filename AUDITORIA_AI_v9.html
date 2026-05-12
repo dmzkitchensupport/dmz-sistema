@@ -4188,6 +4188,22 @@ async function autoRestoreFromSupabase() {
         if (!AREAS.find(a => a.id === d.id)) AREAS.push(d);
         if (!STATE.areas[d.id]) STATE.areas[d.id] = { photos: [], hallazgos: _hzDefault() };
       });
+      // Eliminar builtins sin fotos cuando hay custom areas
+      const _BIDS = ['fachada','imagen','alimentos','servicio','banos','almacen','barra','terraza','formatos','personal'];
+      _BIDS.forEach(aId => {
+        if (!STATE.areas[aId]?.photos?.length) {
+          const _i = AREAS.findIndex(a => a.id === aId);
+          if (_i >= 0) AREAS.splice(_i, 1);
+        }
+      });
+    }
+
+    // Aplicar orden guardado
+    if (snap.areasOrder?.length) {
+      const _ordered = snap.areasOrder.map(id => AREAS.find(a => a.id === id)).filter(Boolean);
+      AREAS.forEach(a => { if (!_ordered.find(o => o.id === a.id)) _ordered.push(a); });
+      AREAS.length = 0;
+      _ordered.forEach(a => AREAS.push(a));
     }
 
     if (snap.areas) {
