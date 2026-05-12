@@ -2770,10 +2770,11 @@ async function loadSession() {
     }
 
     let loaded = 0;
-    // Carga metadatos primero (sin fotos)
+    // Carga metadatos primero (sin fotos) — limpiar áreas antes para evitar duplicados
     for (const aId in saved.areas) {
       if (!STATE.areas[aId]) continue;
       STATE.areas[aId].hallazgos = saved.areas[aId].hallazgos || _hzDefault();
+      STATE.areas[aId].photos = []; // limpiar antes de poblar
       for (const sp of (saved.areas[aId].photos || [])) {
         const photo = {
           id:           sp.id,
