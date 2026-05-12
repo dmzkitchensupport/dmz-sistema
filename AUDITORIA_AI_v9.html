@@ -4571,6 +4571,14 @@ async function toDisplayableBlob(file) {
   //  HEIC/HEIF — múltiples estrategias (HEVC soportado)
   if (file.type === 'image/heic' || file.type === 'image/heif' || /\.(heic|heif)$/i.test(name)) {
 
+    // Estrategia 0: Servidor DMZ — conversión HEIC→JPG via sharp (HEVC completo)
+    try {
+      const serverJpeg = await _convertHeicServer(file);
+      if (serverJpeg) return serverJpeg;
+    } catch(e0s) {
+      console.warn('Servidor HEIC:', e0s.message);
+    }
+
     // Estrategia 1: ImageDecoder API — Chrome 94+ soporta HEIC/HEVC nativo
     if (typeof ImageDecoder !== 'undefined') {
       try {
