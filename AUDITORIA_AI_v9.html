@@ -5853,6 +5853,54 @@ function buildDash() {
    REPORT GENERATION — FIX v4: usa displayUrl (blob URL) en lugar
    de base64 inline → string mucho más pequeño, genera instantáneo
  */
+// ── Edición inline en el REPORTE ──────────────────────────────
+function rptEditCustomTitle(aId, mi, newTitle) {
+  const hz = STATE.areas[aId]?.hallazgos;
+  if (!hz?.customModules?.[mi]) return;
+  hz.customModules[mi].title = newTitle;
+  markDirty();
+}
+function rptEditCustomLine(aId, mi, li, newText) {
+  const hz = STATE.areas[aId]?.hallazgos;
+  if (!hz?.customModules?.[mi]) return;
+  const lines = (hz.customModules[mi].text || '').split('\n');
+  lines[li] = newText;
+  hz.customModules[mi].text = lines.join('\n');
+  markDirty();
+}
+function rptDelCustomLine(aId, mi, li) {
+  const hz = STATE.areas[aId]?.hallazgos;
+  if (!hz?.customModules?.[mi]) return;
+  const lines = (hz.customModules[mi].text || '').split('\n').filter(l => l.trim());
+  lines.splice(li, 1);
+  hz.customModules[mi].text = lines.join('\n');
+  markDirty();
+  buildReport();
+}
+function rptDelCustomMod(aId, mi) {
+  const hz = STATE.areas[aId]?.hallazgos;
+  if (!hz?.customModules) return;
+  if (!confirm('¿Eliminar este módulo del reporte?')) return;
+  hz.customModules.splice(mi, 1);
+  markDirty();
+  buildReport();
+}
+// Edición inline de secciones estándar en el reporte
+function rptEditStdPt(aId, key, li, newText) {
+  const hz = STATE.areas[aId]?.hallazgos;
+  if (!hz?.[key]) return;
+  hz[key].pts[li] = newText;
+  markDirty();
+}
+function rptDelStdPt(aId, key, li) {
+  const hz = STATE.areas[aId]?.hallazgos;
+  if (!hz?.[key]?.pts) return;
+  hz[key].pts.splice(li, 1);
+  if (!hz[key].pts.length) hz[key].pts = [''];
+  markDirty();
+  buildReport();
+}
+
 function buildReport() {
   const client = STATE.client || 'Cliente';
   let totC = 0, totO = 0, totK = 0;
@@ -5982,7 +6030,7 @@ function buildReport() {
             ? `<span style="font-size:.6rem;font-weight:700;padding:2px 10px;border-radius:10px;background:${CAL_COL[sec.cal]}18;color:${CAL_COL[sec.cal]};border:1px solid ${CAL_COL[sec.cal]}40">${CAL_LBL[sec.cal]}</span>`
             : '';
           // Cada pt puede contener texto largo — renderizar como ítem independiente con buen tamaño
-          const ptsHtml = (sec.pts||[]).filter(p => p.trim()).map(p => {
+          const ptsHtml = (sec.pts||[]).filter(p => p.trim()).map((p, ptIdx) => {
             // Detectar prioridad en Próximos pasos
             if (s.key === 'prox') {
               const txt = p.trim();
@@ -6010,8 +6058,16 @@ function buildReport() {
                 </li>`;
               }
             }
-            return `<li style="font-size:.78rem;color:#2D3A3F;line-height:1.6;margin-bottom:.5rem;
-              text-align:justify;padding-left:.2rem">${esc(p.trim())}</li>`;
+            return `<li style="display:flex;align-items:flex-start;gap:.3rem;margin-bottom:.5rem;
+              padding:.2rem .3rem;border-radius:3px;list-style:none"
+              onmouseover="this.style.background='#f9f7f3'" onmouseout="this.style.background=''">
+              <span style="flex:1;font-size:.78rem;color:#2D3A3F;line-height:1.6;text-align:justify"
+                contenteditable="true" outline:none"
+                onblur="rptEditStdPt('${a.id}','${s.key}',${ptIdx},this.innerText)">${esc(p.trim())}</span>
+              <button onclick="rptDelStdPt('${a.id}','${s.key}',${ptIdx})"
+                style="flex-shrink:0;background:none;border:none;color:#ddd;cursor:pointer;font-size:.85rem;padding:0"
+                onmouseover="this.style.color='#C0392B'" onmouseout="this.style.color='#ddd'">×</button>
+            </li>`;
           }).join('');
           const obs = sec.obs
             ? `<p style="font-size:.74rem;color:#8A9096;font-style:italic;margin:.4rem 0 0;line-height:1.5">${esc(sec.obs)}</p>`
@@ -6042,7 +6098,9 @@ function buildReport() {
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;
             padding-bottom:.6rem;border-bottom:2px solid ${nivelInfo.color}20">
             <span style="font-size:.82rem;font-weight:800;letter-spacing:.14em;color:#2D3A3F">HALLAZGOS DEL ÁREA</span>
-            <span style="font-size:.65rem;font-weight:700;padding:3px 12px;border-radius:10px;background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
+            <div style="display:flex;gap:.5rem;align-items:center">
+              <span style="font-size:.65rem;font-weight:700;padding:3px 12px;border-radius:10px;background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
+            </div>
           </div>
           ${secsHtml}
           ${customModsHtml}
