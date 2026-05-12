@@ -1,0 +1,7 @@
+{
+  "name": "dmz-sistema",
+  "version": "1.0.0",
+  "dependencies": {
+    "sharp": "^0.34.5"
+  }
+}
