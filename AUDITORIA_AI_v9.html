@@ -3559,11 +3559,13 @@ async function sbSaveAuditoria() {
       await sbFetch('PATCH',
         `/rest/v1/auditorias?id=eq.${SB._auditoriaId}`,
         payload, { Prefer: 'return=minimal' });
+      STATE._lastSaved = new Date().toISOString();
       return SB._auditoriaId;
     } else {
       // Crear nueva
       const rows = await sbFetch('POST', '/rest/v1/auditorias', payload);
       SB._auditoriaId = rows[0].id;
+      STATE._lastSaved = new Date().toISOString();
       localStorage.setItem('dmz_sb_auditoria_id', SB._auditoriaId);
       return SB._auditoriaId;
     }
@@ -3574,6 +3576,51 @@ async function sbSaveAuditoria() {
 }
 
 /** Carga el listado de auditorías del auditor actual */
+/* ── Supabase Realtime — sync en tiempo real entre evaluadores ── */
+let _realtimeWs = null;
+function initRealtime() {
+  if (!SB.ready || !SB._auditoriaId || _realtimeWs) return;
+  const wsUrl = SB.url.replace('https://', 'wss://') +
+    '/realtime/v1/websocket?apikey=' + SB.anon + '&vsn=1.0.0';
+  const ws = new WebSocket(wsUrl);
+  ws.onopen = () => {
+    ws.send(JSON.stringify({
+      topic: 'realtime:public:auditorias:id=eq.' + SB._auditoriaId,
+      event: 'phx_join',
+      payload: { config: { broadcast: { self: false } } },
+      ref: '1'
+    }));
+    console.log('[Realtime] conectado');
+  };
+  ws.onmessage = async (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.event !== 'UPDATE') return;
+      const rec = msg.payload?.record || msg.payload?.new;
+      if (!rec || rec.id !== SB._auditoriaId) return;
+      const remoteTime = new Date(rec.guardada_en || 0).getTime();
+      const localTime  = new Date(STATE._lastSaved || 0).getTime();
+      if (remoteTime <= localTime + 2000) return;
+      // Otro evaluador guardó — sync silencioso de hallazgos y CLIMA
+      const snap = rec.snapshot;
+      if (!snap) return;
+      if (snap.cl2State) Object.assign(CL2_STATE, snap.cl2State);
+      if (snap.hallazgosState) Object.assign(HZ_STATE, snap.hallazgosState);
+      if (snap.areas) {
+        for (const aId in snap.areas) {
+          if (!STATE.areas[aId]) STATE.areas[aId] = { photos: [], hallazgos: _hzDefault() };
+          STATE.areas[aId].hallazgos = snap.areas[aId].hallazgos || _hzDefault();
+        }
+      }
+      renderAreaNav(); updateGlobalStats(); updateNavBadges();
+      showToast('Sincronizado con co-evaluador');
+    } catch(_e) {}
+  };
+  ws.onclose = () => { _realtimeWs = null; setTimeout(initRealtime, 10000); };
+  ws.onerror = () => { ws.close(); };
+  _realtimeWs = ws;
+}
+
 /* ── Supabase Storage — subir y recuperar fotos en la nube ────── */
 async function sbUploadPhoto(photoId, b64, userId) {
   if (!SB.ready || !b64) return null;
