@@ -2790,6 +2790,16 @@ async function loadSession() {
         }
       });
     }
+    // Restaurar orden de áreas si está guardado
+    if (saved.areasOrder && saved.areasOrder.length) {
+      const ordered = saved.areasOrder
+        .map(id => AREAS.find(a => a.id === id))
+        .filter(Boolean);
+      // Agregar áreas no incluidas en el orden al final
+      AREAS.forEach(a => { if (!ordered.find(o => o.id === a.id)) ordered.push(a); });
+      AREAS.length = 0;
+      ordered.forEach(a => AREAS.push(a));
+    }
 
     let loaded = 0;
     // Carga metadatos primero (sin fotos) — limpiar áreas antes para evitar duplicados
@@ -3484,6 +3494,7 @@ async function sbSaveAuditoria() {
     cl2State:       CL2_STATE,
     hallazgosState: HZ_STATE,
     aliState:       { items: ALI_STATE.items, _cnt: ALI_STATE._cnt },
+    areasOrder:     AREAS.map(a => a.id),
     photoThumbs,   // miniaturas para recuperación visual
     areas:          Object.fromEntries(
       Object.entries(STATE.areas).map(([aId, aData]) => [
