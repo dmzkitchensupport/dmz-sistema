@@ -2986,6 +2986,7 @@ async function lazyLoadAreaPhotos(aId, savedRef) {
         } else {
           photo.state = 'empty';
         }
+      }
     })
   );
   await Promise.all(tasks);
