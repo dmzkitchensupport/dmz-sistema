@@ -1,18 +1,33 @@
 {
   "version": 2,
-  "functions": {
-    "api/convert-heic.js": {
-      "memory": 1024,
-      "maxDuration": 30
+  "builds": [
+    {
+      "src": "api/convert-heic.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "*.html",
+      "use": "@vercel/static"
     }
-  },
+  ],
   "routes": [
-    { "src": "/api/convert-heic", "dest": "/api/convert-heic.js" },
-    { "src": "/", "dest": "/AUDITORIA_AI_v9.html" },
-    { "src": "/auditoria", "dest": "/AUDITORIA_AI_v9.html" },
+    {
+      "src": "/api/convert-heic",
+      "dest": "/api/convert-heic.py"
+    },
+    {
+      "src": "/",
+      "dest": "/AUDITORIA_AI_v9.html"
+    },
+    {
+      "src": "/auditoria",
+      "dest": "/AUDITORIA_AI_v9.html"
+    },
     {
       "src": "/(.*)",
-      "headers": { "Cache-Control": "no-store, no-cache, must-revalidate" },
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate"
+      },
       "dest": "/$1"
     }
   ]
