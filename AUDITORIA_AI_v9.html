@@ -42,6 +42,11 @@ var BUILD = '20260511-v1';
   s.src = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
   s.onerror = function() { window._heicUnavailable = true; };
   document.head.appendChild(s);
+  // libheif-js — soporta HEVC/H.265 (iPhone 12+)
+  var lh = document.createElement('script');
+  lh.src = 'https://cdn.jsdelivr.net/npm/libheif-js@1.18.2/libheif-wasm/libheif.js';
+  lh.onerror = function() { window._libheifUnavailable = true; };
+  document.head.appendChild(lh);
   // html2pdf lazy load
   var p = document.createElement('script');
   p.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
@@ -4582,7 +4587,36 @@ async function toDisplayableBlob(file) {
       if (jpeg) return new File([jpeg], name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
     } catch(e4) {}
 
-    throw new Error(file.name + ': formato HEIC no compatible con este browser. Abre Chrome 108+ o exporta como JPG.');
+    // Estrategia 6: libheif-js — soporta HEVC/H.265 (iPhone 12+, error ERR_LIBHEIF)
+    if (!window._libheifUnavailable && typeof libheif !== 'undefined') {
+      try {
+        const buf = await file.arrayBuffer();
+        const decoder = new libheif.HeifDecoder();
+        const data = decoder.decode(new Uint8Array(buf));
+        if (data && data.length > 0) {
+          const img = data[0];
+          const w = img.get_width();
+          const h = img.get_height();
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          const imageData = ctx.createImageData(w, h);
+          await new Promise((res, rej) => {
+            img.display(imageData, (di) => {
+              if (!di) { rej(new Error('display null')); return; }
+              ctx.putImageData(di, 0, 0);
+              res();
+            });
+          });
+          const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.90));
+          if (blob) return new File([blob], name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+        }
+      } catch(e6) {
+        console.warn('libheif falló:', e6.message);
+      }
+    }
+
+    throw new Error(file.name + ': formato HEIC/HEVC no compatible. Exporta como JPG desde la app Fotos de tu Mac.');
   }
 
   //  DNG / RAW y demás formatos crudos
