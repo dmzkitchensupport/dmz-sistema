@@ -4511,28 +4511,43 @@ function extractJpegFromRaw(arrayBuffer) {
 async function toDisplayableBlob(file) {
   const name = file.name.toLowerCase();
 
-  //  HEIC/HEIF — múltiples estrategias
+  //  HEIC/HEIF — múltiples estrategias (HEVC soportado)
   if (file.type === 'image/heic' || file.type === 'image/heif' || /\.(heic|heif)$/i.test(name)) {
 
-    // Estrategia 1: heic2any (si disponible) — con timeout de 20s por archivo
-    if (!window._heicUnavailable && typeof heic2any !== 'undefined') {
+    // Estrategia 1: ImageDecoder API — Chrome 94+ soporta HEIC/HEVC nativo
+    if (typeof ImageDecoder !== 'undefined') {
       try {
-        const heicPromise = heic2any({ blob: file, toType: 'image/jpeg', quality: 0.88 });
-        const timeout     = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000));
-        const blob = await Promise.race([heicPromise, timeout]);
-        const out  = Array.isArray(blob) ? blob[0] : blob;
-        // Liberar memoria entre conversiones
-        await new Promise(r => setTimeout(r, 50));
-        return new File([out], name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
-      } catch(e) {
-        console.warn('heic2any falló:', e.message);
-        // Si falló por timeout o error, marcar como no disponible temporalmente
-        if (e.message === 'timeout') window._heicUnavailable = true;
-        // Continuar con estrategia 2
+        const decoder = new ImageDecoder({ data: file.stream(), type: 'image/heic' });
+        await decoder.completed;
+        const result = await decoder.decode({ frameIndex: 0 });
+        const frame = result.image;
+        const canvas = new OffscreenCanvas(frame.displayWidth, frame.displayHeight);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(frame, 0, 0);
+        frame.close();
+        decoder.close();
+        const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.92 });
+        return new File([blob], name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+      } catch(e0) {
+        console.warn('ImageDecoder HEIC falló:', e0.message);
       }
     }
 
-    // Estrategia 2: createImageBitmap (Chrome 105+ soporta HEIC nativo)
+    // Estrategia 2: heic2any (si disponible) — con timeout de 30s por archivo
+    if (typeof heic2any !== 'undefined') {
+      try {
+        const heicPromise = heic2any({ blob: file, toType: 'image/jpeg', quality: 0.88 });
+        const timeout     = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 30000));
+        const blob = await Promise.race([heicPromise, timeout]);
+        const out  = Array.isArray(blob) ? blob[0] : blob;
+        await new Promise(r => setTimeout(r, 100));
+        return new File([out], name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+      } catch(e) {
+        console.warn('heic2any falló:', e.message);
+      }
+    }
+
+    // Estrategia 3: createImageBitmap — Chrome 108+ soporta HEIC HEVC
     try {
       const bitmap = await createImageBitmap(file);
       const canvas = document.createElement('canvas');
@@ -4542,31 +4557,32 @@ async function toDisplayableBlob(file) {
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(bitmap, 0, 0);
       bitmap.close();
-      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.95));
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
       return new File([blob], name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
     } catch(e2) {
       console.warn('createImageBitmap HEIC falló:', e2.message);
     }
 
-    // Estrategia 3: intentar mostrar directamente (Safari acepta HEIC nativo)
+    // Estrategia 4: intentar mostrar directamente (Safari acepta HEIC nativo)
     try {
       const url = URL.createObjectURL(file);
       await new Promise((res, rej) => {
         const img = new Image();
-        img.onload = res; img.onerror = rej;
+        img.onload = () => { URL.revokeObjectURL(url); res(); };
+        img.onerror = () => { URL.revokeObjectURL(url); rej(); };
         img.src = url;
       });
-      return file; // Safari puede mostrarlo directamente
+      return file;
     } catch(e3) {}
 
-    // Estrategia 4: extraer JPEG embebido del HEIC (muchos tienen preview JPG)
+    // Estrategia 5: extraer JPEG embebido del HEIC (preview JPG interno)
     try {
       const buf = await file.arrayBuffer();
       const jpeg = extractJpegFromRaw(buf);
       if (jpeg) return new File([jpeg], name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
     } catch(e4) {}
 
-    throw new Error('No se pudo convertir ' + file.name + '. Exporta las fotos como JPG desde Dropbox o Fotos.');
+    throw new Error(file.name + ': formato HEIC no compatible con este browser. Abre Chrome 108+ o exporta como JPG.');
   }
 
   //  DNG / RAW y demás formatos crudos
