@@ -4514,14 +4514,20 @@ async function toDisplayableBlob(file) {
   //  HEIC/HEIF — múltiples estrategias
   if (file.type === 'image/heic' || file.type === 'image/heif' || /\.(heic|heif)$/i.test(name)) {
 
-    // Estrategia 1: heic2any (si disponible)
+    // Estrategia 1: heic2any (si disponible) — con timeout de 20s por archivo
     if (!window._heicUnavailable && typeof heic2any !== 'undefined') {
       try {
-        const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.95 });
+        const heicPromise = heic2any({ blob: file, toType: 'image/jpeg', quality: 0.88 });
+        const timeout     = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000));
+        const blob = await Promise.race([heicPromise, timeout]);
         const out  = Array.isArray(blob) ? blob[0] : blob;
+        // Liberar memoria entre conversiones
+        await new Promise(r => setTimeout(r, 50));
         return new File([out], name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
       } catch(e) {
         console.warn('heic2any falló:', e.message);
+        // Si falló por timeout o error, marcar como no disponible temporalmente
+        if (e.message === 'timeout') window._heicUnavailable = true;
         // Continuar con estrategia 2
       }
     }
@@ -4589,15 +4595,23 @@ async function processFiles(files) {
   let errors = 0;
   showToast('Procesando ' + imgs.length + ' archivo' + (imgs.length > 1 ? 's' : '') + '…');
 
-  for (const file of imgs) {
+  for (let fi = 0; fi < imgs.length; fi++) {
+    const file = imgs[fi];
+    // Feedback por archivo — especialmente útil para HEIC/DNG que tardan
+    if (imgs.length > 1) {
+      showToast('Procesando ' + (fi+1) + '/' + imgs.length + ': ' + file.name.slice(0,20) + '…');
+    }
     let processedFile;
     try {
       processedFile = await toDisplayableBlob(file);
     } catch(err) {
-      showToast(' ' + err.message);
+      console.warn('Error procesando', file.name, err.message);
       errors++;
       continue;
     }
+    // Pequeño respiro entre archivos HEIC/RAW para no saturar el motor de conversión
+    const isHeavy = /\.(heic|heif|dng|raw|cr2|nef|arw)$/i.test(file.name);
+    if (isHeavy && fi < imgs.length - 1) await new Promise(r => setTimeout(r, 150));
 
     const photo = {
       id:           newPid(),
