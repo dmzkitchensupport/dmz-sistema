@@ -4752,6 +4752,7 @@ async function processFiles(files) {
   renderAreaNav();
   updateProgress();
   updateAnalyzeBtn();
+  setupDrop(); // Re-aplicar drop zone tras cambio de área
   markDirty();
 
   const loaded = imgs.length - errors;
