@@ -5030,6 +5030,9 @@ async function analyzeAll() {
    PHOTO CARDS
  */
 function renderGrid() {
+  // Al re-renderizar, el drop-zone se recrea — quitar flag para que setupDrop vuelva a correr
+  const _dz = document.getElementById('drop-zone');
+  if (_dz) _dz._dmzDropReady = false;
   const grid   = document.getElementById('photo-grid');
   const photos = STATE.areas[STATE.currentArea].photos;
 
