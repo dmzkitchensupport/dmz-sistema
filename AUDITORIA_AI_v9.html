@@ -4471,9 +4471,36 @@ function setupDrop() {
   dz.ondragover = e => { e.preventDefault(); dz.classList.add('drag-over'); };
   dz.ondragleave = () => dz.classList.remove('drag-over');
   dz.ondrop = e => {
-    e.preventDefault(); dz.classList.remove('drag-over');
-    processFiles(Array.from(e.dataTransfer.files));
+    e.preventDefault();
+    e.stopPropagation();
+    dz.classList.remove('drag-over');
+
+    // Intentar obtener archivos — dataTransfer.files puede estar vacío desde Finder en Mac
+    let files = Array.from(e.dataTransfer.files || []);
+
+    // Fallback: usar dataTransfer.items (funciona mejor con drag desde Finder)
+    if (!files.length && e.dataTransfer.items) {
+      files = Array.from(e.dataTransfer.items)
+        .filter(item => item.kind === 'file')
+        .map(item => item.getAsFile())
+        .filter(Boolean);
+    }
+
+    if (!files.length) {
+      showToast('No se detectaron archivos. Usa el botón + Fotos para seleccionarlos.');
+      return;
+    }
+    processFiles(files);
   };
+
+  // Evitar que el browser abra/descargue archivos si se sueltan fuera del drop zone
+  document.addEventListener('dragover', e => e.preventDefault(), false);
+  document.addEventListener('drop', e => {
+    if (!e.target.closest('#drop-zone')) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, false);
 }
 
 function onFileSelect(e) {
