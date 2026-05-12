@@ -4550,6 +4550,21 @@ function extractJpegFromRaw(arrayBuffer) {
  * Convierte cualquier archivo a un Blob JPEG visualizable.
  * Flujo: HEIC → heic2any | DNG/RAW → extractJpegFromRaw | resto → directo
  */
+async function _convertHeicServer(file) {
+  // Enviar el HEIC al endpoint serverless — recibe JPEG de vuelta
+  const resp = await fetch('/api/convert-heic', {
+    method: 'POST',
+    headers: { 'Content-Type': file.type || 'image/heic' },
+    body: file,
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!resp.ok) throw new Error('Server ' + resp.status);
+  const blob = await resp.blob();
+  if (!blob.size) throw new Error('Empty response');
+  const name = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+  return new File([blob], name, { type: 'image/jpeg' });
+}
+
 async function toDisplayableBlob(file) {
   const name = file.name.toLowerCase();
 
