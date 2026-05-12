@@ -1,37 +1,18 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "*.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "*.js",
-      "use": "@vercel/static"
+  "functions": {
+    "api/convert-heic.js": {
+      "memory": 1024,
+      "maxDuration": 30
     }
-  ],
+  },
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/",
-      "dest": "/AUDITORIA_AI_v9.html"
-    },
-    {
-      "src": "/auditoria",
-      "dest": "/AUDITORIA_AI_v9.html"
-    },
+    { "src": "/api/convert-heic", "dest": "/api/convert-heic.js" },
+    { "src": "/", "dest": "/AUDITORIA_AI_v9.html" },
+    { "src": "/auditoria", "dest": "/AUDITORIA_AI_v9.html" },
     {
       "src": "/(.*)",
-      "headers": {
-        "Cache-Control": "no-store, no-cache, must-revalidate"
-      },
+      "headers": { "Cache-Control": "no-store, no-cache, must-revalidate" },
       "dest": "/$1"
     }
   ]
