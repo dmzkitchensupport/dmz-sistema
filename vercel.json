@@ -1,11 +1,15 @@
 {
   "version": 2,
-  "functions": {
-    "api/convert-heic.py": {
-      "runtime": "vercel-python@0.0.0",
-      "maxDuration": 60
+  "builds": [
+    {
+      "src": "api/convert-heic.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "*.html",
+      "use": "@vercel/static"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/api/convert-heic",
