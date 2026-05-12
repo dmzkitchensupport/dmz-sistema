@@ -3818,8 +3818,11 @@ async function sbDoLogin() {
     await sbLogin(email, pw);
     document.getElementById('sb-login-modal').style.display='none';
     updateSbStatus(true);
+    // Compartir auditoría — Blanca accede a la misma sesión de Mario
+    const SHARED_AUDITORIA_ID = '30ef6414-9787-44ac-82fe-ffa63b2aa52f';
     const savedId = localStorage.getItem('dmz_sb_auditoria_id');
-    if (savedId) SB._auditoriaId = savedId;
+    SB._auditoriaId = savedId || SHARED_AUDITORIA_ID;
+    localStorage.setItem('dmz_sb_auditoria_id', SB._auditoriaId);
     showToast('Sesion iniciada — cargando auditoría...');
     const ok = await Promise.race([
       autoRestoreFromSupabase(),
@@ -3830,6 +3833,7 @@ async function sbDoLogin() {
       const fa = STATE.currentArea || AREAS[0]?.id;
       if (fa) switchArea(fa);
       setupDrop();
+      initRealtime(); // Activar sync en tiempo real
       showToast('Listo — '+Object.values(STATE.areas).reduce((s,a)=>s+a.photos.length,0)+' fotos');
     } else {
       showToast('Sesion activa — '+email);
