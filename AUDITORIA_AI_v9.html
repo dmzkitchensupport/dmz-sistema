@@ -2321,6 +2321,25 @@ td:hover .hz-edit-hint { opacity: 1; }
       <button onclick="aliSetFiltro('bebida')" id="ali-tab-bebida" style="font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:.25rem .7rem;border-radius:4px;border:1.5px solid var(--border);background:#fff;color:var(--mid);cursor:pointer">BEBIDAS</button>
     </div>
 
+    <!-- Drop zone de fotos para alimentos -->
+    <div id="ali-dropzone"
+      style="margin:1rem 1.2rem .5rem;border:2px dashed var(--border);border-radius:8px;
+             padding:1.2rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--cream)"
+      ondragover="event.preventDefault();event.stopPropagation();this.style.borderColor='var(--gold)';this.style.background='#fffef5'"
+      ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--cream)'"
+      ondrop="aliOnDrop(event)"
+      onclick="document.getElementById('ali-drop-input').click()">
+      <div style="font-size:.65rem;font-weight:700;letter-spacing:.12em;color:var(--mid)">
+        ARRASTRA FOTOS AQUÍ · o haz clic para seleccionar
+      </div>
+      <div style="font-size:.55rem;color:var(--mid);opacity:.6;margin-top:.25rem">
+        JPG · PNG · HEIC · DNG · RAW — se crea un card por foto
+      </div>
+      <input id="ali-drop-input" type="file" multiple
+        accept="image/*,.heic,.heif,.dng,.raw,.cr2,.nef,.arw"
+        style="display:none" onchange="aliOnFileSelect(this)">
+    </div>
+
     <!-- Cronómetro de servicio -->
     <div class="ali-timer-bar">
       <div>
@@ -9073,17 +9092,45 @@ function renderAlimentosGrid() {
     grid.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--mid);font-size:.8rem">Sin '+tipo+' registrados. Usa los botones de arriba para agregar.</div>';
     return;
   }
+  // Grid de miniaturas — cada foto es clicable y abre el modal de calificación
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(140px,1fr))';
+  grid.style.gap = '1rem';
+  grid.style.padding = '1rem 1.2rem';
   grid.innerHTML = items.map((item, idx) => {
-    const nivelCol = _EC_ALI[item.nivel] || 'var(--border)';
-    const cats = {temperatura:'Temp.',estandar:'Estándar',organoleptica:'Organoléptica'};
-    const scores = Object.entries(cats).map(([c,lbl]) => {
-      const val = item[c]||0;
-      return `<div style="text-align:center;padding:.3rem .5rem">
-        <div style="font-size:.6rem;color:var(--mid);margin-bottom:.15rem">${lbl}</div>
-        <div style="font-size:.88rem;font-weight:700;color:${val>0?_EC_ALI[val]:'var(--mid)'}">${val||'—'}</div>
-      </div>`;
-    }).join('');
-    return buildAliCard(item, idx);
+    const prom    = _aliPromedio(item.scores);
+    const promStr = prom > 0 ? prom.toFixed(1) : '—';
+    const nivel   = prom>=4.5?5:prom>=3.5?4:prom>=2.5?3:prom>=1.5?2:prom>0?1:0;
+    const nivelCol = _EC_ALI[nivel] || '#E5E2DC';
+    const badgeTxt = item.tipo === 'bebida' ? 'BEBIDA' : 'ALIMENTO';
+    const badgeBg  = item.tipo === 'bebida' ? '#2D6A9F' : 'var(--gold)';
+    return `<div onclick="aliOpenModal('${item.id}')"
+      style="border-radius:8px;overflow:hidden;border:2px solid ${nivelCol};
+             cursor:pointer;transition:transform .15s,box-shadow .15s;background:#fff"
+      onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'"
+      onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div style="height:110px;background:#f5f5f5;overflow:hidden;position:relative">
+        ${item.fotoB64
+          ? `<img src="${item.fotoB64}" style="width:100%;height:100%;object-fit:cover">`
+          : `<div style="display:flex;align-items:center;justify-content:center;height:100%;
+               color:#ccc;font-size:.65rem;text-align:center;padding:.5rem">
+               Toca para<br>calificar</div>`}
+        <div style="position:absolute;top:.3rem;left:.3rem;background:${badgeBg};
+          color:#fff;font-size:.42rem;font-weight:800;letter-spacing:.1em;
+          padding:.1rem .35rem;border-radius:2px">${badgeTxt}</div>
+        ${prom>0 ? `<div style="position:absolute;top:.3rem;right:.3rem;background:${nivelCol};
+          color:#fff;font-size:.75rem;font-weight:800;padding:.1rem .35rem;border-radius:3px">${promStr}</div>` : ''}
+      </div>
+      <div style="padding:.4rem .5rem">
+        <div style="font-size:.6rem;font-weight:700;color:var(--dark);
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${esc(item.nombre||'Sin nombre')}
+        </div>
+        <div style="font-size:.52rem;color:var(--mid);margin-top:.1rem">
+          ${Object.entries(item.scores||{}).filter(([,v])=>v>0).length}/5 criterios
+        </div>
+      </div>
+    </div>`;
   }).join('');
 }
 
@@ -9195,6 +9242,190 @@ function aliSetScore(id, criterio, valor) {
   }
   updateAliSummary();
   markDirty();
+}
+
+// ── Drop zone de alimentos ─────────────────────────────────────
+async function aliOnDrop(e) {
+  e.preventDefault(); e.stopPropagation();
+  const dz = document.getElementById('ali-dropzone');
+  if (dz) { dz.style.borderColor='var(--border)'; dz.style.background='var(--cream)'; }
+  let files = Array.from(e.dataTransfer.files || []);
+  if (!files.length && e.dataTransfer.items)
+    files = Array.from(e.dataTransfer.items).filter(i=>i.kind==='file').map(i=>i.getAsFile()).filter(Boolean);
+  if (files.length) await aliProcessDropFiles(files);
+}
+
+async function aliOnFileSelect(input) {
+  const files = Array.from(input.files || []);
+  input.value = '';
+  if (files.length) await aliProcessDropFiles(files);
+}
+
+async function aliProcessDropFiles(files) {
+  const filtro = ALI_STATE._filtro;
+  const tipo = filtro === 'bebida' ? 'bebida' : 'alimento';
+  showToast('Procesando ' + files.length + ' foto(s)...');
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (files.length > 1) showToast('('+(i+1)+'/'+files.length+') '+file.name.slice(0,20)+'...');
+    let processed;
+    try { processed = await toDisplayableBlob(file); }
+    catch(e) { console.warn('aliDrop skip:', file.name, e.message); continue; }
+    const reader = new FileReader();
+    await new Promise(res => {
+      reader.onload = ev => {
+        const item = {
+          id: _newAliId(), nombre: file.name.replace(/\.[^.]+$/,''), tipo,
+          categoria: '', obs: '', fotoB64: ev.target.result,
+          scores: { 'Presentación':0,'Temperatura':0,'Sabor':0,'Textura':0,'Porción':0 },
+        };
+        ALI_STATE.items.push(item);
+        res();
+      };
+      reader.readAsDataURL(processed);
+    });
+    if (i < files.length-1) await new Promise(r=>setTimeout(r,80));
+  }
+  renderAlimentosGrid();
+  markDirty();
+  showToast(files.length + ' foto(s) agregadas — toca cada una para calificar');
+}
+
+// ── Modal de calificación ───────────────────────────────────────
+function aliOpenModal(id) {
+  const item = ALI_STATE.items.find(i => i.id === id);
+  if (!item) return;
+  const modal = document.getElementById('ali-modal');
+  const inner = document.getElementById('ali-modal-inner');
+  if (!modal || !inner) return;
+
+  const prom    = _aliPromedio(item.scores);
+  const promStr = prom > 0 ? prom.toFixed(1) : '—';
+  const nivel   = prom >= 4.5?5:prom>=3.5?4:prom>=2.5?3:prom>=1.5?2:prom>0?1:0;
+  const nivelCol  = _EC_ALI[nivel] || '#ccc';
+  const nivelLabel = _EC_NIVELES[nivel] || '—';
+
+  const ectRows = ECT_CRITERIOS.map(crit => {
+    const val = item.scores[crit] || 0;
+    const btns = [1,2,3,4,5].map(n => {
+      const bg = val===n ? (_EC_ALI[n]||'#ccc') : '#f5f5f5';
+      const color = val===n ? '#fff' : '#666';
+      return `<button onclick="aliModalScore('${id}','${crit}',${n})"
+        style="width:2rem;height:2rem;border-radius:50%;border:none;
+               background:${bg};color:${color};font-weight:700;cursor:pointer;
+               font-size:.8rem;transition:all .15s">${n}</button>`;
+    }).join('');
+    return `<div style="display:flex;align-items:center;gap:.5rem;padding:.4rem 0;border-bottom:1px solid #f0f0f0">
+      <span style="flex:1;font-size:.65rem;font-weight:700;letter-spacing:.08em;color:#666">${crit}</span>
+      <div style="display:flex;gap:.3rem">${btns}</div>
+      <span style="width:1.5rem;text-align:center;font-weight:800;color:${val>0?_EC_ALI[val]:'#ccc'}">${val||'—'}</span>
+    </div>`;
+  }).join('');
+
+  inner.innerHTML = `
+    <div style="background:${nivelCol};padding:1rem 1.2rem;display:flex;align-items:center;gap:.8rem">
+      ${item.fotoB64 ? `<img src="${item.fotoB64}" style="width:64px;height:64px;object-fit:cover;border-radius:6px;flex-shrink:0">` : ''}
+      <div style="flex:1">
+        <div style="font-size:.55rem;color:rgba(255,255,255,.7);letter-spacing:.15em">CALIFICACIÓN</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#fff">${promStr}</div>
+        <div style="font-size:.58rem;color:rgba(255,255,255,.85);letter-spacing:.1em">${nivelLabel}</div>
+      </div>
+      <button onclick="aliCloseModal()" style="background:rgba(255,255,255,.2);border:none;color:#fff;
+        width:2rem;height:2rem;border-radius:50%;cursor:pointer;font-size:1.1rem">×</button>
+    </div>
+    <div style="padding:1rem 1.2rem">
+      <div style="margin-bottom:.8rem">
+        <label style="font-size:.58rem;font-weight:700;letter-spacing:.12em;color:#8A9096;display:block;margin-bottom:.3rem">NOMBRE</label>
+        <input id="ali-modal-nombre" value="${esc(item.nombre)}" placeholder="Nombre del platillo o bebida"
+          oninput="updateAliField('${id}','nombre',sanitizarTexto(this.value))"
+          style="width:100%;border:1.5px solid #E5E2DC;border-radius:4px;padding:.45rem .7rem;
+                 font-size:.85rem;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:.8rem">
+        <label style="font-size:.58rem;font-weight:700;letter-spacing:.12em;color:#8A9096;display:block;margin-bottom:.3rem">TIPO</label>
+        <div style="display:flex;gap:.4rem">
+          <button onclick="aliModalTipo('${id}','alimento')" id="ali-modal-tipo-ali"
+            style="flex:1;padding:.35rem;border-radius:4px;font-size:.62rem;font-weight:700;letter-spacing:.08em;cursor:pointer;
+                   border:1.5px solid ${item.tipo==='alimento'?'var(--gold)':'#E5E2DC'};
+                   background:${item.tipo==='alimento'?'var(--gold)':'#fff'};
+                   color:${item.tipo==='alimento'?'#fff':'#666'}">ALIMENTO</button>
+          <button onclick="aliModalTipo('${id}','bebida')" id="ali-modal-tipo-beb"
+            style="flex:1;padding:.35rem;border-radius:4px;font-size:.62rem;font-weight:700;letter-spacing:.08em;cursor:pointer;
+                   border:1.5px solid ${item.tipo==='bebida'?'#2D6A9F':'#E5E2DC'};
+                   background:${item.tipo==='bebida'?'#2D6A9F':'#fff'};
+                   color:${item.tipo==='bebida'?'#fff':'#666'}">BEBIDA</button>
+        </div>
+      </div>
+      <div style="margin-bottom:.8rem">
+        <label style="font-size:.58rem;font-weight:700;letter-spacing:.12em;color:#8A9096;display:block;margin-bottom:.3rem">CALIFICACIÓN ECT</label>
+        ${ectRows}
+      </div>
+      <div style="margin-bottom:.8rem">
+        <label style="font-size:.58rem;font-weight:700;letter-spacing:.12em;color:#8A9096;display:block;margin-bottom:.3rem">FOTO</label>
+        <div onclick="document.getElementById('ali-modal-foto-input').click()"
+          style="border:1.5px dashed #E5E2DC;border-radius:6px;overflow:hidden;cursor:pointer;min-height:80px;
+                 display:flex;align-items:center;justify-content:center">
+          ${item.fotoB64 ? `<img src="${item.fotoB64}" style="width:100%;max-height:200px;object-fit:cover">` 
+            : '<span style="font-size:.6rem;color:#aaa">Toca para agregar foto</span>'}
+        </div>
+        <input id="ali-modal-foto-input" type="file" accept="image/*,.heic,.heif,.dng,.raw,.cr2,.nef,.arw"
+          style="display:none" onchange="aliModalFoto('${id}',this)">
+      </div>
+      <div>
+        <label style="font-size:.58rem;font-weight:700;letter-spacing:.12em;color:#8A9096;display:block;margin-bottom:.3rem">OBSERVACIONES</label>
+        <textarea oninput="updateAliField('${id}','obs',this.value)" rows="2"
+          placeholder="Temperatura, presentación, observaciones..."
+          style="width:100%;border:1.5px solid #E5E2DC;border-radius:4px;padding:.45rem .7rem;
+                 font-size:.82rem;resize:none;outline:none;box-sizing:border-box;line-height:1.4">${esc(item.obs||'')}</textarea>
+      </div>
+      <div style="display:flex;gap:.5rem;margin-top:1rem">
+        <button onclick="aliCloseModal()"
+          style="flex:1;padding:.6rem;background:var(--gold);color:#fff;border:none;border-radius:4px;
+                 font-size:.7rem;font-weight:700;letter-spacing:.1em;cursor:pointer">GUARDAR Y CERRAR</button>
+        <button onclick="deleteAliCard('${id}');aliCloseModal()"
+          style="padding:.6rem .8rem;background:none;border:1.5px solid #E5E2DC;border-radius:4px;
+                 font-size:.7rem;color:#999;cursor:pointer">Eliminar</button>
+      </div>
+    </div>`;
+
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function aliCloseModal() {
+  const modal = document.getElementById('ali-modal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+  renderAlimentosGrid();
+}
+
+function aliModalScore(id, crit, val) {
+  const item = ALI_STATE.items.find(i => i.id === id);
+  if (!item) return;
+  item.scores[crit] = item.scores[crit] === val ? 0 : val;
+  markDirty();
+  aliOpenModal(id); // re-render modal
+}
+
+function aliModalTipo(id, tipo) {
+  const item = ALI_STATE.items.find(i => i.id === id);
+  if (!item) return;
+  item.tipo = tipo;
+  markDirty();
+  aliOpenModal(id);
+}
+
+async function aliModalFoto(id, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const item = ALI_STATE.items.find(i => i.id === id);
+  if (!item) return;
+  input.value = '';
+  let processed = file;
+  try { processed = await toDisplayableBlob(file); } catch(e) { showToast('Error: '+e.message); return; }
+  const reader = new FileReader();
+  reader.onload = ev => { item.fotoB64 = ev.target.result; markDirty(); aliOpenModal(id); };
+  reader.readAsDataURL(processed);
 }
 
 async function aliLoadFoto(id, input) {
@@ -9916,6 +10147,15 @@ async function buildHistorial() {
 }
 
 </script>
+
+<!-- Modal de calificación de alimento/bebida -->
+<div id="ali-modal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(45,58,63,.85);
+  overflow-y:auto;padding:1.5rem">
+  <div style="max-width:540px;margin:0 auto;background:#fff;border-radius:8px;
+    box-shadow:0 12px 48px rgba(0,0,0,.3);overflow:hidden">
+    <div id="ali-modal-inner"></div>
+  </div>
+</div>
 
 <div id="sb-login-modal" style="position:fixed;inset:0;z-index:3000;background:rgba(45,58,63,.92);display:flex;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:8px;width:360px;max-width:96vw;padding:2rem 1.8rem;box-shadow:0 12px 48px rgba(0,0,0,.3)">
