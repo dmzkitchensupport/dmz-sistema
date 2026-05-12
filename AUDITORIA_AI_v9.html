@@ -2772,6 +2772,16 @@ async function loadSession() {
       for (const def of saved.customAreaDefs) {
         _registerCustomArea(def);
       }
+      // Si hay áreas custom, eliminar las builtin sin fotos para evitar duplicados
+      const BUILTIN_IDS = ['fachada','imagen','alimentos','servicio','banos','almacen','barra','terraza','formatos','personal'];
+      BUILTIN_IDS.forEach(aId => {
+        const area = STATE.areas[aId];
+        if (area && area.photos.length === 0) {
+          const idx = AREAS.findIndex(a => a.id === aId);
+          if (idx >= 0) AREAS.splice(idx, 1);
+          delete STATE.areas[aId];
+        }
+      });
     }
 
     let loaded = 0;
