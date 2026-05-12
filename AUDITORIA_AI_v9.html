@@ -2305,13 +2305,20 @@ td:hover .hz-edit-hint { opacity: 1; }
   <div id="alimentos-view">
     <div class="ali-header">
       <div>
-        <div class="ali-title">CALIFICACIÓN DE ALIMENTOS</div>
+        <div class="ali-title">CALIFICACIÓN DE ALIMENTOS &amp; BEBIDAS</div>
         <div class="ali-sub">ESCALA ECT 1-5 · 1=DEFICIENTE · 5=EXCELENTE · PRESENTACIÓN · TEMPERATURA · SABOR · TEXTURA · PORCIÓN</div>
       </div>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-        <button class="btn btn-gold" onclick="addAlimentoCard()">+ Agregar platillo</button>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-gold" onclick="addAlimentoCard('alimento')" style="font-size:.65rem">+ Alimento</button>
+        <button class="btn btn-gold" onclick="addAlimentoCard('bebida')" style="font-size:.65rem;background:#2D6A9F">+ Bebida</button>
         <button class="btn btn-outline" onclick="exportAlimentosPDF()" style="font-size:.65rem">Exportar PDF</button>
       </div>
+    </div>
+    <!-- Tabs filtro -->
+    <div id="ali-tabs" style="display:flex;gap:.3rem;padding:.5rem 1.2rem;border-bottom:1px solid var(--border);background:var(--cream)">
+      <button onclick="aliSetFiltro('todos')" id="ali-tab-todos" style="font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:.25rem .7rem;border-radius:4px;border:1.5px solid var(--gold);background:var(--gold);color:#fff;cursor:pointer">TODOS</button>
+      <button onclick="aliSetFiltro('alimento')" id="ali-tab-alimento" style="font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:.25rem .7rem;border-radius:4px;border:1.5px solid var(--border);background:#fff;color:var(--mid);cursor:pointer">ALIMENTOS</button>
+      <button onclick="aliSetFiltro('bebida')" id="ali-tab-bebida" style="font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:.25rem .7rem;border-radius:4px;border:1.5px solid var(--border);background:#fff;color:var(--mid);cursor:pointer">BEBIDAS</button>
     </div>
 
     <!-- Cronómetro de servicio -->
@@ -3098,8 +3105,9 @@ const STATE = {
    MODULO CALIFICACION DE ALIMENTOS — Estado
  */
 let ALI_STATE = {
-  items: [],    // { id, nombre, temperatura, tempLimite, estandar, organoleptica }
+  items: [],    // { id, nombre, tipo:'alimento'|'bebida', categoria, obs, fotoB64, scores }
   _cnt: 0,
+  _filtro: 'todos', // 'todos' | 'alimento' | 'bebida'
 };
 
 function _newAliId() { return 'ali' + (++ALI_STATE._cnt); }
@@ -8986,18 +8994,28 @@ function aliTimerUpdate() {
 // Estructura de cada item:
 // { id, nombre, categoria, obs, fotoB64, scores:{Presentación:0,...} }
 
-function addAlimentoCard(data) {
-  const item = data || {
+function addAlimentoCard(tipo) {
+  // tipo puede ser 'alimento' o 'bebida' — default según filtro activo
+  const t = (tipo === 'bebida') ? 'bebida' : 
+            (tipo === 'alimento') ? 'alimento' :
+            (ALI_STATE._filtro !== 'todos' ? ALI_STATE._filtro : 'alimento');
+  const item = {
     id:        _newAliId(),
     nombre:    '',
+    tipo:      t,
     categoria: '',
     obs:       '',
     fotoB64:   '',
     scores:    { 'Presentación':0,'Temperatura':0,'Sabor':0,'Textura':0,'Porción':0 },
   };
-  if (!data) ALI_STATE.items.push(item);
+  ALI_STATE.items.push(item);
   renderAlimentosGrid();
   markDirty();
+  // Scroll al nuevo card
+  setTimeout(() => {
+    const grid = document.getElementById('ali-grid');
+    if (grid) grid.lastElementChild?.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }, 100);
 }
 
 function buildAlimentosView() {
@@ -9009,29 +9027,40 @@ function buildAlimentosView() {
     if (!item.fotoB64) item.fotoB64 = '';
     if (!item.categoria) item.categoria = '';
     if (!item.obs) item.obs = item.organoleptica || '';
+    if (!item.tipo) item.tipo = 'alimento'; // migración: default alimento
     return item;
   });
-  if (!ALI_STATE.items.length) {
-    ['Platillo de temporada','Sopa del día','Plato fuerte'].forEach(n => {
-      ALI_STATE.items.push({
-        id: _newAliId(), nombre: n, categoria:'', obs:'', fotoB64:'',
-        scores: { 'Presentación':0,'Temperatura':0,'Sabor':0,'Textura':0,'Porción':0 },
-      });
-    });
-  }
+  renderAlimentosGrid();
+}
+
+function aliSetFiltro(filtro) {
+  ALI_STATE._filtro = filtro;
+  ['todos','alimento','bebida'].forEach(f => {
+    const btn = document.getElementById('ali-tab-'+f);
+    if (!btn) return;
+    if (f === filtro) {
+      btn.style.background = 'var(--gold)'; btn.style.color = '#fff'; btn.style.borderColor = 'var(--gold)';
+    } else {
+      btn.style.background = '#fff'; btn.style.color = 'var(--mid)'; btn.style.borderColor = 'var(--border)';
+    }
+  });
   renderAlimentosGrid();
 }
 
 function renderAlimentosGrid() {
   const grid = document.getElementById('ali-grid');
   if (!grid) return;
-  if (!ALI_STATE.items.length) {
-    grid.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--mid);font-size:.8rem">Sin alimentos registrados. Agrega uno arriba.</div>';
+  const filtro = ALI_STATE._filtro || 'todos';
+  const items = filtro === 'todos' ? ALI_STATE.items
+    : ALI_STATE.items.filter(i => (i.tipo || 'alimento') === filtro);
+  if (!items.length) {
+    const tipo = filtro === 'bebida' ? 'bebidas' : filtro === 'alimento' ? 'alimentos' : 'ítems';
+    grid.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--mid);font-size:.8rem">Sin '+tipo+' registrados. Usa los botones de arriba para agregar.</div>';
     return;
   }
   const _EC = {1:'#C0392B',2:'#E07B00',3:'#F5C518',4:'#84CC16',5:'#2E7D32'};
   const niveles = ['','Deficiente','Regular','Aceptable','Bueno','Excelente'];
-  grid.innerHTML = ALI_STATE.items.map((item, idx) => {
+  grid.innerHTML = items.map((item, idx) => {
     const nivelCol = _EC[item.nivel] || 'var(--border)';
     const cats = {temperatura:'Temp.',estandar:'Estándar',organoleptica:'Organoléptica'};
     const scores = Object.entries(cats).map(([c,lbl]) => {
