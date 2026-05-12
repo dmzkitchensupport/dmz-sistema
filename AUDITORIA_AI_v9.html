@@ -3780,6 +3780,7 @@ async function sbDoLogin() {
       renderAreaNav(); updateNavBadges(); setMode('cap');
       const fa = STATE.currentArea || AREAS[0]?.id;
       if (fa) switchArea(fa);
+      setupDrop();
       showToast('Listo — '+Object.values(STATE.areas).reduce((s,a)=>s+a.photos.length,0)+' fotos');
     } else {
       showToast('Sesion activa — '+email);
