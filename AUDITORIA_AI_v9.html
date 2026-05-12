@@ -9033,6 +9033,10 @@ function buildAlimentosView() {
   renderAlimentosGrid();
 }
 
+// Constantes de escala ECT — globales para buildAliCard y renderAlimentosGrid
+const _EC_ALI = {1:'#C0392B',2:'#E07B00',3:'#F5C518',4:'#84CC16',5:'#2E7D32'};
+const _EC_NIVELES = ['','Deficiente','Regular','Aceptable','Bueno','Excelente'];
+
 function aliSetFiltro(filtro) {
   ALI_STATE._filtro = filtro;
   ['todos','alimento','bebida'].forEach(f => {
@@ -9058,16 +9062,14 @@ function renderAlimentosGrid() {
     grid.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--mid);font-size:.8rem">Sin '+tipo+' registrados. Usa los botones de arriba para agregar.</div>';
     return;
   }
-  const _EC = {1:'#C0392B',2:'#E07B00',3:'#F5C518',4:'#84CC16',5:'#2E7D32'};
-  const niveles = ['','Deficiente','Regular','Aceptable','Bueno','Excelente'];
   grid.innerHTML = items.map((item, idx) => {
-    const nivelCol = _EC[item.nivel] || 'var(--border)';
+    const nivelCol = _EC_ALI[item.nivel] || 'var(--border)';
     const cats = {temperatura:'Temp.',estandar:'Estándar',organoleptica:'Organoléptica'};
     const scores = Object.entries(cats).map(([c,lbl]) => {
       const val = item[c]||0;
       return `<div style="text-align:center;padding:.3rem .5rem">
         <div style="font-size:.6rem;color:var(--mid);margin-bottom:.15rem">${lbl}</div>
-        <div style="font-size:.88rem;font-weight:700;color:${val>0?_EC[val]:'var(--mid)'}">${val||'—'}</div>
+        <div style="font-size:.88rem;font-weight:700;color:${val>0?_EC_ALI[val]:'var(--mid)'}">${val||'—'}</div>
       </div>`;
     }).join('');
     return buildAliCard(item, idx);
