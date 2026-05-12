@@ -9166,7 +9166,7 @@ function buildAliCard(item, idx) {
           ${fotoHtml}
         </div>
         <input class="ali-foto-input" type="file" id="ali-foto-${item.id}"
-          accept="image/*" capture="environment"
+          accept="image/*,.heic,.heif,.dng,.raw,.cr2,.nef,.arw"
           onchange="aliLoadFoto('${item.id}', this)">
       </div>
 
@@ -9197,15 +9197,28 @@ function aliSetScore(id, criterio, valor) {
   markDirty();
 }
 
-function aliLoadFoto(id, input) {
+async function aliLoadFoto(id, input) {
   const file = input.files[0];
   if (!file) return;
   const item = ALI_STATE.items.find(i => i.id === id);
   if (!item) return;
+  input.value = '';
+
+  let processedFile = file;
+  // Convertir HEIC/DNG igual que en CAPTURA
+  try {
+    if (/\.(heic|heif|dng|raw|cr2|nef|arw)$/i.test(file.name) || file.type === '') {
+      showToast('Procesando imagen...');
+      processedFile = await toDisplayableBlob(file);
+    }
+  } catch(e) {
+    showToast('Error al procesar: ' + e.message);
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = e => {
     item.fotoB64 = e.target.result;
-    // Re-render la tarjeta
     const idx  = ALI_STATE.items.indexOf(item);
     const card = document.getElementById('ali-card-' + id);
     if (card) {
@@ -9214,8 +9227,9 @@ function aliLoadFoto(id, input) {
       card.replaceWith(tmp.firstElementChild);
     }
     markDirty();
+    showToast('Foto agregada');
   };
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(processedFile);
 }
 
 function updateAliField(id, field, value) {
