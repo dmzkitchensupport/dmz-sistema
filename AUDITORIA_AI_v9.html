@@ -6001,7 +6001,18 @@ function buildReport() {
             ${obs}
           </div>`;
         }).filter(Boolean).join('');
-        if (!secsHtml) return '';
+        // Módulos personalizados (ej. CUALIDADES)
+        const customMods = (hz.customModules || []).filter(m => m.title || m.text);
+        const customModsHtml = customMods.map(m => `
+          <div style="margin-bottom:1rem">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;
+              padding-bottom:.3rem;border-bottom:1px solid #E5E2DC">
+              <span style="font-size:.72rem;font-weight:800;letter-spacing:.12em;color:#5F5E5A">${esc(m.title||'MÓDULO PERSONALIZADO').toUpperCase()}</span>
+            </div>
+            <div style="font-size:.78rem;color:#2D3A3F;line-height:1.6;white-space:pre-wrap;text-align:justify">${esc(m.text||'')}</div>
+          </div>`).join('');
+
+        if (!secsHtml && !customModsHtml) return '';
         return `<div style="padding:1.2rem 1.6rem;border-top:2px solid ${nivelInfo.color}30;background:${nivelInfo.bg}30">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;
             padding-bottom:.6rem;border-bottom:2px solid ${nivelInfo.color}20">
@@ -6009,6 +6020,7 @@ function buildReport() {
             <span style="font-size:.65rem;font-weight:700;padding:3px 12px;border-radius:10px;background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
           </div>
           ${secsHtml}
+          ${customModsHtml}
         </div>`;
       })()}
     </div>`;
