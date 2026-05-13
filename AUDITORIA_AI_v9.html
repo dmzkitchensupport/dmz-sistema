@@ -6006,6 +6006,8 @@ function buildReport() {
       ).join('');
       const notes = p.notes.filter(n => n.trim());
       const imgSrc = p.storageB64 ? 'data:image/jpeg;base64,' + p.storageB64 : (p.displayUrl || '');
+      // Omitir fotos sin imagen — no mostrar negro en reporte
+      if (!imgSrc || imgSrc.length < 20) return '';
       return `<div class="rpt-photo">
         <img src="${imgSrc}" alt="" loading="lazy">
         ${mkrs}
