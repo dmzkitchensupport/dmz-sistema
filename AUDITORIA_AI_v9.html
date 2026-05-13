@@ -1539,13 +1539,53 @@ td:hover .hz-edit-hint { opacity: 1; }
   font-weight: 600; letter-spacing: .07em;
 }
 
-/*  PDF print styles v8  */
+/*  PDF print styles v10 — native window.print(), fiel al reporte en pantalla  */
 @media print {
-  #topbar, #sidebar, .rpt-bar { display: none !important; }
-  #report-view { display: block !important; }
-  .rpt-area { page-break-inside: avoid; }
-  body { font-family: var(--f-b); }
+  /* Ocultar TODA la UI excepto el reporte */
+  #topbar, #sidebar, .rpt-bar,
+  #main, #dash-view, #alimentos-view,
+  #hallazgos-view, #clima2-view, #hist-view,
+  #racreaa-view, #login-screen, #expired-screen,
+  .nav-session, .save-wrap, .btn, button,
+  [id^="btn-"], .toast, .modal,
+  .session-bar, .api-bar { display: none !important; }
+
+  /* Asegurar que report-view sea visible y ocupe todo */
+  html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  #report-view {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+
+  /* Página A4 con márgenes */
+  @page { size: A4 portrait; margin: 10mm 10mm 12mm 10mm; }
+
+  /* Fotos: 2 columnas en print, no cortar */
+  .rpt-photos {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: .6rem !important;
+    padding: .6rem !important;
+  }
+  .rpt-photo { break-inside: avoid !important; page-break-inside: avoid !important; }
+  .rpt-photo img { width: 100% !important; aspect-ratio: 3/2 !important; object-fit: cover !important; }
+
+  /* Áreas: intentar no cortar el header pero permitir corte del contenido si hay muchas fotos */
+  .rpt-area { page-break-inside: auto; }
+  .rpt-ah, .rpt-hall-head, .rpt-dash { page-break-inside: avoid; }
+
+  /* Texto */
+  body { font-family: var(--f-b); color: #000; }
   .rpt-note, .rpt-hall td, .rpt-table td, p { text-align: justify; }
+
+  /* Colores preservados */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
 }
 
 /* Powered by DMZ watermark strip */
@@ -9498,15 +9538,12 @@ function buildHallazgosReportSection() {
 
 /*  Exportación PDF con html2pdf.js  */
 async function exportReportePDF() {
-  if (window._pdfUnavailable || typeof html2pdf === 'undefined') {
-    showToast('Libreria PDF no disponible — usa Ctrl+P para imprimir');
-    window.print();
-    return;
-  }
+  const el = document.getElementById('report-view');
+  if (!el || el.style.display === 'none') { showToast('Ve al tab REPORTE primero'); return; }
 
-  showToast('Procesando fotos para PDF…');
+  showToast('Procesando fotos…');
 
-  // Asegura que TODAS las fotos tienen storageB64 antes de generar el PDF
+  // Asegurar que TODAS las fotos tienen storageB64 cargado en memoria
   const photoTasks = [];
   for (const aId in STATE.areas) {
     for (const p of STATE.areas[aId].photos) {
@@ -9526,38 +9563,13 @@ async function exportReportePDF() {
   }
   await Promise.all(photoTasks);
 
-  // Regenera el reporte con las fotos ya en memoria
+  // Regenerar reporte con fotos en memoria
   buildReport();
-  await new Promise(r => setTimeout(r, 400));
+  await new Promise(r => setTimeout(r, 500));
 
-  const el = document.getElementById('report-view');
-  if (!el) { showToast('Ve al tab REPORTE primero'); return; }
-
-  const bar = el.querySelector('.rpt-bar');
-  if (bar) bar.style.display = 'none';
-
-  showToast('Generando PDF…');
-  const client  = (STATE.client || 'auditoria').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
-  const dateStr = new Date().toISOString().slice(0,10);
-  const filename = `DMZ-Reporte-${client}-${dateStr}.pdf`;
-
-  try {
-    await html2pdf().set({
-      margin:       [10, 10, 12, 10],
-      filename:     filename,
-      image:        { type: 'jpeg', quality: 0.92 },
-      html2canvas:  { scale: 2, useCORS: true, allowTaint: true, logging: false,
-                      imageTimeout: 30000, removeContainer: true },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
-    }).from(el).save();
-    showToast('PDF generado: ' + filename);
-  } catch(err) {
-    showToast('Error al generar PDF: ' + err.message);
-    console.error(err);
-  } finally {
-    if (bar) bar.style.display = '';
-  }
+  showToast('Abriendo dialogo de impresion — guarda como PDF…');
+  await new Promise(r => setTimeout(r, 300));
+  window.print();
 }
 
 async function exportHallazgosPDF() {
