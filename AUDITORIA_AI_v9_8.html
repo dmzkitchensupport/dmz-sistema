@@ -1302,6 +1302,148 @@ td:hover .hz-edit-hint { opacity: 1; }
   display: flex; align-items: center; justify-content: space-between;
   font-size: .62rem; color: var(--mid); flex-wrap: wrap; gap: .5rem;
 }
+
+/* ── Sugerencias grid (cuadros estilo captura) ─────────────────── */
+.sg-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 1.4rem;
+}
+.sg-card {
+  background: #fff;
+  border: 2px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.sg-card.sg-critico  { border-color: rgba(192,57,43,.6);  }
+.sg-card.sg-observacion { border-color: rgba(224,123,0,.6); }
+.sg-card.sg-correcto  { border-color: rgba(46,125,50,.6); }
+.sg-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .55rem 1rem;
+  background: var(--cream);
+  border-bottom: 1px solid var(--border);
+  gap: .6rem;
+  flex-wrap: wrap;
+}
+.sg-area-sel {
+  font-family: var(--f-t);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  border: none;
+  background: transparent;
+  color: var(--dark);
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+}
+.sg-alert-btns {
+  display: flex;
+  gap: .35rem;
+}
+.sg-alert-btn {
+  padding: .22rem .7rem;
+  border-radius: 3px;
+  border: 1.5px solid transparent;
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  cursor: pointer;
+  background: none;
+  transition: all .12s;
+}
+.sg-alert-btn.critico   { border-color: var(--red);   color: var(--red); }
+.sg-alert-btn.observacion { border-color: var(--amber); color: var(--amber); }
+.sg-alert-btn.correcto  { border-color: var(--green); color: var(--green); }
+.sg-alert-btn.active.critico    { background: var(--red);   color: #fff; }
+.sg-alert-btn.active.observacion { background: var(--amber); color: #fff; }
+.sg-alert-btn.active.correcto   { background: var(--green); color: #fff; }
+.sg-del-btn {
+  background: none; border: none;
+  color: var(--mid); cursor: pointer;
+  font-size: .85rem; line-height: 1;
+  padding: .1rem .3rem;
+  border-radius: 3px;
+  transition: color .12s;
+}
+.sg-del-btn:hover { color: var(--red); }
+.sg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  padding: .65rem 1rem .4rem;
+  border-bottom: 1px solid var(--border);
+}
+.sg-chip {
+  padding: .22rem .65rem;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  font-size: .64rem;
+  cursor: pointer;
+  color: var(--mid);
+  background: #fff;
+  transition: all .12s;
+  user-select: none;
+}
+.sg-chip:hover { border-color: var(--gold); color: var(--dark); }
+.sg-chip.selected {
+  background: var(--dark);
+  color: #fff;
+  border-color: var(--dark);
+}
+.sg-body {
+  padding: .65rem 1rem .85rem;
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+}
+.sg-field-lbl {
+  font-size: .54rem;
+  letter-spacing: .18em;
+  font-weight: 700;
+  color: var(--mid);
+  margin-bottom: .2rem;
+  text-transform: uppercase;
+}
+.sg-textarea {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  padding: .5rem .75rem;
+  font-size: .75rem;
+  font-family: var(--f-b);
+  color: var(--dark);
+  resize: vertical;
+  min-height: 60px;
+  outline: none;
+  transition: border-color .15s;
+  background: var(--off);
+}
+.sg-textarea:focus { border-color: var(--gold); background: #fff; }
+.sg-textarea::placeholder { color: #c4bfb8; font-style: italic; }
+.sg-row { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+@media (max-width: 640px) { .sg-row { grid-template-columns: 1fr; } }
+.sg-add-btn {
+  margin: 0 1.4rem 1rem;
+  padding: .55rem;
+  width: calc(100% - 2.8rem);
+  background: rgba(201,149,42,.07);
+  border: 1.5px dashed var(--gold);
+  color: var(--gold);
+  border-radius: var(--r);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  cursor: pointer;
+  transition: all .15s;
+}
+.sg-add-btn:hover { background: rgba(201,149,42,.14); }
+
 .hz-spinner-wrap {
   display: flex; align-items: center; gap: .7rem;
   padding: 1.5rem; color: var(--mid); font-size: .72rem;
@@ -1633,7 +1775,7 @@ td:hover .hz-edit-hint { opacity: 1; }
     <div class="mode-btns">
       <button class="mode-btn active" id="btn-cap" onclick="setMode('cap')">📷 CAPTURA</button>
       <button class="mode-btn" id="btn-dash" onclick="setMode('dash')">📊 DASHBOARD</button>
-      <button class="mode-btn" id="btn-hz" onclick="setMode('hz')">📝 HALLAZGOS</button>
+      <button class="mode-btn" id="btn-hz" onclick="setMode('hz')">💡 SUGERENCIAS</button>
       <button class="mode-btn" id="btn-clima2" onclick="setMode('clima2')">🧑‍🤝‍🧑 CLIMA</button>
       <button class="mode-btn" id="btn-rep" onclick="setMode('rep')">📋 REPORTE</button>
       <button class="mode-btn" id="btn-hist" onclick="setMode('hist')">🗂 HISTORIAL</button>
@@ -1753,86 +1895,37 @@ td:hover .hz-edit-hint { opacity: 1; }
     <div class="dmz-powered">POWERED BY <span>DMZ</span> · DE LA MORA ZUMARÁN · KITCHEN SUPPORT</div>
   </div>
 
-  <!-- Hallazgos & Plan de Acción view -->
+  <!-- Sugerencias view -->
   <div id="hallazgos-view">
     <div class="hz-header">
       <div>
-        <div class="hz-title">HALLAZGOS Y PLAN DE ACCIÓN</div>
-        <div class="hz-sub">CARGA · CLASIFICACIÓN · SOLUCIONES POR TURNO</div>
+        <div class="hz-title">SUGERENCIAS DE MEJORA</div>
+        <div class="hz-sub">ÁREA · CLASIFICACIÓN · OBSERVACIÓN · PROPUESTA</div>
       </div>
-      <button class="btn btn-gold" onclick="exportHallazgosPDF()" style="font-size:.65rem">⬇ PDF Plan de Acción</button>
-    </div>
-
-    <!-- Texto libre de hallazgos -->
-    <div class="hz-input-wrap">
-      <div class="hz-lbl">INGRESA LOS HALLAZGOS DE AUDITORÍA</div>
-      <textarea class="hz-textarea" id="hz-textarea"
-        placeholder="Escribe o pega aquí los hallazgos de la auditoría. El sistema los clasificará automáticamente en Crítico, Observación y Correcto.&#10;&#10;Puedes usar palabras clave como:&#10;• CRÍTICO / CRITICO / ⚠ / URGENTE → clasificado como Crítico&#10;• OBSERVACIÓN / OBSERVACION / REVISAR → Observación&#10;• CORRECTO / OK / CUMPLE / BIEN → Correcto&#10;&#10;Ejemplo:&#10;CRÍTICO: Temperatura de refrigerador a 12°C, fuera del rango de 0-4°C. Acción inmediata requerida.&#10;OBSERVACIÓN: Etiquetado de productos incompleto en el 40% de los contenedores.&#10;CORRECTO: Brigada con uniforme completo y EPP. Cumple estándar."></textarea>
-      <div class="hz-actions">
-        <button class="btn btn-dark" onclick="clasificarHallazgos()">⚡ Clasificar Hallazgos</button>
-        <button class="btn btn-ai" id="btn-gen-plan" onclick="generarPlanAccion()" disabled>🔍 Generar Plan de Acción</button>
-        <button class="btn btn-outline" onclick="limpiarHallazgos()">↺ Limpiar</button>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button class="btn btn-outline" onclick="sgAddCard()" style="font-size:.65rem;">＋ Agregar área</button>
+        <button class="btn btn-gold" onclick="exportHallazgosPDF()" style="font-size:.65rem;">⬇ PDF Sugerencias</button>
       </div>
     </div>
 
-    <!-- Resúmenes 3 categorías -->
-    <div id="hz-summaries-wrap" style="display:none">
-      <div style="font-size:.57rem;letter-spacing:.22em;font-weight:700;color:var(--mid);margin-bottom:.65rem;">RESUMEN DE HALLAZGOS CLASIFICADOS</div>
-      <div class="hz-summaries">
-        <div class="hz-sum-card critico">
-          <div class="hz-sum-head">
-            <span class="hz-sum-icon">🔴</span>
-            <span class="hz-sum-title" style="color:var(--red)">CRÍTICO</span>
-            <span class="hz-sum-count" id="hz-cnt-critico">0</span>
-          </div>
-          <ul class="hz-sum-list" id="hz-list-critico">
-            <li class="hz-empty">Sin hallazgos críticos.</li>
-          </ul>
-        </div>
-        <div class="hz-sum-card observa">
-          <div class="hz-sum-head">
-            <span class="hz-sum-icon">◎</span>
-            <span class="hz-sum-title" style="color:var(--amber)">OBSERVACIONES</span>
-            <span class="hz-sum-count" id="hz-cnt-observa">0</span>
-          </div>
-          <ul class="hz-sum-list" id="hz-list-observa">
-            <li class="hz-empty">Sin observaciones.</li>
-          </ul>
-        </div>
-        <div class="hz-sum-card correcto">
-          <div class="hz-sum-head">
-            <span class="hz-sum-icon">✓</span>
-            <span class="hz-sum-title" style="color:var(--green)">CORRECTO</span>
-            <span class="hz-sum-count" id="hz-cnt-correcto">0</span>
-          </div>
-          <ul class="hz-sum-list" id="hz-list-correcto">
-            <li class="hz-empty">Sin ítems correctos.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
+    <!-- Grid de cuadros por área -->
+    <div class="sg-grid" id="sg-grid"></div>
 
-    <!-- Plan de Acción -->
-    <div class="hz-plan-wrap" id="hz-plan-wrap">
+    <!-- Plan de Acción (se mantiene para compatibilidad con reporte) -->
+    <div class="hz-plan-wrap" id="hz-plan-wrap" style="display:none;">
       <div class="hz-plan-head">
         <span>PLAN DE ACCIÓN Y MEJORAS</span>
         <span style="font-size:.58rem;font-weight:400;opacity:.65;letter-spacing:.06em">POWERED BY DMZ</span>
       </div>
       <div id="hz-plan-body">
-        <div class="hz-plan-empty">
-          Clasifica los hallazgos y presiona <strong>Generar Plan de Acción</strong> para obtener soluciones, mejoras y tiempos por turno.
-        </div>
-      </div>
-      <div class="hz-plan-footer" id="hz-plan-footer" style="display:none">
-        <span id="hz-plan-meta">—</span>
-        <button class="btn btn-outline" onclick="generarPlanAccion()" style="font-size:.62rem">↻ Regenerar Plan</button>
+        <div class="hz-plan-empty">Sin plan de acción generado.</div>
       </div>
     </div>
 
     <div class="dmz-powered">POWERED BY <span>DMZ</span> · DE LA MORA ZUMARÁN · KITCHEN SUPPORT</div>
   </div>
 
-  <!-- Report view -->
+    <!-- Report view -->
   <div id="report-view"></div>
 
   <!-- Historial view -->
@@ -2165,6 +2258,7 @@ async function saveSession(silent) {
     areas:          {},
     cl2State:       JSON.parse(JSON.stringify(CL2_STATE)),
     hallazgosState: JSON.parse(JSON.stringify(HZ_STATE)),
+    sugerencias:    JSON.parse(JSON.stringify(STATE.sugerencias || [])),
   };
 
   // Fotos: guarda en IndexedDB (sin límite), solo metadatos en localStorage
@@ -2315,6 +2409,7 @@ async function loadSession() {
 
     if (saved.cl2State)       Object.assign(CL2_STATE, saved.cl2State);
     if (saved.hallazgosState) Object.assign(HZ_STATE,  saved.hallazgosState);
+    if (saved.sugerencias)    { STATE.sugerencias = saved.sugerencias; _sgNextId = STATE.sugerencias.reduce((m,s) => Math.max(m, (s.id||0)+1), 1); }
 
     return loaded > 0;
   } catch(e) {
@@ -2584,6 +2679,7 @@ function setMode(m) {
   if (m === 'clima2') buildClima2View();
   if (m === 'hist')   buildHistorial();
   if (m === 'degu' && !document.getElementById('degu-tbody').hasChildNodes()) deguInitRows();
+  if (m === 'hz')   sgRender();
 }
 
 function onKeyInput() {
@@ -5430,3 +5526,170 @@ function deguInitRows() {
 </div>
 </body>
 </html>
+/* ── SUGERENCIAS MODULE ─────────────────────────────────────────
+   Cuadros editables por área, estilo captura
+────────────────────────────────────────────────────────────────*/
+
+// Estado de sugerencias — array de objetos {id, areaId, alert, chips, observacion, propuesta, responsable, tiempo}
+if (!STATE.sugerencias) STATE.sugerencias = [];
+let _sgNextId = 1;
+
+const SG_ALERTS = [
+  { key: 'critico',     label: 'CRÍTICO',     col: 'var(--red)' },
+  { key: 'observacion', label: 'OBSERVACIÓN', col: 'var(--amber)' },
+  { key: 'correcto',    label: 'CORRECTO',    col: 'var(--green)' },
+];
+
+// Áreas disponibles para el selector (combina AREAS definidas + áreas capturadas)
+function _sgAreaOptions() {
+  const opts = [];
+  // Áreas de captura activas
+  const captureAreas = Object.keys(STATE.areas).filter(id => STATE.areas[id]);
+  captureAreas.forEach(id => {
+    const def = AREAS.find(a => a.id === id);
+    opts.push({ id, name: def ? def.name : id.toUpperCase() });
+  });
+  // Agregar áreas de AREAS que no estén ya
+  AREAS.forEach(a => {
+    if (!opts.find(o => o.id === a.id)) opts.push({ id: a.id, name: a.name });
+  });
+  return opts;
+}
+
+function _sgChipsFor(areaId) {
+  const def = AREAS.find(a => a.id === areaId);
+  return def ? def.chips : [];
+}
+
+function sgRender() {
+  const grid = document.getElementById('sg-grid');
+  if (!grid) return;
+
+  if (!STATE.sugerencias.length) {
+    grid.innerHTML = '<div style="padding:2.5rem;text-align:center;color:var(--mid);font-size:.78rem;">Presiona <strong>+ Agregar área</strong> para añadir una sugerencia de mejora.</div>';
+    return;
+  }
+
+  const areaOpts = _sgAreaOptions();
+  grid.innerHTML = STATE.sugerencias.map((sg, i) => {
+    const chips = _sgChipsFor(sg.areaId);
+    const areaName = areaOpts.find(o => o.id === sg.areaId)?.name || sg.areaId;
+
+    const alertBtns = SG_ALERTS.map(a =>
+      `<button class="sg-alert-btn ${a.key}${sg.alert === a.key ? ' active' : ''}"
+        onclick="sgSetAlert(${i},'${a.key}')">${a.label}</button>`
+    ).join('');
+
+    const areaSelect = `<select class="sg-area-sel" onchange="sgSetArea(${i},this.value)">
+      ${areaOpts.map(o => `<option value="${o.id}"${sg.areaId === o.id ? ' selected' : ''}>${o.name}</option>`).join('')}
+    </select>`;
+
+    const chipsHtml = chips.length ? `
+      <div class="sg-chips">
+        ${chips.map(c => `<span class="sg-chip${(sg.chips||[]).includes(c) ? ' selected' : ''}"
+          onclick="sgToggleChip(${i},'${c.replace(/'/g,"\'")}')">
+          ${c}
+        </span>`).join('')}
+      </div>` : '';
+
+    return `<div class="sg-card sg-${sg.alert||''}">
+      <div class="sg-card-header">
+        ${areaSelect}
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <div class="sg-alert-btns">${alertBtns}</div>
+          <button class="sg-del-btn" onclick="sgDelete(${i})" title="Eliminar">✕</button>
+        </div>
+      </div>
+      ${chipsHtml}
+      <div class="sg-body">
+        <div>
+          <div class="sg-field-lbl">Observación / Hallazgo</div>
+          <textarea class="sg-textarea" rows="2"
+            placeholder="Describe el hallazgo observado en esta área…"
+            oninput="sgSet(${i},'observacion',this.value)">${sg.observacion||''}</textarea>
+        </div>
+        <div class="sg-row">
+          <div>
+            <div class="sg-field-lbl">Propuesta de mejora</div>
+            <textarea class="sg-textarea" rows="2"
+              placeholder="¿Qué acción se recomienda?"
+              oninput="sgSet(${i},'propuesta',this.value)">${sg.propuesta||''}</textarea>
+          </div>
+          <div>
+            <div class="sg-field-lbl">Responsable</div>
+            <textarea class="sg-textarea" rows="2"
+              placeholder="Gerencia / Chef / Capitán…"
+              oninput="sgSet(${i},'responsable',this.value)">${sg.responsable||''}</textarea>
+          </div>
+        </div>
+        <div>
+          <div class="sg-field-lbl">Tiempo de implementación</div>
+          <div class="sg-alert-btns" style="gap:.4rem;flex-wrap:wrap;">
+            ${['INMEDIATO','CORTO PLAZO','MEDIO PLAZO'].map(t =>
+              `<button class="sg-alert-btn${sg.tiempo===t?' active critico':''}"
+                style="${sg.tiempo===t?'background:var(--dark);color:#fff;border-color:var(--dark)':'border-color:var(--border);color:var(--mid)'};font-size:.58rem;"
+                onclick="sgSet(${i},'tiempo','${t}')">${t}</button>`
+            ).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function sgAddCard() {
+  const areaOpts = _sgAreaOptions();
+  STATE.sugerencias.push({
+    id: _sgNextId++,
+    areaId: areaOpts[0]?.id || 'cocina',
+    alert: 'observacion',
+    chips: [],
+    observacion: '',
+    propuesta: '',
+    responsable: '',
+    tiempo: ''
+  });
+  sgRender();
+  autoSave();
+  // Scroll al nuevo card
+  setTimeout(() => {
+    const cards = document.querySelectorAll('.sg-card');
+    if (cards.length) cards[cards.length-1].scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }, 80);
+}
+
+function sgDelete(i) {
+  STATE.sugerencias.splice(i, 1);
+  sgRender();
+  autoSave();
+}
+
+function sgSetAlert(i, alert) {
+  STATE.sugerencias[i].alert = alert;
+  sgRender();
+  autoSave();
+}
+
+function sgSetArea(i, areaId) {
+  STATE.sugerencias[i].areaId = areaId;
+  STATE.sugerencias[i].chips  = [];
+  sgRender();
+  autoSave();
+}
+
+function sgToggleChip(i, chip) {
+  const chips = STATE.sugerencias[i].chips || [];
+  const idx   = chips.indexOf(chip);
+  if (idx >= 0) chips.splice(idx, 1);
+  else chips.push(chip);
+  STATE.sugerencias[i].chips = chips;
+  sgRender();
+  autoSave();
+}
+
+function sgSet(i, field, val) {
+  STATE.sugerencias[i][field] = val;
+  autoSave();
+}
+
+
