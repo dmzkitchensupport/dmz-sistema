@@ -1132,7 +1132,7 @@ function restoreEmergencyBackup() {
     const backup = JSON.parse(raw);
     if (backup.cl2State)       Object.assign(CL2_STATE, backup.cl2State);
     if (backup.hallazgosState) Object.assign(HZ_STATE,  backup.hallazgosState);
-    if (backup.aliState?.items) ALI_STATE.items = backup.aliState.items;
+    if (backup.aliState?.items) { ALI_STATE.items = backup.aliState.items; ALI_STATE.resumen = backup.aliState?.resumen || ""; }
     if (backup.client) {
       STATE.client = backup.client;
       const el = document.getElementById('inp-client');
@@ -2384,6 +2384,37 @@ td:hover .hz-edit-hint { opacity: 1; }
       </div>
     </div>
 
+    <!-- Resumen General F&B -->
+    <div id="ali-resumen-wrap"
+      style="background:#fff;border-radius:var(--r);box-shadow:var(--shadow);
+             border-left:4px solid var(--gold);padding:1rem 1.2rem;margin:0 0 .4rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.55rem;gap:.8rem">
+        <div>
+          <div style="font-family:var(--f-t);font-size:.72rem;font-weight:800;letter-spacing:.12em;color:var(--dark)">
+            RESUMEN GENERAL
+          </div>
+          <div style="font-size:.52rem;color:var(--mid);letter-spacing:.1em;margin-top:.1rem">
+            EVALUACIÓN GLOBAL DE LA CALIFICACIÓN F&B · ESTA SESIÓN
+          </div>
+        </div>
+        <div id="ali-resumen-chars"
+          style="font-size:.52rem;color:var(--mid);letter-spacing:.08em;white-space:nowrap">
+          0 / 800
+        </div>
+      </div>
+      <textarea id="ali-resumen-txt"
+        maxlength="800"
+        placeholder="Describe el desempeño general de cocina y servicio: consistencia en temperaturas, presentación, tiempos, hallazgos críticos y áreas de oportunidad..."
+        oninput="aliResumenInput(this)"
+        style="width:100%;border:1.5px solid var(--border);border-radius:4px;
+               padding:.55rem .75rem;font-size:.8rem;font-family:var(--f-b);
+               color:var(--dark);resize:none;outline:none;line-height:1.5;
+               box-sizing:border-box;transition:border-color .15s;background:#fafaf8"
+        onfocus="this.style.borderColor='var(--gold)'"
+        onblur="this.style.borderColor='var(--border)'"
+        rows="4"></textarea>
+    </div>
+
     <div class="dmz-powered">POWERED BY <span>DMZ</span> · DE LA MORA ZUMARÁN · KITCHEN SUPPORT</div>
   </div>
 
@@ -2703,7 +2734,7 @@ async function saveSession(silent) {
     areas:          {},
     cl2State:       JSON.parse(JSON.stringify(CL2_STATE)),
     hallazgosState: JSON.parse(JSON.stringify(HZ_STATE)),
-    aliState:       { items: ALI_STATE.items.map(function(it){ var x=Object.assign({},it); delete x.fotoB64; return x; }), _cnt: ALI_STATE._cnt },
+    aliState:       { items: ALI_STATE.items.map(function(it){ var x=Object.assign({},it); delete x.fotoB64; return x; }), _cnt: ALI_STATE._cnt, resumen: ALI_STATE.resumen||"" },
   };
 
   // Fotos: guarda en IndexedDB (sin límite), solo metadatos en localStorage
@@ -2914,6 +2945,7 @@ async function loadSession() {
     if (saved.aliState && saved.aliState.items) {
       ALI_STATE.items = saved.aliState.items;
       ALI_STATE._cnt  = saved.aliState._cnt || 0;
+      ALI_STATE.resumen = saved.aliState.resumen || '';
     }
 
     return loaded > 0;
@@ -3098,7 +3130,7 @@ function startAutoSave() {
         client:  STATE.client,
         cl2State: CL2_STATE,
         hallazgosState: HZ_STATE,
-        aliState: { items: ALI_STATE.items },
+        aliState: { items: ALI_STATE.items, _cnt: ALI_STATE._cnt, resumen: ALI_STATE.resumen||"" },
         areas: Object.fromEntries(
           Object.entries(STATE.areas).map(([k,v]) => [k, {
             photos: v.photos.map(p => ({ id:p.id, name:p.name, alert:p.alert, state:p.state, notes:p.notes, markers:p.markers })),
@@ -3167,6 +3199,7 @@ let ALI_STATE = {
   items: [],    // { id, nombre, tipo:'alimento'|'bebida', categoria, obs, fotoB64, scores }
   _cnt: 0,
   _filtro: 'todos', // 'todos' | 'alimento' | 'bebida'
+  resumen: '',  // Resumen general de la sesión F&B
 };
 
 function _newAliId() { return 'ali' + (++ALI_STATE._cnt); }
@@ -3542,7 +3575,7 @@ async function sbSaveAuditoria() {
     customAreaDefs: STATE.customAreaDefs,
     cl2State:       CL2_STATE,
     hallazgosState: HZ_STATE,
-    aliState:       { items: ALI_STATE.items, _cnt: ALI_STATE._cnt },
+    aliState:       { items: ALI_STATE.items, _cnt: ALI_STATE._cnt, resumen: ALI_STATE.resumen||"" },
     areasOrder:     AREAS.map(a => a.id),
     photoThumbs,   // miniaturas para recuperación visual
     areas:          Object.fromEntries(
@@ -3803,7 +3836,7 @@ async function sbCargarAuditoria(id) {
     if (el) el.value = STATE.client;
     if (snap.cl2State)       Object.assign(CL2_STATE, snap.cl2State);
     if (snap.hallazgosState) Object.assign(HZ_STATE,  snap.hallazgosState);
-    if (snap.aliState)       { ALI_STATE.items = snap.aliState.items || []; ALI_STATE._cnt = snap.aliState._cnt || 0; }
+    if (snap.aliState)       { ALI_STATE.items = snap.aliState.items || []; ALI_STATE._cnt = snap.aliState._cnt || 0; ALI_STATE.resumen = snap.aliState.resumen || ''; }
 
     SB._auditoriaId = id;
     localStorage.setItem('dmz_sb_auditoria_id', id);
@@ -4262,7 +4295,7 @@ async function autoRestoreFromSupabase() {
 
     if (snap.cl2State)        Object.assign(CL2_STATE, snap.cl2State);
     if (snap.hallazgosState)  Object.assign(HZ_STATE,  snap.hallazgosState);
-    if (snap.aliState?.items) ALI_STATE.items = snap.aliState.items;
+    if (snap.aliState?.items) { ALI_STATE.items = snap.aliState.items; ALI_STATE.resumen = snap.aliState?.resumen || ""; }
 
     if (snap.customAreaDefs?.length) {
       STATE.customAreaDefs = snap.customAreaDefs;
@@ -8874,7 +8907,7 @@ async function autoRestoreSession() {
     if (el) el.value = STATE.client;
     if (snap.cl2State)       Object.assign(CL2_STATE, snap.cl2State);
     if (snap.hallazgosState) Object.assign(HZ_STATE,  snap.hallazgosState);
-    if (snap.aliState?.items) ALI_STATE.items = snap.aliState.items;
+    if (snap.aliState?.items) { ALI_STATE.items = snap.aliState.items; ALI_STATE.resumen = snap.aliState?.resumen || ""; }
 
     if (snap.customAreaDefs?.length) {
       STATE.customAreaDefs = snap.customAreaDefs;
@@ -9645,7 +9678,10 @@ function buildAlimentosView() {
     if (!item.tipo) item.tipo = 'alimento'; // migración: default alimento
     return item;
   });
+  if (!ALI_STATE.resumen) ALI_STATE.resumen = '';
   renderAlimentosGrid();
+  aliResumenSync();
+  updateAliSummary();
 }
 
 // Constantes de escala ECT — globales para buildAliCard y renderAlimentosGrid
@@ -9679,7 +9715,7 @@ function renderAlimentosGrid() {
   }
   // Grid de miniaturas — cada foto es clicable y abre el modal de calificación
   grid.style.display = 'grid';
-  grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(140px,1fr))';
+  grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(180px,1fr))';
   grid.style.gap = '1rem';
   grid.style.padding = '1rem 1.2rem';
   grid.innerHTML = items.map((item, idx) => {
@@ -9698,7 +9734,7 @@ function renderAlimentosGrid() {
                border:none;color:#fff;width:1.4rem;height:1.4rem;border-radius:50%;
                font-size:.85rem;line-height:1;cursor:pointer;opacity:0;transition:opacity .15s;
                display:flex;align-items:center;justify-content:center">×</button>
-      <div onclick="aliOpenModal('${item.id}')" style="height:110px;background:#f5f5f5;overflow:hidden;position:relative">
+      <div onclick="aliOpenModal('${item.id}')" style="height:160px;background:#f5f5f5;overflow:hidden;position:relative">
         ${item.fotoB64
           ? `<img src="${item.fotoB64}" style="width:100%;height:100%;object-fit:cover">`
           : `<div style="display:flex;align-items:center;justify-content:center;height:100%;
@@ -9954,7 +9990,7 @@ function aliOpenModal(id) {
         <div onclick="document.getElementById('ali-modal-foto-input').click()"
           style="border:1.5px dashed #E5E2DC;border-radius:6px;overflow:hidden;cursor:pointer;min-height:80px;
                  display:flex;align-items:center;justify-content:center">
-          ${item.fotoB64 ? `<img src="${item.fotoB64}" style="width:100%;max-height:200px;object-fit:cover">` 
+          ${item.fotoB64 ? `<img src="${item.fotoB64}" style="width:100%;max-height:320px;object-fit:cover;border-radius:6px">` 
             : '<span style="font-size:.6rem;color:#aaa">Toca para agregar foto</span>'}
         </div>
         <input id="ali-modal-foto-input" type="file" accept="image/*,.heic,.heif,.dng,.raw,.cr2,.nef,.arw"
@@ -10094,6 +10130,25 @@ function updateAliSummary() {
   if (el('ali-sum-1')) el('ali-sum-1').textContent = cnt[1]+' Crítico';
 }
 
+function aliResumenInput(ta) {
+  const val = ta.value;
+  ALI_STATE.resumen = val;
+  const chars = document.getElementById('ali-resumen-chars');
+  if (chars) chars.textContent = val.length + ' / 800';
+  markDirty();
+}
+
+function aliResumenSync() {
+  // Sincroniza ALI_STATE.resumen → textarea (llamar al cargar sesión)
+  const ta    = document.getElementById('ali-resumen-txt');
+  const chars = document.getElementById('ali-resumen-chars');
+  if (!ta) return;
+  const val = ALI_STATE.resumen || '';
+  ta.value = val;
+  if (chars) chars.textContent = val.length + ' / 800';
+}
+
+
 function buildAlimentosReportSection() {
   const items = ALI_STATE.items.filter(i => i.nombre || Object.values(i.scores).some(v=>v>0));
   if (!items.length) return `<div style="padding:1.5rem 2rem;color:var(--mid);font-size:.78rem">
@@ -10154,6 +10209,12 @@ function buildAlimentosReportSection() {
         <tbody>${rows}</tbody>
       </table>
     </div>
+    ${ALI_STATE.resumen ? `<div style="margin:1rem 1.5rem;padding:.85rem 1rem;background:#FFFEF5;
+      border-left:4px solid #C9952A;border-radius:4px">
+      <div style="font-size:.56rem;font-weight:800;letter-spacing:.15em;color:#8A9096;margin-bottom:.4rem">
+        RESUMEN GENERAL F&B</div>
+      <div style="font-size:.78rem;line-height:1.6;color:#2D3A3F">${esc(ALI_STATE.resumen)}</div>
+    </div>` : ''}
   </div>`;
 }
 
