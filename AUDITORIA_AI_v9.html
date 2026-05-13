@@ -10104,11 +10104,28 @@ async async function aliModalFoto(id, input) {
   const item = ALI_STATE.items.find(i => i.id === id);
   if (!item) return;
   input.value = '';
-  let processed = file;
-  try { processed = await toDisplayableBlob(file); } catch(e) { showToast('Error: '+e.message); return; }
-  const reader = new FileReader();
-  reader.onload = ev => { item.fotoB64 = ev.target.result; markDirty(); aliOpenModal(id); };
-  reader.readAsDataURL(processed);
+  showToast('⏳ Cargando foto…');
+  try {
+    // Intentar conversión HEIC si aplica, sino usar directo
+    let blob = file;
+    if (typeof toDisplayableBlob === 'function') {
+      try { blob = await toDisplayableBlob(file); } catch(e) { blob = file; }
+    }
+    await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        item.fotoB64 = ev.target.result;
+        markDirty();
+        aliOpenModal(id);
+        showToast('✓ Foto agregada');
+        resolve();
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch(e) {
+    showToast('⚠ Error al cargar foto: ' + e.message);
+  }
 }
 
 async function aliLoadFoto(id, input) {
