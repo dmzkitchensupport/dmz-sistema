@@ -5622,8 +5622,9 @@ function addNote(pid) {
 
 function delNote(pid, idx) {
   const p = findPhoto(pid);
-  if (!p || p.notes.length <= 1) return;
+  if (!p) return;
   p.notes.splice(idx, 1);
+  markDirty();
   refreshCard(pid);
 }
 
