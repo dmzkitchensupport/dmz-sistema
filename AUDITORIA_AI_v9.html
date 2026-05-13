@@ -6382,20 +6382,12 @@ function buildReport() {
         <img src="${LOGO}" style="height:80px;max-width:240px;object-fit:contain;" alt="Cielito">
       </div>
 
-      <!-- FOTOS: 2x2 grid, foto completa sin recorte -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;background:#111;">
-        <div style="background:#000;display:flex;align-items:center;justify-content:center;min-height:320px;">
-          <img src="${SALON2}" style="width:100%;height:auto;max-height:380px;object-fit:contain;display:block;" alt="">
-        </div>
-        <div style="background:#000;display:flex;align-items:center;justify-content:center;min-height:320px;">
-          <img src="${SALON}"  style="width:100%;height:auto;max-height:380px;object-fit:contain;display:block;" alt="">
-        </div>
-        <div style="background:#000;display:flex;align-items:center;justify-content:center;min-height:320px;">
-          <img src="${GASTRO}" style="width:100%;height:auto;max-height:380px;object-fit:contain;display:block;" alt="">
-        </div>
-        <div style="background:#000;display:flex;align-items:center;justify-content:center;min-height:320px;">
-          <img src="${SERV}"   style="width:100%;height:auto;max-height:380px;object-fit:contain;display:block;" alt="">
-        </div>
+      <!-- FOTOS: 4 en un solo renglón, mismo alto, cover -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:2px;background:#111;">
+        <img src="${SALON2}" style="width:100%;height:320px;object-fit:cover;object-position:center;display:block;" alt="">
+        <img src="${SALON}"  style="width:100%;height:320px;object-fit:cover;object-position:center;display:block;" alt="">
+        <img src="${GASTRO}" style="width:100%;height:320px;object-fit:cover;object-position:center;display:block;" alt="">
+        <img src="${SERV}"   style="width:100%;height:320px;object-fit:cover;object-position:center;display:block;" alt="">
       </div>
 
       <!-- CARDS CUALIDADES: grid de 2 columnas -->
