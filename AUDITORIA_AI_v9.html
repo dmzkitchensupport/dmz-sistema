@@ -3552,7 +3552,8 @@ async function sbSaveAuditoria() {
             state: p.state, notes: p.notes,
             markers: p.markers, aiSuggestion: p.aiSuggestion,
             hasThumb: !!photoThumbs[p.id],
-          }))
+          })),
+          hallazgos: aData.hallazgos || _hzDefault()
         }
       ])
     ),
