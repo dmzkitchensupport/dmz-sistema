@@ -4910,14 +4910,8 @@ async function processFiles(files) {
         photo.storageB64 = b64;
         photo._idbSaved  = true;
         await idbPutPhoto(photo.id, b64);
-        // Upload a Supabase Storage para persistencia en nube
-        if (SB.ready && SB.userId) {
-          try {
-            await sbUploadPhoto(photo.id, b64, SB.userId);
-          } catch(e) {
-            console.warn('sbUploadPhoto error:', e);
-          }
-        }
+        // Upload a Supabase Storage desactivado (RLS policy)
+        // Las fotos se persisten via snapshot en tabla auditorias
       }
     });
   }
