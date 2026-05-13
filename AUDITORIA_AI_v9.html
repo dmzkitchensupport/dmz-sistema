@@ -5293,7 +5293,7 @@ function _hzDefault() {
 function hzSetTitulo(aId, texto) {
   const hz = STATE.areas[aId]?.hallazgos;
   if (!hz) return;
-  hz._titulo = texto.trim() || 'HALLAZGOS DEL ÁREA';
+  hz._titulo = texto.trim() || 'COMENTARIOS DEL ÁREA';
   markDirty();
 }
 
@@ -5428,7 +5428,7 @@ function buildHzPanelHtml(aId, hz) {
           padding:.3rem .8rem;cursor:pointer">↺ Restaurar secciones eliminadas</button>
       </div>` : '';
 
-  const hzTitleTxt = STATE.areas[aId]?.hallazgos?._titulo || 'HALLAZGOS DEL ÁREA';
+  const hzTitleTxt = STATE.areas[aId]?.hallazgos?._titulo || 'COMENTARIOS DEL ÁREA';
   return `<div class="hz-panel-title" contenteditable="true" 
     style="outline:none;cursor:text;border-radius:3px;padding:0 .3rem;transition:background .15s"
     onmouseover="this.style.background='rgba(201,149,42,.08)'"
@@ -6314,7 +6314,7 @@ function buildReport() {
         return `<div style="padding:1.2rem 1.6rem;border-top:2px solid ${nivelInfo.color}30;background:${nivelInfo.bg}30">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;
             padding-bottom:.6rem;border-bottom:2px solid ${nivelInfo.color}20">
-            <span style="font-size:.82rem;font-weight:800;letter-spacing:.14em;color:#2D3A3F">${hz._titulo || 'HALLAZGOS DEL ÁREA'}</span>
+            <span style="font-size:.82rem;font-weight:800;letter-spacing:.14em;color:#2D3A3F">${hz._titulo || 'COMENTARIOS DEL ÁREA'}</span>
             <div style="display:flex;gap:.5rem;align-items:center">
               <span style="font-size:.65rem;font-weight:700;padding:3px 12px;border-radius:10px;background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
             </div>
