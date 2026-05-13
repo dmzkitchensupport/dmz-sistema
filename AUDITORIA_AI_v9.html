@@ -6337,6 +6337,76 @@ function buildReport() {
     </div>
   </div>
 
+  <!-- CUALIDADES DE LA EMPRESA -->
+  ${(() => {
+    const CUAL = [
+      { icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>`, label:'UBICACIÓN', desc:'El establecimiento se encuentra en un entorno sumamente agradable y acogedor.' },
+      { icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`, label:'AMBIENTE', desc:'Espacio bonito, acogedor y con una atmósfera agradable.' },
+      { icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`, label:'GASTRONOMÍA', desc:'Buena calidad en la comida.' },
+      { icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3m8 0h3a2 2 0 002-2v-3"/><circle cx="12" cy="12" r="4"/></svg>`, label:'MIXOLOGÍA', desc:'Los cócteles son elaborados con esmero y presentan una excelente calidad.' },
+      { icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`, label:'SERVICIO', desc:'El personal brinda un servicio amable.' },
+      { icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`, label:'GESTIÓN', desc:'Socio operativo presente.' },
+      { icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>`, label:'RELACIONES LABORALES', desc:'Los propietarios mantienen un trato humano y respetuoso con el personal, lo que contribuye a un ambiente laboral positivo.' },
+    ];
+    const cards = CUAL.map((c, i) => `
+      <div style="
+        display:flex;flex-direction:column;gap:.6rem;
+        background:#fff;border-radius:10px;
+        padding:1.1rem 1rem 1rem;
+        border-top:3px solid #C9952A;
+        box-shadow:0 2px 16px rgba(0,0,0,.07);
+        transition:transform .2s;
+        position:relative;overflow:hidden;
+      ">
+        <div style="
+          position:absolute;top:-12px;right:-10px;
+          font-family:var(--f-t);font-size:4.5rem;font-weight:900;
+          color:rgba(201,149,42,.06);line-height:1;
+          user-select:none;pointer-events:none;letter-spacing:-.04em;
+        ">${String(i+1).padStart(2,'0')}</div>
+        <div style="
+          width:40px;height:40px;border-radius:8px;
+          background:linear-gradient(135deg,#1a2332,#2D3A4F);
+          display:flex;align-items:center;justify-content:center;
+          color:#C9952A;flex-shrink:0;
+        ">${c.icon}</div>
+        <div style="font-size:.6rem;font-weight:800;letter-spacing:.2em;color:#C9952A;text-transform:uppercase;">${c.label}</div>
+        <div style="font-size:.78rem;color:#3D4A50;line-height:1.6;font-weight:400;">${c.desc}</div>
+      </div>`).join('');
+    return `
+    <div style="margin-bottom:1.8rem;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.1);">
+      <!-- Header -->
+      <div style="
+        background:linear-gradient(135deg,#0f1923 0%,#1a2332 60%,#243044 100%);
+        padding:1.4rem 2rem;
+        display:flex;align-items:center;justify-content:space-between;
+      ">
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <div style="width:3px;height:2.2rem;background:linear-gradient(180deg,#C9952A,#E8B84B);border-radius:2px;"></div>
+          <div>
+            <div style="font-size:.52rem;letter-spacing:.32em;color:rgba(255,255,255,.38);font-weight:600;margin-bottom:.2rem;">EVALUACIÓN GENERAL</div>
+            <div style="font-family:var(--f-t);font-size:1.05rem;font-weight:800;letter-spacing:.12em;color:#fff;text-transform:uppercase;">Cualidades del Establecimiento</div>
+          </div>
+        </div>
+        <div style="
+          font-family:var(--f-t);font-size:2rem;font-weight:900;
+          color:rgba(201,149,42,.18);letter-spacing:-.04em;line-height:1;
+          user-select:none;
+        ">★★★</div>
+      </div>
+      <!-- Cards grid -->
+      <div style="
+        background:#F7F5F1;
+        padding:1.4rem 1.6rem;
+        display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+        gap:1rem;
+      ">
+        ${cards}
+      </div>
+    </div>`;
+  })()}
+
   <!--  MÓDULO I: EVIDENCIA FOTOGRÁFICA  -->
   <div class="rpt-module-divider">I · EVIDENCIA FOTOGRÁFICA POR ÁREA</div>
   ${areaSections}
