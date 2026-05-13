@@ -2533,13 +2533,28 @@ function _setNavSub(btnId, text) {
   sub.textContent=text;
 }
 
+let _dirtySbTimer = null;
 function markDirty() {
   _unsaved = true;
   const dot = document.getElementById('save-dot');
   const lbl = document.getElementById('save-label');
   if (dot) { dot.className = 'save-dot saving'; }
-  if (lbl) lbl.textContent = 'Cambios sin guardar';
+  if (lbl) lbl.textContent = 'Guardando...';
   updateNavBadges();
+  // Guardar en Supabase 3s después del último cambio
+  clearTimeout(_dirtySbTimer);
+  _dirtySbTimer = setTimeout(async () => {
+    try {
+      await saveSession(false);
+      await sbSaveAuditoria();
+      const lbl2 = document.getElementById('save-label');
+      if (lbl2) lbl2.textContent = 'Guardado en nube ✓';
+    } catch(e) {
+      console.warn('markDirty save error:', e);
+      const lbl2 = document.getElementById('save-label');
+      if (lbl2) lbl2.textContent = 'Error al guardar';
+    }
+  }, 3000);
 }
 
 // Actualiza el indicador tras guardar
