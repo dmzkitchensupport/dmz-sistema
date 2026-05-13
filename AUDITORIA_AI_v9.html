@@ -5172,9 +5172,8 @@ function buildCard(p) {
       <div class="ai-actions">
         <button class="btn-confirm" onclick="confirmAI('${p.id}')">Confirmar</button>
         <button class="btn-edit-ai" onclick="editAI('${p.id}')"> Manual</button>
-        <button class="btn-edit-ai" onclick="analyzePhoto('${p.id}')" title="Analizar con AI">
-        ${p.aiSuggestion ? '↺ Re-analizar' : '✦ Analizar con AI'}
-      </button>
+        <button class="btn-edit-ai" onclick="analyzePhoto('${p.id}')" title="Analizar con AI">${p.aiSuggestion ? '↺ Re-analizar' : '✦ Analizar con AI'}</button>
+        <button class="btn-edit-ai" style="color:#C0392B;border-color:rgba(192,57,43,.3)" onclick="clearAI('${p.id}')">✕ Borrar</button>
       </div>
     </div>`;
   } else if (p.aiSuggestion?.error) {
@@ -5566,6 +5565,17 @@ function editAI(pid) {
   }
   p.state = 'empty';
   p.aiSuggestion = null;
+  refreshCard(pid);
+}
+
+function clearAI(pid) {
+  const p = findPhoto(pid);
+  if (!p) return;
+  p.aiSuggestion = null;
+  p.notes = [];
+  p.alert = null;
+  p.state = 'empty';
+  markDirty();
   refreshCard(pid);
 }
 
