@@ -2298,6 +2298,88 @@ td:hover .hz-edit-hint { opacity: 1; }
     <div class="dmz-powered">POWERED BY <span>DMZ</span> · DE LA MORA ZUMARÁN · KITCHEN SUPPORT</div>
   </div>
 
+  <div id="alimentos-view">
+    <div class="ali-header">
+      <div>
+        <div class="ali-title">CALIFICACIÓN F&B</div>
+        <div class="ali-sub">ESCALA ECT 1-5 · 1=DEFICIENTE · 5=EXCELENTE · PRESENTACIÓN · TEMPERATURA · SABOR · TEXTURA · PORCIÓN</div>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-gold" onclick="addAlimentoCard('alimento')" style="font-size:.65rem">+ Alimento</button>
+        <button class="btn btn-gold" onclick="addAlimentoCard('bebida')" style="font-size:.65rem;background:#2D6A9F">+ Bebida</button>
+        <button class="btn btn-outline" onclick="exportAlimentosPDF()" style="font-size:.65rem">Exportar PDF</button>
+      </div>
+    </div>
+    <!-- Tabs filtro -->
+    <div id="ali-tabs" style="display:flex;gap:.3rem;padding:.5rem 1.2rem;border-bottom:1px solid var(--border);background:var(--cream)">
+      <button onclick="aliSetFiltro('todos')" id="ali-tab-todos" style="font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:.25rem .7rem;border-radius:4px;border:1.5px solid var(--gold);background:var(--gold);color:#fff;cursor:pointer">TODOS</button>
+      <button onclick="aliSetFiltro('alimento')" id="ali-tab-alimento" style="font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:.25rem .7rem;border-radius:4px;border:1.5px solid var(--border);background:#fff;color:var(--mid);cursor:pointer">ALIMENTOS</button>
+      <button onclick="aliSetFiltro('bebida')" id="ali-tab-bebida" style="font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:.25rem .7rem;border-radius:4px;border:1.5px solid var(--border);background:#fff;color:var(--mid);cursor:pointer">BEBIDAS</button>
+    </div>
+
+    <!-- Drop zone de fotos para alimentos -->
+    <div id="ali-dropzone"
+      style="margin:1rem 1.2rem .5rem;border:2px dashed var(--border);border-radius:8px;
+             padding:1.2rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--cream)"
+      ondragover="event.preventDefault();event.stopPropagation();this.style.borderColor='var(--gold)';this.style.background='#fffef5'"
+      ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--cream)'"
+      ondrop="aliOnDrop(event)"
+      onclick="document.getElementById('ali-drop-input').click()">
+      <div style="font-size:.65rem;font-weight:700;letter-spacing:.12em;color:var(--mid)">
+        ARRASTRA FOTOS AQUÍ · o haz clic para seleccionar
+      </div>
+      <div style="font-size:.55rem;color:var(--mid);opacity:.6;margin-top:.25rem">
+        JPG · PNG · HEIC · DNG · RAW — se crea un card por foto
+      </div>
+      <input id="ali-drop-input" type="file" multiple
+        accept="image/*,.heic,.heif,.dng,.raw,.cr2,.nef,.arw"
+        style="display:none" onchange="aliOnFileSelect(this)">
+    </div>
+
+    <!-- Cronómetro de servicio -->
+    <div class="ali-timer-bar">
+      <div>
+        <div class="ali-timer-lbl">TIEMPO DE SERVICIO</div>
+        <div class="ali-timer-display verde" id="ali-timer-display">00:00</div>
+      </div>
+      <div class="ali-semaforo">
+        <div class="ali-sem-dot on-verde" id="ali-sem-verde" title="Correcto ≤20 min"></div>
+        <div class="ali-sem-dot" id="ali-sem-ambar" title="Observación ≤30 min"></div>
+        <div class="ali-sem-dot" id="ali-sem-rojo"  title="Crítico >30 min"></div>
+      </div>
+      <div>
+        <div class="ali-timer-lbl" id="ali-timer-nivel-lbl">CORRECTO</div>
+        <div class="ali-timer-lbl" style="opacity:.5">Estándar: 20 min</div>
+      </div>
+      <div class="ali-timer-btns">
+        <button class="btn btn-gold"    id="ali-timer-btn" onclick="aliTimerToggle()">Iniciar</button>
+        <button class="btn btn-outline" onclick="aliTimerReset()" style="font-size:.65rem">Reset</button>
+      </div>
+    </div>
+
+    <div class="ali-grid" id="ali-grid"><!-- JS --></div>
+
+    <div class="ali-summary-bar" id="ali-summary-bar" style="display:none">
+      <div class="ali-summary-kpi">
+        <div class="sk-n" id="ali-sum-prom" style="color:var(--gold)">—</div>
+        <div class="sk-l">PROMEDIO GLOBAL</div>
+      </div>
+      <div class="ali-summary-kpi">
+        <div class="sk-n" id="ali-sum-total">0</div>
+        <div class="sk-l">PLATILLOS</div>
+      </div>
+      <div style="flex:1;display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+        <span class="ali-summary-chip" id="ali-sum-5" style="background:#2E7D32">0 Excelente</span>
+        <span class="ali-summary-chip" id="ali-sum-4" style="background:#84CC16">0 Bueno</span>
+        <span class="ali-summary-chip" id="ali-sum-3" style="background:#F5C518;color:#000">0 Regular</span>
+        <span class="ali-summary-chip" id="ali-sum-2" style="background:#E07B00">0 Deficiente</span>
+        <span class="ali-summary-chip" id="ali-sum-1" style="background:#C0392B">0 Crítico</span>
+      </div>
+    </div>
+
+    <div class="dmz-powered">POWERED BY <span>DMZ</span> · DE LA MORA ZUMARÁN · KITCHEN SUPPORT</div>
+  </div>
+
   <!-- Sugerencias view -->
   <div id="hallazgos-view">
     <div class="hz-header">
