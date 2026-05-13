@@ -6776,8 +6776,8 @@ async function startDelivery() {
   document.getElementById('dm-generate-btn').disabled = true;
 
   try {
-    // 1. Asegurar fotos en memoria
-    progText.textContent = 'Cargando fotos...';
+    // 1. Asegurar fotos de captura en memoria
+    progText.textContent = 'Cargando fotos de captura...';
     progFill.style.width = '10%';
     const photoTasks = [];
     for (const aId in STATE.areas) {
@@ -6791,11 +6791,21 @@ async function startDelivery() {
     }
     await Promise.all(photoTasks);
 
-    // 2. Regenerar reporte con todas las fotos
+    // 1b. Asegurar fotos de F&B en memoria (crítico — se guardan en IDB con key ali_)
+    progText.textContent = 'Cargando fotos de alimentos...';
+    progFill.style.width = '20%';
+    const aliFotoTasks = ALI_STATE.items
+      .filter(it => !it.fotoB64 && it.id)
+      .map(it => idbGetPhoto('ali_' + it.id).then(b64 => {
+        if (b64) it.fotoB64 = b64;
+      }).catch(()=>{}));
+    await Promise.all(aliFotoTasks);
+
+    // 2. Regenerar reporte con todas las fotos ya en memoria
     progText.textContent = 'Generando reporte...';
-    progFill.style.width = '30%';
+    progFill.style.width = '35%';
     buildReport();
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 800));
 
     // 3. Capturar el HTML del reporte exactamente como se ve
     progFill.style.width = '60%';
@@ -9753,9 +9763,15 @@ async function exportReportePDF() {
       }
     }
   }
+  // Cargar fotos F&B desde IDB
+  ALI_STATE.items.filter(it => !it.fotoB64 && it.id).forEach(it => {
+    photoTasks.push(idbGetPhoto('ali_' + it.id).then(b64 => {
+      if (b64) it.fotoB64 = b64;
+    }).catch(()=>{}));
+  });
   await Promise.all(photoTasks);
   buildReport();
-  await new Promise(r => setTimeout(r, 500));
+  await new Promise(r => setTimeout(r, 600));
   showToast('⏳ Abriendo diálogo de impresión…');
   await new Promise(r => setTimeout(r, 200));
   window.print();
