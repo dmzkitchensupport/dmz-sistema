@@ -4906,11 +4906,7 @@ async function processFiles(files) {
     showToast('' + loaded + ' foto' + (loaded > 1 ? 's' : '') + ' cargada' + (loaded > 1 ? 's' : ''));
   }
 
-  if (STATE.apiKey.startsWith('sk-ant-')) {
-    const newPhotos = STATE.areas[STATE.currentArea].photos
-      .filter(p => p.state === 'empty' && p.aiSuggestion === null);
-    newPhotos.forEach(p => analyzePhoto(p.id));
-  }
+  // Análisis AI: manual desde botón "Analizar área"
 }
 
 /* 
@@ -5135,7 +5131,9 @@ function buildCard(p) {
       <div class="ai-actions">
         <button class="btn-confirm" onclick="confirmAI('${p.id}')">Confirmar</button>
         <button class="btn-edit-ai" onclick="editAI('${p.id}')"> Manual</button>
-        <button class="btn-edit-ai" onclick="analyzePhoto('${p.id}')" title="Re-analizar">↺ Re-analizar</button>
+        <button class="btn-edit-ai" onclick="analyzePhoto('${p.id}')" title="Analizar con AI">
+        ${p.aiSuggestion ? '↺ Re-analizar' : '✦ Analizar con AI'}
+      </button>
       </div>
     </div>`;
   } else if (p.aiSuggestion?.error) {
