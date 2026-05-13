@@ -10100,7 +10100,7 @@ function aliModalTipo(id, tipo) {
   aliOpenModal(id);
 }
 
-async async function aliModalFoto(id, input) {
+async function aliModalFoto(id, input) {
   const file = input.files[0];
   if (!file) return;
   const item = ALI_STATE.items.find(i => i.id === id);
