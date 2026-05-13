@@ -776,10 +776,8 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
 }
 .rpt-photo img {
   width: 100%;
-  object-fit: contain; object-position: center;
+  object-fit: cover; object-position: center;
   display: block; flex-shrink: 0;
-  background: #1a1a1a;
-  max-height: 340px;
 }
 .rpt-caption {
   background: transparent;
@@ -6138,9 +6136,10 @@ function buildReport() {
         <div class="rpt-caption"><span class="rpt-badge" style="background:${col}">${lbl}</span>${notes.map(n => `<div class="rpt-note">${esc(n)}</div>`).join('')}</div>
       </div>`;
       return `<div class="rpt-photo" data-src="${imgSrc.slice(0,50)}">
-        <div style="position:relative;width:100%;line-height:0">
+        <div style="position:relative;width:100%;line-height:0;overflow:hidden">
           <img src="${imgSrc}" alt="" loading="lazy" onerror="this.style.display='none'"
-            style="width:100%;display:block;object-fit:contain;background:#1a1a1a;max-height:340px">
+            onload="(function(img){var r=img.naturalHeight/img.naturalWidth;img.parentNode.style.paddingBottom=(r*100)+'%';img.style.position='absolute';img.style.top='0';img.style.left='0';img.style.width='100%';img.style.height='100%';img.style.objectFit='cover';})(this)"
+            style="width:100%;display:block;object-fit:cover;background:#f0ede8">
           ${mkrs}
         </div>
         <div class="rpt-caption">
