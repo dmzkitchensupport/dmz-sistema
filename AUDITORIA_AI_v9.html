@@ -6157,29 +6157,47 @@ function buildReport() {
         const customModsHtml = customMods.map((m, mi) => {
           const lines = (m.text||'').split('\n').filter(l => l.trim());
           const linesHtml = lines.map((line, li) => `
-            <li style="display:flex;align-items:flex-start;gap:.4rem;margin-bottom:.35rem;
-              padding:.25rem .35rem;border-radius:4px"
-              onmouseover="this.style.background='#f9f7f3'" onmouseout="this.style.background=''">
+            <li style="display:flex;align-items:center;gap:.5rem;padding:.3rem .4rem;
+              border-radius:4px;transition:background .15s"
+              onmouseover="this.style.background='#f5f3ef'" onmouseout="this.style.background=''">
+              <span style="flex-shrink:0;width:.45rem;height:.45rem;border-radius:50%;
+                background:#C9952A;display:inline-block"></span>
               <span contenteditable="true" style="flex:1;font-size:.78rem;color:#2D3A3F;
-                line-height:1.5;outline:none;cursor:text"
+                line-height:1.5;outline:none;cursor:text;font-weight:500"
                 onblur="rptEditCustomLine('${aIdLocal}',${mi},${li},this.innerText)">${esc(line)}</span>
               <button onclick="rptDelCustomLine('${aIdLocal}',${mi},${li})"
                 style="flex-shrink:0;background:none;border:none;color:#ddd;cursor:pointer;
-                font-size:.9rem;padding:0 .2rem;line-height:1"
-                onmouseover="this.style.color='#C0392B'" onmouseout="this.style.color='#ddd'">×</button>
+                font-size:.85rem;padding:0 .2rem;opacity:0"
+                onmouseover="this.style.opacity='1';this.style.color='#C0392B'" 
+                onmouseout="this.style.opacity='0'">×</button>
             </li>`).join('');
-          return `<div style="margin-bottom:1rem">
-            <div style="display:flex;align-items:center;justify-content:space-between;
-              margin-bottom:.4rem;padding-bottom:.3rem;border-bottom:1px solid #E5E2DC">
-              <span contenteditable="true" style="font-size:.72rem;font-weight:800;
-                letter-spacing:.12em;color:#5F5E5A;outline:none;cursor:text"
-                onblur="rptEditCustomTitle('${aIdLocal}',${mi},this.innerText)">${esc(m.title||'MÓDULO PERSONALIZADO').toUpperCase()}</span>
+          // Diseño premium para módulos custom (ej. CUALIDADES)
+          const titleTxt = (m.title||'MÓDULO').toUpperCase();
+          const isQual = titleTxt.includes('CUALIDAD') || titleTxt.includes('FORTALEZ') || titleTxt.includes('POSITIV');
+          return `<div style="margin:1.2rem 0;border-radius:8px;overflow:hidden;
+            box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid #E5E2DC">
+            <!-- Header con gradiente -->
+            <div style="background:linear-gradient(135deg,#1a2332 0%,#2D3A4F 100%);
+              padding:.7rem 1.2rem;display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:.6rem">
+                ${isQual ? '<span style="font-size:1rem">★</span>' : ''}
+                <span contenteditable="true" style="font-size:.75rem;font-weight:800;
+                  letter-spacing:.2em;color:#fff;outline:none;cursor:text;text-transform:uppercase"
+                  onblur="rptEditCustomTitle('${aIdLocal}',${mi},this.innerText)">${esc(titleTxt)}</span>
+              </div>
               <button onclick="rptDelCustomMod('${aIdLocal}',${mi})"
-                style="font-size:.58rem;background:none;border:none;color:#bbb;cursor:pointer;
-                padding:.1rem .4rem;border-radius:3px"
-                onmouseover="this.style.color='#C0392B'" onmouseout="this.style.color='#bbb'">× Eliminar</button>
+                style="font-size:.55rem;background:rgba(255,255,255,.15);border:none;color:rgba(255,255,255,.7);
+                cursor:pointer;padding:.15rem .5rem;border-radius:3px;letter-spacing:.05em"
+                onmouseover="this.style.background='rgba(192,57,43,.7)'" 
+                onmouseout="this.style.background='rgba(255,255,255,.15)'">× Eliminar</button>
             </div>
-            <ul style="list-style:disc;padding-left:1.2rem;margin:0">${linesHtml}</ul>
+            <!-- Contenido -->
+            <div style="padding:.9rem 1.2rem;background:#fff">
+              <ul style="list-style:none;padding:0;margin:0;display:grid;
+                grid-template-columns:${lines.length > 4 ? '1fr 1fr' : '1fr'};gap:.3rem .8rem">
+                ${linesHtml}
+              </ul>
+            </div>
           </div>`;
         }).join('');
         if (!secsHtml && !customModsHtml) return '';
