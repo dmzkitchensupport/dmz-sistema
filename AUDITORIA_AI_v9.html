@@ -6430,6 +6430,26 @@ function buildReport() {
   // Módulo Hallazgos — sección de reporte
   const hallSection = buildHallazgosReportSection();
 
+  // ── Módulo V: Sugerencias
+  let sgSection = '';
+  if (STATE.sugerencias && STATE.sugerencias.length) {
+    const sgCards = STATE.sugerencias
+      .filter(sg => (sg.titulo||'').trim() || (sg.observacion||'').trim())
+      .map(sg => {
+        const tit = esc(sg.titulo||'Sin título');
+        const obs = esc(sg.observacion||'');
+        return '<div class="rpt-area" style="border-left:4px solid var(--gold);margin-bottom:1rem;">' +
+          '<div class="rpt-ah" style="border-left:none;padding:.75rem 1.2rem;">' +
+            '<div class="rpt-ah-name" style="font-size:.85rem;letter-spacing:.08em;">' + tit + '</div>' +
+          '</div>' +
+          (obs ? '<div style="padding:.5rem 1.2rem 1rem;font-size:.78rem;color:var(--dark);line-height:1.6;white-space:pre-wrap;">' + obs + '</div>' : '') +
+        '</div>';
+      }).join('');
+    if (sgCards) {
+      sgSection = '<div class="rpt-module-divider">V · SUGERENCIAS DE MEJORA</div>' + sgCards;
+    }
+  }
+
   // Reporte HTML base (sin highlight aún para calcular)
   let rawReport = `<div class="rpt-bar">
     <span><span style="opacity:.4">REPORTE · </span>${esc(client.toUpperCase())} · ${date}</span>
@@ -6559,6 +6579,9 @@ function buildReport() {
   <!--  MÓDULO IV: HALLAZGOS Y PLAN DE ACCIÓN  -->
   <div class="rpt-module-divider">IV · HALLAZGOS Y PLAN DE ACCIÓN</div>
   ${hallSection}
+
+  <!--  MÓDULO V: SUGERENCIAS  -->
+  ${sgSection}
 
   <div class="dmz-powered">POWERED BY <span style="color:var(--gold)">DMZ</span> · DE LA MORA ZUMARÁN · KITCHEN SUPPORT</div>`;
 
