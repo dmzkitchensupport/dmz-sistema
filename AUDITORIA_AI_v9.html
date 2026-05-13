@@ -6193,7 +6193,6 @@ function buildReport() {
     </div>` : '';
 
     areaSections += `<div class="rpt-area">
-      ${_servicioIntro}
       <div class="rpt-ah" style="border-left-color:${dCol}">
         <div class="rpt-ah-left">
           <div class="rpt-ah-n">${String(ai+1).padStart(2,'0')}</div>
@@ -6212,6 +6211,7 @@ function buildReport() {
         <div class="rpt-ss" style="color:#E07B00">${aO} Observaciones</div>
         <div class="rpt-ss" style="color:#2E7D32">${aK} Correctos</div>
       </div>
+      ${_servicioIntro}
       <div class="rpt-photos">${photosHtml}</div>
       ${hallRows ? `<div class="rpt-hall">
         <div class="rpt-hall-head">ÁREAS DE OPORTUNIDAD Y PROPUESTAS DE OPTIMIZACIÓN</div>
