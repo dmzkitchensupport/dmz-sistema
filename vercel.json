@@ -2,6 +2,10 @@
   "version": 2,
   "builds": [
     {
+      "src": "api/rac-proxy.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "api/convert-heic.py",
       "use": "@vercel/python"
     },
@@ -11,6 +15,10 @@
     }
   ],
   "routes": [
+    {
+      "src": "/api/rac-proxy/(.*)",
+      "dest": "/api/rac-proxy.js"
+    },
     {
       "src": "/api/convert-heic",
       "dest": "/api/convert-heic.py"
