@@ -8374,6 +8374,16 @@ function buildClima2ReportSection() {
     || (res && res.length);
   if (!hasData) return '';
 
+  // ── Intro metodología (textos fijos de la pestaña CLIMA) ────
+  const metodoTextos = [
+    'El levantamiento del clima laboral se realizó de manera aleatoria y bajo un mismo conjunto de preguntas para todo el personal, con el objetivo de obtener una visión clara y objetiva sobre cómo se sienten los colaboradores, así como su percepción hacia la empresa y sus funciones.',
+    'Es importante destacar que la información recabada es completamente confidencial, lo que permitió que el equipo pudiera expresarse con libertad, transparencia y apertura respecto a su experiencia dentro de la organización.'
+  ];
+  const metodologiaHtml = `<div style="padding:.9rem 1.2rem;border-left:3px solid var(--gold);background:#fdfcf8;margin-bottom:.2rem">
+    <div style="font-size:.6rem;font-weight:800;letter-spacing:.18em;color:var(--gold);margin-bottom:.65rem">METODOLOGÍA DE TRABAJO Y ANÁLISIS DEL STAFF</div>
+    ${metodoTextos.map(t => `<p style="font-size:.74rem;color:var(--dark);line-height:1.7;text-align:justify;margin-bottom:.55rem">${esc(t)}</p>`).join('')}
+  </div>`;
+
   let resumenHtml = '';
   if (res && res.length) {
     resumenHtml = `<div style="padding:.8rem 1rem;border-top:1px solid var(--border)">
@@ -8456,6 +8466,7 @@ function buildClima2ReportSection() {
         </div>
       </div>
     </div>
+    ${metodologiaHtml}
     ${resumenHtml}
     ${respRows ? `<div style="padding:.6rem 1rem;border-top:1px solid var(--border)">
       <div class="rpt-hall-head" style="margin-bottom:.5rem">RESPUESTAS INDIVIDUALES</div>
