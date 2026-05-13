@@ -4487,55 +4487,23 @@ function sgRender() {
   const grid = document.getElementById('sg-grid');
   if (!grid) return;
   if (!STATE.sugerencias.length) {
-    grid.innerHTML = '<div style="padding:2.5rem;text-align:center;color:var(--mid);font-size:.78rem;">Presiona <strong>+ Agregar área</strong> para añadir una sugerencia de mejora.</div>';
+    grid.innerHTML = '<div style="padding:2.5rem;text-align:center;color:var(--mid);font-size:.78rem;">Presiona <strong>+ Agregar área</strong> para añadir una sugerencia.</div>';
     return;
   }
   const areaOpts = _sgAreaOptions();
   grid.innerHTML = STATE.sugerencias.map((sg, i) => {
-    const chips = _sgChipsFor(sg.areaId);
-    const alertBtns = SG_ALERTS.map(a =>
-      `<button class="sg-alert-btn ${a.key}${sg.alert===a.key?' active':''}" onclick="sgSetAlert(${i},'${a.key}')">${a.label}</button>`
-    ).join('');
     const areaSelect = `<select class="sg-area-sel" onchange="sgSetArea(${i},this.value)">${
       areaOpts.map(o => `<option value="${o.id}"${sg.areaId===o.id?' selected':''}>${o.name}</option>`).join('')
     }</select>`;
-    const chipsHtml = chips.length ? `<div class="sg-chips">${
-      chips.map(c => `<span class="sg-chip${(sg.chips||[]).includes(c)?' selected':''}" onclick="sgToggleChip(${i},${JSON.stringify(c)})">${c}</span>`).join('')
-    }</div>` : '';
-    return `<div class="sg-card sg-${sg.alert||''}">
+    return `<div class="sg-card">
       <div class="sg-card-header">
         ${areaSelect}
-        <div style="display:flex;align-items:center;gap:.5rem;">
-          <div class="sg-alert-btns">${alertBtns}</div>
-          <button class="sg-del-btn" onclick="sgDelete(${i})" title="Eliminar">✕</button>
-        </div>
+        <button class="sg-del-btn" onclick="sgDelete(${i})" title="Eliminar">✕</button>
       </div>
-      ${chipsHtml}
       <div class="sg-body">
-        <div>
-          <div class="sg-field-lbl">Observación / Hallazgo</div>
-          <textarea class="sg-textarea" rows="2" placeholder="Describe el hallazgo…" oninput="sgSet(${i},'observacion',this.value)">${sg.observacion||''}</textarea>
-        </div>
-        <div class="sg-row">
-          <div>
-            <div class="sg-field-lbl">Propuesta de mejora</div>
-            <textarea class="sg-textarea" rows="2" placeholder="¿Qué acción se recomienda?" oninput="sgSet(${i},'propuesta',this.value)">${sg.propuesta||''}</textarea>
-          </div>
-          <div>
-            <div class="sg-field-lbl">Responsable</div>
-            <textarea class="sg-textarea" rows="2" placeholder="Gerencia / Chef / Capitán…" oninput="sgSet(${i},'responsable',this.value)">${sg.responsable||''}</textarea>
-          </div>
-        </div>
-        <div>
-          <div class="sg-field-lbl">Tiempo de implementación</div>
-          <div class="sg-alert-btns">
-            ${['INMEDIATO','CORTO PLAZO','MEDIO PLAZO'].map(t =>
-              `<button class="sg-alert-btn${sg.tiempo===t?' active critico':''}"
-                style="${sg.tiempo===t?'background:var(--dark);color:#fff;border-color:var(--dark)':'border-color:var(--border);color:var(--mid)'};font-size:.58rem;"
-                onclick="sgSet(${i},'tiempo','${t}')">${t}</button>`
-            ).join('')}
-          </div>
-        </div>
+        <textarea class="sg-textarea" rows="3"
+          placeholder="Escribe aquí las observaciones de esta área…"
+          oninput="sgSet(${i},'observacion',this.value)">${sg.observacion||''}</textarea>
       </div>
     </div>`;
   }).join('');
