@@ -1548,8 +1548,8 @@ td:hover .hz-edit-hint { opacity: 1; }
   #hallazgos-view, #clima2-view, #hist-view,
   #racreaa-view, #login-screen, #expired-screen,
   .nav-session, .save-wrap, .btn, button,
-  [id^="btn-"], .toast, .modal,
-  .session-bar, .api-bar { display: none !important; }
+  [id^="btn-"], #toast, .toast, .modal,
+  .session-bar, .api-bar, #dmz-degraded-banner { display: none !important; }
 
   /* Asegurar que report-view sea visible y ocupe todo */
   html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
@@ -9773,10 +9773,13 @@ async function exportReportePDF() {
   });
   await Promise.all(photoTasks);
   buildReport();
-  await new Promise(r => setTimeout(r, 600));
-  showToast('⏳ Abriendo diálogo de impresión…');
-  await new Promise(r => setTimeout(r, 200));
+  // Esperar a que el DOM esté completamente renderizado con todas las imágenes
+  await new Promise(r => setTimeout(r, 1200));
+  // Ocultar toast antes de imprimir para que no aparezca en el PDF
+  const toastEl = document.getElementById('toast');
+  if (toastEl) toastEl.style.display = 'none';
   window.print();
+  if (toastEl) toastEl.style.display = '';
 }
 
 async function exportHallazgosPDF() {
