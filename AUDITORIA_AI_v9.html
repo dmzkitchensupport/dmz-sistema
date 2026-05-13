@@ -10249,7 +10249,7 @@ async function exportAlimentosPDF() {
 //  Tenant:  dmz · Auth: JWT HS256 15min + refresh cookie
 // ══════════════════════════════════════════════════════════════
 const RAC = {
-  BASE:    'https://dmz-audit.netlify.app/.netlify/functions',
+  BASE:    '/api/rac-proxy',   // Vercel proxy → dmz-audit.netlify.app (CORS fix)
   TENANT:  'dmz',
   token:   null,
   data:    null,   // { audits, total, avg, counts }
@@ -10261,7 +10261,6 @@ function racHeaders() {
   return {
     'Content-Type':  'application/json',
     'Authorization': 'Bearer ' + (RAC.token || ''),
-    'Origin':        'https://mariozumaran.github.io',
   };
 }
 
@@ -10308,10 +10307,7 @@ async function racLogin() {
     const resp = await fetch(RAC.BASE + '/auth-login', {
       method:      'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'Origin':       'https://mariozumaran.github.io',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email,
         password:    pass,
