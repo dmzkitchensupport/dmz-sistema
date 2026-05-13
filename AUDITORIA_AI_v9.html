@@ -5329,8 +5329,18 @@ function buildHzPanelHtml(aId, hz) {
       </div>
     </div>`).join('');
 
+  const hasHidden = ['hall','crit','op','imp','prox'].some(k => hz[k]?.hidden);
+  const restoreBtn = hasHidden
+    ? `<div style="text-align:center;padding:.5rem 0;margin-top:.3rem">
+        <button onclick="hzRestoreAll('${aId}')"
+          style="font-size:.6rem;font-weight:700;letter-spacing:.1em;color:var(--mid);
+          background:none;border:1.5px solid var(--border);border-radius:4px;
+          padding:.3rem .8rem;cursor:pointer">↺ Restaurar secciones eliminadas</button>
+      </div>` : '';
+
   return `<div class="hz-panel-title">HALLAZGOS DEL ÁREA</div>
     ${secsHtml}
+    ${restoreBtn}
     ${modsHtml}
     <button class="hz-add-module-btn" onclick="hzCustomModAdd('${aId}')">
       + Agregar módulo personalizado
