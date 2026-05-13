@@ -6052,7 +6052,7 @@ function rptEditCustomLine(aId, mi, li, newText) {
 function rptDelCustomLine(aId, mi, li) {
   const hz = STATE.areas[aId]?.hallazgos;
   if (!hz?.customModules?.[mi]) return;
-  const lines = (hz.customModules[mi].text || '').split('\n').filter(l => l.trim());
+  const lines = (hz.customModules[mi].text || '').split('\n').map(l => l.replace(/^[\s•\-\*·]+/, '').trim()).filter(l => l);
   lines.splice(li, 1);
   hz.customModules[mi].text = lines.join('\n');
   markDirty();
@@ -6296,7 +6296,7 @@ function buildReport() {
         const customMods = (hz.customModules || []).filter(m => m.title || m.text);
         const aIdLocal = a.id;
         const customModsHtml = customMods.map((m, mi) => {
-          const lines = (m.text||'').split('\n').filter(l => l.trim());
+          const lines = (m.text||'').split('\n').map(l => l.replace(/^[\s•\-\*·]+/, '').trim()).filter(l => l);
           const linesHtml = lines.map((line, li) => `
             <li style="display:flex;align-items:flex-start;gap:.55rem;padding:.35rem .4rem;
               border-radius:4px;transition:background .15s;list-style:none"
@@ -8044,7 +8044,7 @@ function renderCl2AnalisisBlock() {
   resBody.querySelectorAll('.cl2-analisis-append, .cl2-resumen-ai').forEach(el => el.remove());
   const m = CL2_STATE.meta || {};
   if (!m.fortalezas && !m.focos) return;
-  const toBullets = txt => txt.split('\n').filter(Boolean)
+  const toBullets = txt => txt.split('\n').map(l => l.replace(/^[\s•\-\*·]+/, '').trim()).filter(Boolean)
     .map(b => `<li style="margin-bottom:.4rem;font-size:.76rem;color:#2D3A3F;line-height:1.6">${esc(b)}</li>`)
     .join('');
   const div = document.createElement('div');
@@ -8484,7 +8484,7 @@ async function exportClima2PDF() {
 
   // ── Helpers ──────────────────────────────────────────────────
   const e = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const toBulletList = txt => (txt||'').split('\n').filter(Boolean)
+  const toBulletList = txt => (txt||'').split('\n').map(l => l.replace(/^[\s•\-\*·]+/, '').trim()).filter(Boolean)
     .map(b => `<li>${e(b)}</li>`).join('');
 
   const colOrdenados = [...col].sort((a,b) => {
