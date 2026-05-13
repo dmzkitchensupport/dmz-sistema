@@ -6224,7 +6224,7 @@ function buildReport() {
               <span style="font-size:.72rem;font-weight:800;letter-spacing:.12em;color:#5F5E5A">${s.label.toUpperCase()}</span>
               ${badge}
             </div>
-            ${ptsHtml ? `<ul style="margin:.3rem 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:.4rem .8rem">${ptsHtml}</ul>` : ''}
+            ${ptsHtml ? `<ul style="margin:.3rem 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.2rem">${ptsHtml}</ul>` : ''}
             ${obs}
           </div>`;
         }).filter(Boolean).join('');
