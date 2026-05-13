@@ -8379,9 +8379,13 @@ function buildClima2ReportSection() {
     'El levantamiento del clima laboral se realizó de manera aleatoria y bajo un mismo conjunto de preguntas para todo el personal, con el objetivo de obtener una visión clara y objetiva sobre cómo se sienten los colaboradores, así como su percepción hacia la empresa y sus funciones.',
     'Es importante destacar que la información recabada es completamente confidencial, lo que permitió que el equipo pudiera expresarse con libertad, transparencia y apertura respecto a su experiencia dentro de la organización.'
   ];
-  const metodologiaHtml = `<div style="padding:.9rem 1.2rem;border-left:3px solid var(--gold);background:#fdfcf8;margin-bottom:.2rem">
-    <div style="font-size:.6rem;font-weight:800;letter-spacing:.18em;color:var(--gold);margin-bottom:.65rem">METODOLOGÍA DE TRABAJO Y ANÁLISIS DEL STAFF</div>
-    ${metodoTextos.map(t => `<p style="font-size:.74rem;color:var(--dark);line-height:1.7;text-align:justify;margin-bottom:.55rem">${esc(t)}</p>`).join('')}
+  const metodologiaHtml = `<div style="margin:.4rem 0;border-radius:0;overflow:hidden;border-left:4px solid var(--gold)">
+    <div style="background:linear-gradient(135deg,#1a2332 0%,#2D3A4F 100%);padding:.7rem 1.2rem">
+      <span style="font-size:.72rem;font-weight:800;letter-spacing:.2em;color:#fff">METODOLOGÍA DE TRABAJO Y ANÁLISIS DEL STAFF</span>
+    </div>
+    <div style="background:#fdfcf8;padding:1rem 1.3rem">
+      ${metodoTextos.map(t => `<p style="font-size:.76rem;color:#2D3A3F;line-height:1.75;text-align:justify;margin-bottom:.6rem;last-child:margin-bottom:0">${esc(t)}</p>`).join('')}
+    </div>
   </div>`;
 
   let resumenHtml = '';
