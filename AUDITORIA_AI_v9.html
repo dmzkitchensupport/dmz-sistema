@@ -4368,8 +4368,9 @@ async function init() {
   // 1. Primero: conectar a Supabase con token guardado
   await sbRestoreSession();
 
-  // 2. Si Supabase conectó, restaurar desde la nube (más reciente)
+  // 2. Si Supabase conectó, refrescar token ANTES de restaurar
   if (SB.ready) {
+    try { await sbRefreshToken(); } catch(e) { console.warn('token refresh en init:', e); }
     await autoRestoreFromSupabase();
   }
 
