@@ -4289,7 +4289,26 @@ async function autoRestoreFromSupabase() {
     if (snap.areas) {
       for (const aId in snap.areas) {
         if (!STATE.areas[aId]) STATE.areas[aId] = { photos: [], hallazgos: _hzDefault() };
-        STATE.areas[aId].hallazgos = snap.areas[aId].hallazgos || _hzDefault();
+        const rawHz = snap.areas[aId].hallazgos || _hzDefault();
+        // Auto-convertir obs a pts y separar pts con \n al restaurar
+        ['hall','crit','op','imp','prox'].forEach(key => {
+          const sec = rawHz[key];
+          if (!sec) return;
+          if (sec.obs && sec.obs.trim()) {
+            const lines = sec.obs.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
+            if (lines.length) { sec.pts = [...(sec.pts||[]).filter(p=>p.trim()), ...lines]; sec.obs = ''; }
+          }
+          if (sec.pts?.length) {
+            const exp = [];
+            sec.pts.forEach(pt => {
+              if (!pt.trim()) return;
+              const ls = pt.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
+              exp.push(...(ls.length>1 ? ls : [pt.trim()]));
+            });
+            if (exp.length) sec.pts = exp;
+          }
+        });
+        STATE.areas[aId].hallazgos = rawHz;
         const thumbs = snap.photoThumbs || {};
         STATE.areas[aId].photos = (snap.areas[aId].photos || []).map(p => {
           const thumb = thumbs[p.id] || null;
@@ -8830,7 +8849,26 @@ async function autoRestoreSession() {
     if (snap.areas) {
       for (const aId in snap.areas) {
         if (!STATE.areas[aId]) STATE.areas[aId] = { photos: [], hallazgos: _hzDefault() };
-        STATE.areas[aId].hallazgos = snap.areas[aId].hallazgos || _hzDefault();
+        const rawHz = snap.areas[aId].hallazgos || _hzDefault();
+        // Auto-convertir obs a pts y separar pts con \n al restaurar
+        ['hall','crit','op','imp','prox'].forEach(key => {
+          const sec = rawHz[key];
+          if (!sec) return;
+          if (sec.obs && sec.obs.trim()) {
+            const lines = sec.obs.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
+            if (lines.length) { sec.pts = [...(sec.pts||[]).filter(p=>p.trim()), ...lines]; sec.obs = ''; }
+          }
+          if (sec.pts?.length) {
+            const exp = [];
+            sec.pts.forEach(pt => {
+              if (!pt.trim()) return;
+              const ls = pt.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
+              exp.push(...(ls.length>1 ? ls : [pt.trim()]));
+            });
+            if (exp.length) sec.pts = exp;
+          }
+        });
+        STATE.areas[aId].hallazgos = rawHz;
         STATE.areas[aId].photos = (snap.areas[aId].photos || []).map(p => ({
           ...p, storageB64:null, displayUrl:null, _lazyPending:true
         }));
