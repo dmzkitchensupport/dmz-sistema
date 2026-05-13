@@ -3501,13 +3501,13 @@ async function sbSaveAuditoria() {
     if (!b64) return res(null);
     const img = new Image();
     img.onload = () => {
-      const MAX = 200;
+      const MAX = 800;
       const ratio = Math.min(MAX/img.width, MAX/img.height, 1);
       const c = document.createElement('canvas');
       c.width  = Math.round(img.width  * ratio);
       c.height = Math.round(img.height * ratio);
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      res(c.toDataURL('image/jpeg', 0.55));
+      res(c.toDataURL('image/jpeg', 0.75));
     };
     img.onerror = () => res(null);
     img.src = b64;
@@ -4290,9 +4290,16 @@ async function autoRestoreFromSupabase() {
       for (const aId in snap.areas) {
         if (!STATE.areas[aId]) STATE.areas[aId] = { photos: [], hallazgos: _hzDefault() };
         STATE.areas[aId].hallazgos = snap.areas[aId].hallazgos || _hzDefault();
-        STATE.areas[aId].photos = (snap.areas[aId].photos || []).map(p => ({
-          ...p, storageB64: null, displayUrl: null, _lazyPending: true
-        }));
+        const thumbs = snap.photoThumbs || {};
+        STATE.areas[aId].photos = (snap.areas[aId].photos || []).map(p => {
+          const thumb = thumbs[p.id] || null;
+          return {
+            ...p,
+            storageB64: thumb ? thumb.replace(/^data:image\/[^;]+;base64,/, '') : null,
+            displayUrl: thumb || null,
+            _lazyPending: !thumb
+          };
+        });
       }
     }
 
