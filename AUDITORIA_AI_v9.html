@@ -6256,11 +6256,11 @@ function buildReport() {
                 </li>`;
               }
             }
-            return `<li style="display:flex;align-items:flex-start;gap:.5rem;padding:.35rem .4rem;
+            return `<li style="display:flex;align-items:flex-start;gap:.55rem;padding:.35rem .4rem;
               border-radius:4px;list-style:none"
               onmouseover="this.style.background='#f9f7f3'" onmouseout="this.style.background=''">
-              <span style="flex-shrink:0;width:.45rem;height:.45rem;border-radius:50%;background:#C9952A;margin-top:.38rem;display:inline-block;"></span>
-              <span style="flex:1;font-size:.78rem;color:#2D3A3F;line-height:1.6;"
+              <span style="flex-shrink:0;width:.42rem;height:.42rem;border-radius:50%;background:#C9952A;margin-top:.42rem;display:inline-block;"></span>
+              <span style="flex:1;font-size:.78rem;color:#2D3A3F;line-height:1.6;text-align:justify"
                 contenteditable="true"
                 onblur="rptEditStdPt('${a.id}','${s.key}',${ptIdx},this.innerText)">${esc(p.trim())}</span>
               <button onclick="rptDelStdPt('${a.id}','${s.key}',${ptIdx})"
@@ -6293,13 +6293,13 @@ function buildReport() {
         const customModsHtml = customMods.map((m, mi) => {
           const lines = (m.text||'').split('\n').filter(l => l.trim());
           const linesHtml = lines.map((line, li) => `
-            <li style="display:flex;align-items:center;gap:.5rem;padding:.3rem .4rem;
-              border-radius:4px;transition:background .15s"
+            <li style="display:flex;align-items:flex-start;gap:.55rem;padding:.35rem .4rem;
+              border-radius:4px;transition:background .15s;list-style:none"
               onmouseover="this.style.background='#f5f3ef'" onmouseout="this.style.background=''">
-              <span style="flex-shrink:0;width:.45rem;height:.45rem;border-radius:50%;
-                background:#C9952A;display:inline-block"></span>
+              <span style="flex-shrink:0;width:.42rem;height:.42rem;border-radius:50%;
+                background:#C9952A;display:inline-block;margin-top:.42rem"></span>
               <span contenteditable="true" style="flex:1;font-size:.78rem;color:#2D3A3F;
-                line-height:1.5;outline:none;cursor:text;font-weight:500"
+                line-height:1.6;outline:none;cursor:text;font-weight:500;text-align:justify"
                 onblur="rptEditCustomLine('${aIdLocal}',${mi},${li},this.innerText)">${esc(line)}</span>
               <button onclick="rptDelCustomLine('${aIdLocal}',${mi},${li})"
                 style="flex-shrink:0;background:none;border:none;color:#ddd;cursor:pointer;
@@ -6330,7 +6330,7 @@ function buildReport() {
             <!-- Contenido -->
             <div style="padding:.9rem 1.2rem;background:#fff">
               <ul style="list-style:none;padding:0;margin:0;display:grid;
-                grid-template-columns:${lines.length > 4 ? '1fr 1fr' : '1fr'};gap:.3rem .8rem">
+                grid-template-columns:${lines.length > 4 ? '1fr 1fr' : '1fr'};gap:.25rem .8rem">
                 ${linesHtml}
               </ul>
             </div>
