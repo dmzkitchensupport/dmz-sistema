@@ -2051,7 +2051,7 @@ td:hover .hz-edit-hint { opacity: 1; }
       <button class="mode-btn"        id="btn-clima2"    onclick="setMode('clima2')">CLIMA</button>
       <button class="mode-btn"        id="btn-rep"       onclick="setMode('rep')">REPORTE</button>
       <button class="mode-btn"        id="btn-hist"      onclick="setMode('hist')">HISTORIAL</button>
-      <button class="mode-btn"        id="btn-racreaa"   onclick="setMode('racreaa')">RACREAA</button>
+      <button class="mode-btn"        id="btn-racreaa"   onclick="setMode('racreaa')" style="display:none">RACREAA</button>
     </div>
     <div class="presence-bar" id="presence-bar" style="display:none">
       <span style="letter-spacing:.08em">EN LÍNEA:</span>
@@ -4525,7 +4525,7 @@ function setMode(m) {
   if (m === 'clima2')  buildClima2View();
   if (m === 'hist')    buildHistorial();
   if (m === 'ali')     buildAlimentosView();
-  if (m === 'racreaa') racInit();
+  if (m === 'racreaa') { setMode('cap'); return; } // RACREAA deshabilitado temporalmente
 }
 
 function onKeyInput() {
