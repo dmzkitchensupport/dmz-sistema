@@ -3139,6 +3139,7 @@ const STATE = {
   areas: {},
   customAreaDefs: [],
   logoB64: '',
+  clienteLogoB64: '',
 };
 
 /* 
@@ -4318,6 +4319,21 @@ async function _initSupabaseBackground() {
   } catch(e) { console.warn('Supabase bg error:',e.message); }
 }
 
+function loadClienteLogo(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    STATE.clienteLogoB64 = e.target.result;
+    localStorage.setItem('dmz_cliente_logo', e.target.result);
+    markDirty();
+    // Actualizar preview en topbar
+    const preview = document.getElementById('cliente-logo-preview');
+    if (preview) { preview.src = e.target.result; }
+    showToast('Logo del cliente cargado');
+  };
+  reader.readAsDataURL(file);
+}
+
 async function init() {
   AREAS.forEach(a => STATE.areas[a.id] = { photos: [], hallazgos: _hzDefault() });
   // Ocultar modal si ya hay sesión guardada
@@ -4336,6 +4352,8 @@ async function init() {
   // Aplica logo guardado
   const _savedLogo = localStorage.getItem('dmz_logo');
   if (_savedLogo) { STATE.logoB64 = _savedLogo; applyLogo(_savedLogo); }
+  const _savedClienteLogo = localStorage.getItem('dmz_cliente_logo');
+  if (_savedClienteLogo) STATE.clienteLogoB64 = _savedClienteLogo;
 
   // API Key: cargar desde sessionStorage si existe, sino del default
   // sessionStorage no persiste entre pestañas ni al cerrar — más seguro
@@ -8363,6 +8381,7 @@ async function exportClima2PDF() {
         </div>
       </div>
       <div class="cover-right">
+        ${STATE.clienteLogoB64 ? `<img src="${STATE.clienteLogoB64}" style="max-height:80px;max-width:200px;object-fit:contain;margin-bottom:1rem;display:block;filter:brightness(1.1)">` : ''}
         <div class="cover-badge">
           <div class="cover-badge-n">${col.length}</div>
           <div class="cover-badge-l">COLABORADORES</div>
