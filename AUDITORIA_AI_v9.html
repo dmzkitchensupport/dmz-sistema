@@ -6024,6 +6024,14 @@ function rptDelCustomMod(aId, mi) {
   buildReport();
 }
 // Edición inline de secciones estándar en el reporte
+function rptToggleCols(aId, key) {
+  const hz = STATE.areas[aId]?.hallazgos;
+  if (!hz) return;
+  hz['_cols_' + key] = hz['_cols_' + key] === 2 ? 1 : 2;
+  markDirty();
+  buildReport();
+}
+
 function rptEditStdPt(aId, key, li, newText) {
   const hz = STATE.areas[aId]?.hallazgos;
   if (!hz?.[key]) return;
@@ -6218,13 +6226,16 @@ function buildReport() {
           const obs = sec.obs
             ? `<p style="font-size:.74rem;color:#8A9096;font-style:italic;margin:.4rem 0 0;line-height:1.5">${esc(sec.obs)}</p>`
             : '';
+          const colKey = a.id + '_' + s.key + '_cols';
+          const cols2 = hz['_cols_' + s.key] === 2;
           return `<div style="margin-bottom:1rem">
             <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;
               padding-bottom:.3rem;border-bottom:1px solid #E5E2DC">
               <span style="font-size:.72rem;font-weight:800;letter-spacing:.12em;color:#5F5E5A">${s.label.toUpperCase()}</span>
               ${badge}
+              <button onclick="rptToggleCols('${a.id}','${s.key}')" style="margin-left:auto;background:none;border:1px solid #E5E2DC;border-radius:4px;cursor:pointer;padding:.15rem .5rem;font-size:.55rem;font-weight:700;color:#5F5E5A;letter-spacing:.08em" title="Cambiar columnas">${cols2 ? '2 COL' : '1 COL'}</button>
             </div>
-            ${ptsHtml ? `<ul style="margin:.3rem 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.2rem">${ptsHtml}</ul>` : ''}
+            ${ptsHtml ? `<ul id="ul-${a.id}-${s.key}" style="margin:.3rem 0 0;padding:0;list-style:none;${cols2 ? 'display:grid;grid-template-columns:1fr 1fr;gap:.4rem .8rem' : 'display:flex;flex-direction:column;gap:.2rem'}">${ptsHtml}</ul>` : ''}
             ${obs}
           </div>`;
         }).filter(Boolean).join('');
