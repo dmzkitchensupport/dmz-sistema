@@ -3529,7 +3529,9 @@ async function sbSaveAuditoria() {
   const buildPhotoThumb = (b64) => new Promise(res => {
     if (!b64) return res(null);
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.onload = () => {
+      try {
       const MAX = 800;
       const ratio = Math.min(MAX/img.width, MAX/img.height, 1);
       const c = document.createElement('canvas');
@@ -3537,9 +3539,9 @@ async function sbSaveAuditoria() {
       c.height = Math.round(img.height * ratio);
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
       res(c.toDataURL('image/jpeg', 0.75));
+      } catch(e) { res(null); } // canvas tainted por CORS — ignorar
     };
     img.onerror = () => res(null);
-    img.crossOrigin = 'anonymous';
     img.src = b64;
   });
 
