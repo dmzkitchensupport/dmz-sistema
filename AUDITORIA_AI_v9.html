@@ -764,8 +764,8 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
 .rpt-ss:last-child { border-right: none; }
 .rpt-photos {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 1rem; padding: 1rem; background: var(--off);
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: .8rem; padding: 1rem; background: var(--off);
 }
 .rpt-photo {
   position: relative; background: #111;
@@ -775,23 +775,25 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
   break-inside: avoid; page-break-inside: avoid;
 }
 .rpt-photo img {
-  width: 100%; aspect-ratio: 4/3;
+  width: 100%; aspect-ratio: 3/2;
   object-fit: cover; object-position: center;
   display: block; flex-shrink: 0;
 }
 .rpt-caption {
-  background: #1a1f2b;
-  padding: .65rem .85rem .7rem;
-  border-top: 2px solid rgba(255,255,255,0.06);
+  background: transparent;
+  padding: .3rem .5rem .35rem;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
 }
 .rpt-badge {
-  display: inline-block; padding: .18rem .55rem; border-radius: 3px;
-  font-size: .6rem; font-weight: 700; letter-spacing: .1em; color: #fff;
-  margin-bottom: .4rem;
+  display: inline-block; padding: .15rem .45rem; border-radius: 3px;
+  font-size: .55rem; font-weight: 700; letter-spacing: .1em; color: #fff;
+  margin-bottom: 0; box-shadow: 0 1px 4px rgba(0,0,0,.4);
 }
 .rpt-note {
-  font-size: .68rem; color: rgba(255,255,255,.88);
-  line-height: 1.6; text-align: left;
+  font-size: .62rem; color: rgba(255,255,255,.9);
+  line-height: 1.45; text-align: left;
+  text-shadow: 0 1px 3px rgba(0,0,0,.8);
 }
 .rpt-note::before { content: "· "; }
 .rpt-hall { background: #fff; }
