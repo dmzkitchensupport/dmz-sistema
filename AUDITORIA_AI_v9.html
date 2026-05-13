@@ -2706,6 +2706,7 @@ function resizeForStorage(displayUrl, maxPx) {
       resolve(canvas.toDataURL('image/jpeg', 0.93).split(',')[1]);
     };
     img.onerror = () => resolve(null);
+    img.crossOrigin = 'anonymous';
     img.src = displayUrl;
   });
 }
@@ -3544,6 +3545,7 @@ async function sbSaveAuditoria() {
       res(c.toDataURL('image/jpeg', 0.75));
     };
     img.onerror = () => res(null);
+    img.crossOrigin = 'anonymous';
     img.src = b64;
   });
 
@@ -5026,6 +5028,7 @@ function resizeForApi(displayUrl, maxPx) {
       resolve(canvas.toDataURL('image/jpeg', CFG.apiImgQuality).split(',')[1]);
     };
     img.onerror = () => resolve(null);
+    img.crossOrigin = 'anonymous';
     img.src = displayUrl;
   });
 }
