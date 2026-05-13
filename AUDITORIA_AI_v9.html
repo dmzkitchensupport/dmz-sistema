@@ -5352,6 +5352,23 @@ function buildHzPanelHtml(aId, hz) {
 }
 
 /* ── Módulos personalizados por área ─────────────────────────── */
+async function hzGuardarArea(aId) {
+  const btn = document.getElementById('hz-save-btn-' + aId);
+  if (btn) { btn.textContent = 'Guardando...'; btn.disabled = true; }
+  try {
+    window._saveCount = 0;
+    await saveSession(false);
+    await sbSaveAuditoria();
+    if (btn) { btn.textContent = '✓ Guardado'; btn.style.background = '#2E7D32'; }
+    setTimeout(() => {
+      if (btn) { btn.textContent = 'Guardar hallazgos'; btn.style.background = '#2D3A3F'; btn.disabled = false; }
+    }, 2000);
+  } catch(e) {
+    if (btn) { btn.textContent = 'Error — reintentar'; btn.style.background = '#C0392B'; btn.disabled = false; }
+    console.warn('hzGuardarArea:', e.message);
+  }
+}
+
 function hzCustomModAdd(aId) {
   const hz = _hzGetArea(aId);
   if (!hz) return;
