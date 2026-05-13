@@ -5187,7 +5187,7 @@ function buildCard(p) {
   if (p.state === 'confirmed' && p.alert) {
     confirmedBadge = `<div style="display:flex;align-items:center;gap:.5rem;padding:.45rem .5rem;
       background:${AC[p.alert]}12;border:1px solid ${AC[p.alert]}40;border-radius:4px">
-      <span style="font-size:.62rem;font-weight:700;color:${AC[p.alert]}">${AI_[p.alert]} ${AL[p.alert]}</span>
+      <span style="font-size:.62rem;font-weight:700;color:${AC[p.alert]}">${AL[p.alert]}</span>
       <span style="margin-left:auto;font-size:.58rem;color:var(--green)">confirmado</span>
       <button onclick="unconfirm('${p.id}')" style="border:none;background:none;color:var(--mid);cursor:pointer;font-size:.62rem"></button>
     </div>`;
@@ -6063,7 +6063,7 @@ function buildReport() {
     const photosHtml = photos.map(p => {
       const col  = AC[p.alert] || '#888';
       const lbl  = AL[p.alert] || 'SIN CLASIFICAR';
-      const icon = AI_[p.alert] || '?';
+      const icon = '';
       const mkrs = p.markers.map((m, i) =>
         `<div class="ann-dot" style="left:${m.x*100}%;top:${m.y*100}%;background:${col}">${i+1}</div>`
       ).join('');
