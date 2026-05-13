@@ -764,19 +764,20 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
 .rpt-ss:last-child { border-right: none; }
 .rpt-photos {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-  gap: .8rem; padding: 1rem; background: var(--off);
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: .9rem; padding: 1rem; background: var(--off);
 }
 .rpt-photo {
   position: relative; background: #F4F2EE;
   border-radius: 6px; overflow: hidden;
   display: flex; flex-direction: column;
   box-shadow: 0 1px 4px rgba(0,0,0,.12);
+  border: 1px solid rgba(0,0,0,.08);
   break-inside: avoid; page-break-inside: avoid;
 }
 .rpt-photo img {
-  width: 100%;
-  object-fit: cover; object-position: center;
+  width: 100%; height: 260px;
+  object-fit: cover; object-position: center top;
   display: block; flex-shrink: 0;
 }
 .rpt-caption {
@@ -6115,7 +6116,12 @@ function buildReport() {
     const dCol   = aC > 0 ? '#C0392B' : aO > 0 ? '#E07B00' : '#2E7D32';
     const dLbl   = aC > 0 ? 'ÁREA DE OPORTUNIDAD CRÍTICA' : aO > 0 ? 'ÁREA EN OBSERVACIÓN' : 'ÁREA EN NIVEL CORRECTO';
 
-    const photosHtml = photos.map(p => {
+    // Ordenar: landscape primero, portrait al final (evita que fotos verticales rompan el grid)
+    const _sortedPhotos = [...photos].sort((a, b) => {
+      // Si no hay imagen no hay forma de saber — mantener orden
+      return 0;
+    });
+    const photosHtml = _sortedPhotos.map(p => {
       if (!p.alert) return ''; // omitir fotos sin clasificar en reporte
       const col  = AC[p.alert] || '#888';
       const lbl  = AL[p.alert] || 'SIN CLASIFICAR';
@@ -6136,10 +6142,8 @@ function buildReport() {
         <div class="rpt-caption"><span class="rpt-badge" style="background:${col}">${lbl}</span>${notes.map(n => `<div class="rpt-note">${esc(n)}</div>`).join('')}</div>
       </div>`;
       return `<div class="rpt-photo" data-src="${imgSrc.slice(0,50)}">
-        <div style="position:relative;width:100%;line-height:0;overflow:hidden">
-          <img src="${imgSrc}" alt="" loading="lazy" onerror="this.style.display='none'"
-            onload="(function(img){var r=img.naturalHeight/img.naturalWidth;img.parentNode.style.paddingBottom=(r*100)+'%';img.style.position='absolute';img.style.top='0';img.style.left='0';img.style.width='100%';img.style.height='100%';img.style.objectFit='cover';})(this)"
-            style="width:100%;display:block;object-fit:cover;background:#f0ede8">
+        <div style="position:relative;width:100%;overflow:hidden">
+          <img src="${imgSrc}" alt="" loading="lazy" onerror="this.style.display='none'">
           ${mkrs}
         </div>
         <div class="rpt-caption">
@@ -6533,6 +6537,19 @@ function buildReport() {
 
   document.getElementById('report-view').innerHTML = rawReport;
 
+  // Ordenar fotos portrait al final de cada grid tras cargar
+  document.querySelectorAll('.rpt-photos').forEach(grid => {
+    grid.querySelectorAll('.rpt-photo img').forEach(img => {
+      const card = img.closest('.rpt-photo');
+      img.addEventListener('load', function() {
+        if (this.naturalHeight > this.naturalWidth * 1.1) {
+          // Es portrait — mover al final del grid
+          grid.appendChild(card);
+        }
+      }, { once: true });
+    });
+  });
+
   // Cargar imágenes faltantes desde IndexedDB en background
   document.querySelectorAll('.rpt-photo-missing').forEach(async div => {
     const pid = div.dataset.pid;
@@ -6796,8 +6813,9 @@ body{font-family:var(--f-b);background:var(--off);color:var(--dark)}
 .pn{font-family:var(--f-t);font-size:1.6rem;font-weight:800;line-height:1}
 .pl{font-size:.52rem;letter-spacing:.12em;color:var(--mid)}
 .rpt-sbar{padding:.4rem 1.2rem;background:var(--cream);border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;gap:1.2rem;font-size:.65rem;font-weight:600}
-.rpt-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.8rem;padding:1rem}
-.rpt-photo{position:relative;border-radius:var(--r);overflow:hidden;background:#eee}
+.rpt-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:.9rem;padding:1rem}
+.rpt-photo{position:relative;border-radius:var(--r);overflow:hidden;background:#eee;border:1px solid rgba(0,0,0,.08)}
+.rpt-photo img{width:100%;height:260px;object-fit:cover;object-position:center top;display:block}
 .rpt-photo img{width:100%;display:block;max-height:280px;object-fit:contain;background:#f8f8f8}
 .rpt-caption{padding:.5rem .65rem;background:#fff;border-top:1px solid var(--border)}
 .rpt-badge{font-size:.58rem;font-weight:700;letter-spacing:.07em;color:#fff;padding:.15rem .45rem;border-radius:2px;display:inline-block;margin-bottom:.25rem}
