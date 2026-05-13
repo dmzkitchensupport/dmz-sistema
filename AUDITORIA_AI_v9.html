@@ -2625,101 +2625,6 @@ function b64ToObjectURL(b64) {
 
 //  Guarda sesión: texto en localStorage, fotos en IndexedDB
 
-/* ── SUGERENCIAS MODULE ──────────────────────────────────────────── */
-if (!STATE.sugerencias) STATE.sugerencias = [];
-let _sgNextId = 1;
-
-const SG_ALERTS = [
-  { key:'critico',     label:'CRÍTICO'     },
-  { key:'observacion', label:'OBSERVACIÓN' },
-  { key:'correcto',    label:'CORRECTO'    },
-];
-
-function _sgAreaOptions() {
-  const opts = [];
-  Object.keys(STATE.areas).forEach(id => {
-    const def = AREAS.find(a => a.id === id);
-    opts.push({ id, name: def ? def.name : id.toUpperCase() });
-  });
-  AREAS.forEach(a => { if (!opts.find(o => o.id === a.id)) opts.push({ id:a.id, name:a.name }); });
-  return opts;
-}
-
-function _sgChipsFor(areaId) {
-  const def = AREAS.find(a => a.id === areaId);
-  return def ? def.chips : [];
-}
-
-function sgRender() {
-  const grid = document.getElementById('sg-grid');
-  if (!grid) return;
-  if (!STATE.sugerencias.length) {
-    grid.innerHTML = '<div style="padding:2.5rem;text-align:center;color:var(--mid);font-size:.78rem;">Presiona <strong>+ Agregar área</strong> para añadir una sugerencia de mejora.</div>';
-    return;
-  }
-  const areaOpts = _sgAreaOptions();
-  grid.innerHTML = STATE.sugerencias.map((sg, i) => {
-    const chips = _sgChipsFor(sg.areaId);
-    const alertBtns = SG_ALERTS.map(a =>
-      `<button class="sg-alert-btn ${a.key}${sg.alert===a.key?' active':''}" onclick="sgSetAlert(${i},'${a.key}')">${a.label}</button>`
-    ).join('');
-    const areaSelect = `<select class="sg-area-sel" onchange="sgSetArea(${i},this.value)">${
-      areaOpts.map(o => `<option value="${o.id}"${sg.areaId===o.id?' selected':''}>${o.name}</option>`).join('')
-    }</select>`;
-    const chipsHtml = chips.length ? `<div class="sg-chips">${
-      chips.map(c => `<span class="sg-chip${(sg.chips||[]).includes(c)?' selected':''}" onclick="sgToggleChip(${i},${JSON.stringify(c)})">${c}</span>`).join('')
-    }</div>` : '';
-    return `<div class="sg-card sg-${sg.alert||''}">
-      <div class="sg-card-header">
-        ${areaSelect}
-        <div style="display:flex;align-items:center;gap:.5rem;">
-          <div class="sg-alert-btns">${alertBtns}</div>
-          <button class="sg-del-btn" onclick="sgDelete(${i})" title="Eliminar">✕</button>
-        </div>
-      </div>
-      ${chipsHtml}
-      <div class="sg-body">
-        <div>
-          <div class="sg-field-lbl">Observación / Hallazgo</div>
-          <textarea class="sg-textarea" rows="2" placeholder="Describe el hallazgo…" oninput="sgSet(${i},'observacion',this.value)">${sg.observacion||''}</textarea>
-        </div>
-        <div class="sg-row">
-          <div>
-            <div class="sg-field-lbl">Propuesta de mejora</div>
-            <textarea class="sg-textarea" rows="2" placeholder="¿Qué acción se recomienda?" oninput="sgSet(${i},'propuesta',this.value)">${sg.propuesta||''}</textarea>
-          </div>
-          <div>
-            <div class="sg-field-lbl">Responsable</div>
-            <textarea class="sg-textarea" rows="2" placeholder="Gerencia / Chef / Capitán…" oninput="sgSet(${i},'responsable',this.value)">${sg.responsable||''}</textarea>
-          </div>
-        </div>
-        <div>
-          <div class="sg-field-lbl">Tiempo de implementación</div>
-          <div class="sg-alert-btns">
-            ${['INMEDIATO','CORTO PLAZO','MEDIO PLAZO'].map(t =>
-              `<button class="sg-alert-btn${sg.tiempo===t?' active critico':''}"
-                style="${sg.tiempo===t?'background:var(--dark);color:#fff;border-color:var(--dark)':'border-color:var(--border);color:var(--mid)'};font-size:.58rem;"
-                onclick="sgSet(${i},'tiempo','${t}')">${t}</button>`
-            ).join('')}
-          </div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function sgAddCard() {
-  const areaOpts = _sgAreaOptions();
-  STATE.sugerencias.push({ id:_sgNextId++, areaId:areaOpts[0]?.id||'cocina', alert:'observacion', chips:[], observacion:'', propuesta:'', responsable:'', tiempo:'' });
-  sgRender();
-  autoSave();
-  setTimeout(() => { const c = document.querySelectorAll('.sg-card'); if(c.length) c[c.length-1].scrollIntoView({behavior:'smooth',block:'nearest'}); }, 80);
-}
-function sgDelete(i)          { STATE.sugerencias.splice(i,1); sgRender(); autoSave(); }
-function sgSetAlert(i,alert)  { STATE.sugerencias[i].alert=alert; sgRender(); autoSave(); }
-function sgSetArea(i,areaId)  { STATE.sugerencias[i].areaId=areaId; STATE.sugerencias[i].chips=[]; sgRender(); autoSave(); }
-function sgToggleChip(i,chip) { const c=STATE.sugerencias[i].chips||[]; const x=c.indexOf(chip); if(x>=0)c.splice(x,1); else c.push(chip); STATE.sugerencias[i].chips=c; sgRender(); autoSave(); }
-function sgSet(i,field,val)   { STATE.sugerencias[i][field]=val; autoSave(); }
 
 async function saveSession(silent) {
   const dot = document.getElementById('save-dot');
@@ -4549,6 +4454,103 @@ function onKeyInput() {
   }
   updateAnalyzeBtn();
 }
+
+/* ── SUGERENCIAS MODULE ──────────────────────────────────────────── */
+if (!STATE.sugerencias) STATE.sugerencias = [];
+let _sgNextId = 1;
+
+const SG_ALERTS = [
+  { key:'critico',     label:'CRÍTICO'     },
+  { key:'observacion', label:'OBSERVACIÓN' },
+  { key:'correcto',    label:'CORRECTO'    },
+];
+
+function _sgAreaOptions() {
+  const opts = [];
+  Object.keys(STATE.areas).forEach(id => {
+    const def = AREAS.find(a => a.id === id);
+    opts.push({ id, name: def ? def.name : id.toUpperCase() });
+  });
+  AREAS.forEach(a => { if (!opts.find(o => o.id === a.id)) opts.push({ id:a.id, name:a.name }); });
+  return opts;
+}
+
+function _sgChipsFor(areaId) {
+  const def = AREAS.find(a => a.id === areaId);
+  return def ? def.chips : [];
+}
+
+function sgRender() {
+  const grid = document.getElementById('sg-grid');
+  if (!grid) return;
+  if (!STATE.sugerencias.length) {
+    grid.innerHTML = '<div style="padding:2.5rem;text-align:center;color:var(--mid);font-size:.78rem;">Presiona <strong>+ Agregar área</strong> para añadir una sugerencia de mejora.</div>';
+    return;
+  }
+  const areaOpts = _sgAreaOptions();
+  grid.innerHTML = STATE.sugerencias.map((sg, i) => {
+    const chips = _sgChipsFor(sg.areaId);
+    const alertBtns = SG_ALERTS.map(a =>
+      `<button class="sg-alert-btn ${a.key}${sg.alert===a.key?' active':''}" onclick="sgSetAlert(${i},'${a.key}')">${a.label}</button>`
+    ).join('');
+    const areaSelect = `<select class="sg-area-sel" onchange="sgSetArea(${i},this.value)">${
+      areaOpts.map(o => `<option value="${o.id}"${sg.areaId===o.id?' selected':''}>${o.name}</option>`).join('')
+    }</select>`;
+    const chipsHtml = chips.length ? `<div class="sg-chips">${
+      chips.map(c => `<span class="sg-chip${(sg.chips||[]).includes(c)?' selected':''}" onclick="sgToggleChip(${i},${JSON.stringify(c)})">${c}</span>`).join('')
+    }</div>` : '';
+    return `<div class="sg-card sg-${sg.alert||''}">
+      <div class="sg-card-header">
+        ${areaSelect}
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <div class="sg-alert-btns">${alertBtns}</div>
+          <button class="sg-del-btn" onclick="sgDelete(${i})" title="Eliminar">✕</button>
+        </div>
+      </div>
+      ${chipsHtml}
+      <div class="sg-body">
+        <div>
+          <div class="sg-field-lbl">Observación / Hallazgo</div>
+          <textarea class="sg-textarea" rows="2" placeholder="Describe el hallazgo…" oninput="sgSet(${i},'observacion',this.value)">${sg.observacion||''}</textarea>
+        </div>
+        <div class="sg-row">
+          <div>
+            <div class="sg-field-lbl">Propuesta de mejora</div>
+            <textarea class="sg-textarea" rows="2" placeholder="¿Qué acción se recomienda?" oninput="sgSet(${i},'propuesta',this.value)">${sg.propuesta||''}</textarea>
+          </div>
+          <div>
+            <div class="sg-field-lbl">Responsable</div>
+            <textarea class="sg-textarea" rows="2" placeholder="Gerencia / Chef / Capitán…" oninput="sgSet(${i},'responsable',this.value)">${sg.responsable||''}</textarea>
+          </div>
+        </div>
+        <div>
+          <div class="sg-field-lbl">Tiempo de implementación</div>
+          <div class="sg-alert-btns">
+            ${['INMEDIATO','CORTO PLAZO','MEDIO PLAZO'].map(t =>
+              `<button class="sg-alert-btn${sg.tiempo===t?' active critico':''}"
+                style="${sg.tiempo===t?'background:var(--dark);color:#fff;border-color:var(--dark)':'border-color:var(--border);color:var(--mid)'};font-size:.58rem;"
+                onclick="sgSet(${i},'tiempo','${t}')">${t}</button>`
+            ).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function sgAddCard() {
+  const areaOpts = _sgAreaOptions();
+  STATE.sugerencias.push({ id:_sgNextId++, areaId:areaOpts[0]?.id||'cocina', alert:'observacion', chips:[], observacion:'', propuesta:'', responsable:'', tiempo:'' });
+  sgRender();
+  autoSave();
+  setTimeout(() => { const c = document.querySelectorAll('.sg-card'); if(c.length) c[c.length-1].scrollIntoView({behavior:'smooth',block:'nearest'}); }, 80);
+}
+function sgDelete(i)          { STATE.sugerencias.splice(i,1); sgRender(); autoSave(); }
+function sgSetAlert(i,alert)  { STATE.sugerencias[i].alert=alert; sgRender(); autoSave(); }
+function sgSetArea(i,areaId)  { STATE.sugerencias[i].areaId=areaId; STATE.sugerencias[i].chips=[]; sgRender(); autoSave(); }
+function sgToggleChip(i,chip) { const c=STATE.sugerencias[i].chips||[]; const x=c.indexOf(chip); if(x>=0)c.splice(x,1); else c.push(chip); STATE.sugerencias[i].chips=c; sgRender(); autoSave(); }
+function sgSet(i,field,val)   { STATE.sugerencias[i][field]=val; autoSave(); }
+
 
 function renderAreaNav() {
   const nav = document.getElementById('area-nav');
