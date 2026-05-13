@@ -775,9 +775,11 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
   break-inside: avoid; page-break-inside: avoid;
 }
 .rpt-photo img {
-  width: 100%; aspect-ratio: 3/2;
-  object-fit: cover; object-position: center;
+  width: 100%;
+  object-fit: contain; object-position: center;
   display: block; flex-shrink: 0;
+  background: #1a1a1a;
+  max-height: 340px;
 }
 .rpt-caption {
   background: transparent;
@@ -6136,8 +6138,11 @@ function buildReport() {
         <div class="rpt-caption"><span class="rpt-badge" style="background:${col}">${lbl}</span>${notes.map(n => `<div class="rpt-note">${esc(n)}</div>`).join('')}</div>
       </div>`;
       return `<div class="rpt-photo" data-src="${imgSrc.slice(0,50)}">
-        <img src="${imgSrc}" alt="" loading="lazy" onerror="this.style.display='none'">
-        ${mkrs}
+        <div style="position:relative;width:100%;line-height:0">
+          <img src="${imgSrc}" alt="" loading="lazy" onerror="this.style.display='none'"
+            style="width:100%;display:block;object-fit:contain;background:#1a1a1a;max-height:340px">
+          ${mkrs}
+        </div>
         <div class="rpt-caption">
           <span class="rpt-badge" style="background:${col}">${lbl}</span>
           ${notes.map(n => `<div class="rpt-note">${esc(n)}</div>`).join('')}
