@@ -10376,18 +10376,17 @@ function buildAlimentosReportSection() {
       return `<td style="text-align:center;font-weight:700;color:${v?ECT_COLORS[v]:'var(--mid)'}">${v||'—'}</td>`;
     }).join('');
     const fotoCell = item.fotoB64
-      ? `<img src="${item.fotoB64}" style="width:60px;height:44px;object-fit:cover;border-radius:3px">`
+      ? `<img src="${item.fotoB64}" style="width:90px;height:68px;object-fit:cover;border-radius:5px;display:block;">`
       : '—';
     return `<tr>
       <td style="text-align:center;color:var(--mid);font-weight:700;font-size:.65rem">${i+1}</td>
       <td style="font-weight:600;font-size:.72rem">${esc(item.nombre||'—')}</td>
-      <td style="font-size:.68rem;color:var(--mid)">${esc(item.categoria||'—')}</td>
       ${scoresCells}
       <td style="text-align:center;font-family:var(--f-t);font-weight:800;font-size:.9rem;color:${col}">
         ${prom>0?prom.toFixed(1):'—'}
       </td>
       <td style="text-align:center"><span class="tbadge" style="background:${col}">${lbl}</span></td>
-      <td style="text-align:center">${fotoCell}</td>
+      <td style="text-align:center;padding:.3rem">${fotoCell}</td>
     </tr>`;
   }).join('');
 
@@ -10408,7 +10407,7 @@ function buildAlimentosReportSection() {
     <div style="padding:1rem 1.5rem;overflow-x:auto">
       <table class="rpt-table">
         <thead><tr>
-          <th>#</th><th>PLATILLO</th><th>CATEGORÍA</th>
+          <th>#</th><th>PLATILLO</th>
           ${ECT_CRITERIOS.map(c=>`<th style="text-align:center">${c.toUpperCase().slice(0,4)}</th>`).join('')}
           <th style="text-align:center">PROM</th>
           <th style="text-align:center">NIVEL</th>
