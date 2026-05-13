@@ -5569,13 +5569,11 @@ function editAI(pid) {
 function clearAI(pid) {
   const p = findPhoto(pid);
   if (!p) return;
+  // Solo borra el análisis IA — nunca toca notas ni clasificación del usuario
   p.aiSuggestion = null;
-  p.notes = [];
-  p.alert = null;
-  p.state = 'empty';
+  if (p.state === 'ai' || p.state === 'confirmed') p.state = 'empty';
   markDirty();
   refreshCard(pid);
-  saveSession(false).then(() => sbSaveAuditoria()).catch(() => {});
 }
 
 function unconfirm(pid) {
