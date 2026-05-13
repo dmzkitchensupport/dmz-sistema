@@ -4377,7 +4377,8 @@ async function init() {
   const restored = loadSession();
 
   renderAreaNav();
-  switchArea('fachada');
+  const firstArea = AREAS.find(a => a.id === 'fachada') ? 'fachada' : (AREAS[0]?.id || 'fachada');
+  switchArea(firstArea);
   setupDrop();
 
   document.getElementById('inp-client').addEventListener('input', e => {
@@ -4586,6 +4587,7 @@ function switchArea(id) {
   }
   STATE.currentArea = id;
   const area = AREAS.find(a => a.id === id);
+  if (!area) return;
   document.getElementById('area-title').textContent = area.name;
   renderAreaNav();
   renderGrid();
