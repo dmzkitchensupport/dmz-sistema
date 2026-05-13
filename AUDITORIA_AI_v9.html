@@ -5210,7 +5210,26 @@ function _hzDefault() {
 function hzToggleSec(aId, key) {
   const hz = STATE.areas[aId]?.hallazgos;
   if (!hz || !hz[key]) return;
-  hz[key].hidden = !hz[key].hidden;
+  if (hz[key].hidden) {
+    // Restaurar
+    hz[key].hidden = false;
+  } else {
+    // Confirmar eliminación
+    const labels = {hall:'Hallazgos', crit:'Puntos críticos', op:'Áreas de oportunidad', imp:'Implementación de mejoras', prox:'Próximos pasos'};
+    if (!confirm('¿Eliminar la sección "' + (labels[key]||key) + '" de esta área?\nPuedes restaurarla después desde el botón de abajo.')) return;
+    hz[key].hidden = true;
+    hz[key].pts = [''];
+    hz[key].obs = '';
+    hz[key].cal = null;
+  }
+  markDirty();
+  renderHzPanel();
+}
+
+function hzRestoreAll(aId) {
+  const hz = STATE.areas[aId]?.hallazgos;
+  if (!hz) return;
+  ['hall','crit','op','imp','prox'].forEach(k => { if (hz[k]) hz[k].hidden = false; });
   markDirty();
   renderHzPanel();
 }
@@ -5276,11 +5295,11 @@ function buildHzPanelHtml(aId, hz) {
         <span class="hz-sec-label">${s.label}</span>
         <div style="display:flex;align-items:center;gap:.4rem">
           ${showCal ? `<div class="hz-cal-btns">${calBtns}</div>` : ''}
-          <button onclick="hzToggleSec('${aId}','${s.key}')" title="Ocultar esta sección"
-            style="background:none;border:none;cursor:pointer;color:var(--mid);font-size:.9rem;
-            padding:.1rem .3rem;border-radius:3px;line-height:1" 
-            onmouseover="this.style.color='#C0392B'" 
-            onmouseout="this.style.color='var(--mid)'">✕</button>
+          <button onclick="hzToggleSec('${aId}','${s.key}')" title="Eliminar esta sección"
+            style="background:none;border:none;cursor:pointer;color:var(--mid);font-size:.75rem;
+            font-weight:600;letter-spacing:.04em;padding:.1rem .4rem;border-radius:3px;line-height:1" 
+            onmouseover="this.style.color='#C0392B';this.style.background='#FCEBEB'" 
+            onmouseout="this.style.color='var(--mid)';this.style.background='none'">× Eliminar</button>
         </div>
       </div>
       <div class="hz-pts" id="hz-pts-${aId}-${s.key}">${ptsHtml}</div>
