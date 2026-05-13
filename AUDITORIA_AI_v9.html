@@ -4423,20 +4423,23 @@ function setMode(m) {
     const btn = document.getElementById('btn-' + id);
     if (btn) btn.classList.toggle('active', m === id);
   });
-  document.getElementById('main').style.display               = m === 'cap'     ? 'flex'  : 'none';
-  document.getElementById('dash-view').style.display          = m === 'dash'    ? 'block' : 'none';
-  document.getElementById('alimentos-view').classList.toggle('visible', m === 'ali');
-  document.getElementById('hallazgos-view').classList.toggle('visible', m === 'hz');
-  document.getElementById('clima2-view').classList.toggle('visible',    m === 'clima2');
-  document.getElementById('report-view').style.display        = m === 'rep'     ? 'block' : 'none';
-  document.getElementById('hist-view').classList.toggle('visible',      m === 'hist');
-  document.getElementById('racreaa-view').classList.toggle('visible',   m === 'racreaa');
+  const _el = id => document.getElementById(id);
+  const _show = (id, val) => { const e = _el(id); if (e) e.style.display = val; };
+  const _toggle = (id, on) => { const e = _el(id); if (e) e.classList.toggle('visible', on); };
+  _show('main',       m === 'cap'  ? 'flex'  : 'none');
+  _show('dash-view',  m === 'dash' ? 'block' : 'none');
+  _show('report-view',m === 'rep'  ? 'block' : 'none');
+  _toggle('alimentos-view', m === 'ali');
+  _toggle('hallazgos-view', m === 'hz');
+  _toggle('clima2-view',    m === 'clima2');
+  _toggle('hist-view',      m === 'hist');
+  _toggle('racreaa-view',   m === 'racreaa');
   if (m === 'dash')    buildDash();
   if (m === 'rep')     buildReport();
   if (m === 'clima2')  buildClima2View();
   if (m === 'hist')    buildHistorial();
-  if (m === 'ali')     buildAlimentosView();
-  if (m === 'racreaa') { setMode('cap'); return; } // RACREAA deshabilitado temporalmente
+  if (m === 'ali' && typeof buildAlimentosView === 'function') buildAlimentosView();
+  if (m === 'racreaa') { setMode('cap'); return; }
   if (m === 'hz')      sgRender();
 }
 
