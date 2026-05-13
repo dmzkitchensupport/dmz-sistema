@@ -5207,14 +5207,12 @@ function buildCard(p) {
       ).join('')}</div>` : '';
 
   const notesHtml = p.notes.map((n, i) => {
-    const nbg = p.alert === 'critico' ? 'red-bg' : p.alert === 'observacion' ? 'amb-bg' : p.alert === 'correcto' ? 'grn-bg' : '';
     return `<div class="note-item">
-      <div class="note-n ${nbg}">${i+1}</div>
-      <textarea class="note-ta" rows="3" placeholder="¿Qué observas aquí? Describe el problema con detalle."
+      <textarea class="note-ta" rows="3" placeholder="Agrega una observación (opcional)"
         oninput="updateNote('${p.id}',${i},this.value)"
         onkeydown="if(event.key==='Enter'&&event.shiftKey){event.preventDefault();addNote('${p.id}')}"
       >${esc(n)}</textarea>
-      ${p.notes.length > 0 ? `<button class="btn-del-note" onclick="delNote('${p.id}',${i})"></button>` : ''}
+      <button class="btn-del-note" onclick="delNote('${p.id}',${i})" title="Eliminar nota">✕</button>
     </div>`;
   }).join('');
 
