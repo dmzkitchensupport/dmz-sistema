@@ -5348,6 +5348,11 @@ function buildHzPanelHtml(aId, hz) {
     <div class="hz-nivel-bar">
       <span class="hz-nivel-lbl">Nivel general del área</span>
       <span class="hz-nivel-badge" style="background:${nivelInfo.bg};color:${nivelInfo.color}">${nivelInfo.label}</span>
+      <button onclick="hzGuardarArea('${aId}')" id="hz-save-btn-${aId}"
+        style="font-size:.6rem;font-weight:700;letter-spacing:.08em;padding:.3rem .8rem;
+        background:#2D3A3F;color:#fff;border:none;border-radius:4px;cursor:pointer;flex-shrink:0">
+        Guardar hallazgos
+      </button>
     </div>`;
 }
 
