@@ -4514,14 +4514,14 @@ function sgAddCard() {
   const areaOpts = _sgAreaOptions();
   STATE.sugerencias.push({ id:_sgNextId++, areaId:areaOpts[0]?.id||'cocina', alert:'observacion', chips:[], observacion:'', propuesta:'', responsable:'', tiempo:'' });
   sgRender();
-  autoSave();
+  markDirty();
   setTimeout(() => { const c = document.querySelectorAll('.sg-card'); if(c.length) c[c.length-1].scrollIntoView({behavior:'smooth',block:'nearest'}); }, 80);
 }
-function sgDelete(i)          { STATE.sugerencias.splice(i,1); sgRender(); autoSave(); }
-function sgSetAlert(i,alert)  { STATE.sugerencias[i].alert=alert; sgRender(); autoSave(); }
-function sgSetArea(i,areaId)  { STATE.sugerencias[i].areaId=areaId; STATE.sugerencias[i].chips=[]; sgRender(); autoSave(); }
-function sgToggleChip(i,chip) { const c=STATE.sugerencias[i].chips||[]; const x=c.indexOf(chip); if(x>=0)c.splice(x,1); else c.push(chip); STATE.sugerencias[i].chips=c; sgRender(); autoSave(); }
-function sgSet(i,field,val)   { STATE.sugerencias[i][field]=val; autoSave(); }
+function sgDelete(i)          { STATE.sugerencias.splice(i,1); sgRender(); markDirty(); }
+function sgSetAlert(i,alert)  { STATE.sugerencias[i].alert=alert; sgRender(); markDirty(); }
+function sgSetArea(i,areaId)  { STATE.sugerencias[i].areaId=areaId; STATE.sugerencias[i].chips=[]; sgRender(); markDirty(); }
+function sgToggleChip(i,chip) { const c=STATE.sugerencias[i].chips||[]; const x=c.indexOf(chip); if(x>=0)c.splice(x,1); else c.push(chip); STATE.sugerencias[i].chips=c; sgRender(); markDirty(); }
+function sgSet(i,field,val)   { STATE.sugerencias[i][field]=val; markDirty(); }
 
 
 function renderAreaNav() {
