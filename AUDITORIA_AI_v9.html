@@ -4409,8 +4409,8 @@ async function init() {
   startAutoSave();
   checkEmergencyBackup();
   // Actualizar indicador de respaldo cada 15s
-  setInterval(updateBackupStatus, 15000);
-  setTimeout(updateBackupStatus, 2000);
+  setInterval(() => { if(typeof updateBackupStatus==='function') updateBackupStatus(); }, 15000);
+  setTimeout(() => { if(typeof updateBackupStatus==='function') updateBackupStatus(); }, 2000);
   initNetworkMonitor();
   // Restauración desde Supabase ya ocurrió al inicio (ver autoRestoreFromSupabase)
 
@@ -6095,6 +6095,7 @@ function buildReport() {
     const dLbl   = aC > 0 ? 'ÁREA DE OPORTUNIDAD CRÍTICA' : aO > 0 ? 'ÁREA EN OBSERVACIÓN' : 'ÁREA EN NIVEL CORRECTO';
 
     const photosHtml = photos.map(p => {
+      if (!p.alert) return ''; // omitir fotos sin clasificar en reporte
       const col  = AC[p.alert] || '#888';
       const lbl  = AL[p.alert] || 'SIN CLASIFICAR';
       const icon = '';
