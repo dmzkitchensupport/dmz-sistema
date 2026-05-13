@@ -5577,6 +5577,7 @@ function clearAI(pid) {
   p.state = 'empty';
   markDirty();
   refreshCard(pid);
+  saveSession(false).then(() => sbSaveAuditoria()).catch(() => {});
 }
 
 function unconfirm(pid) {
