@@ -3441,7 +3441,7 @@ async function sbFetch(method, path, body, extra) {
 // ── AUTH — Login / Logout ─────────────────────────────────────────
 async function sbLogin(email, password) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 12000);
+  const timer = setTimeout(() => ctrl.abort(), 6000);
   let resp;
   try {
     resp = await fetch(SB.url + '/auth/v1/token?grant_type=password', {
@@ -4450,22 +4450,23 @@ async function init() {
   const _keyInput = document.getElementById('inp-key');
   if (_keyInput) { _keyInput.value = _activeKey; onKeyInput(); }
 
-  // 1. Primero: conectar a Supabase con token guardado
-  await sbRestoreSession();
-
-  // 2. Si Supabase conectó, refrescar token ANTES de restaurar
-  if (SB.ready) {
-    try { await sbRefreshToken(); } catch(e) { console.warn('token refresh en init:', e); }
-    await autoRestoreFromSupabase();
-  }
-
-  // 3. Restaura sesión local (fallback si Supabase no tiene datos)
+  // 1. Cargar localStorage INMEDIATAMENTE — sin esperar Supabase
   const restored = loadSession();
-
   renderAreaNav();
   const firstArea = AREAS.find(a => a.id === 'fachada') ? 'fachada' : (AREAS[0]?.id || 'fachada');
   switchArea(firstArea);
   setupDrop();
+
+  // 2. Supabase en background — si conecta, sincroniza encima
+  sbRestoreSession().then(async ok => {
+    if (!ok) return;
+    try { await sbRefreshToken(); } catch(e) {}
+    const sbOk = await Promise.race([
+      autoRestoreFromSupabase(),
+      new Promise(r => setTimeout(r, 8000, false))
+    ]);
+    if (sbOk) { renderAreaNav(); updateNavBadges(); showToast('Datos sincronizados desde nube'); }
+  }).catch(e => console.warn('Supabase init error:', e));
 
   document.getElementById('inp-client').addEventListener('input', e => {
     STATE.client = e.target.value;
