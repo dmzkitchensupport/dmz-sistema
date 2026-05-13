@@ -1598,6 +1598,8 @@ td:hover .hz-edit-hint { opacity: 1; }
 .sg-card.sg-correcto    { border-color:rgba(46,125,50,.6); }
 .sg-card-header { display:flex; align-items:center; justify-content:space-between; padding:.55rem 1rem; background:var(--cream); border-bottom:1px solid var(--border); gap:.6rem; flex-wrap:wrap; }
 .sg-area-sel { font-family:var(--f-t); font-size:.72rem; font-weight:700; letter-spacing:.1em; border:none; background:transparent; color:var(--dark); cursor:pointer; padding:0; outline:none; }
+.sg-title-inp { font-family:var(--f-t); font-size:.78rem; font-weight:700; letter-spacing:.1em; border:none; background:transparent; color:var(--dark); padding:0; outline:none; flex:1; min-width:0; }
+.sg-title-inp::placeholder { color:var(--mid); font-weight:400; }
 .sg-alert-btns { display:flex; gap:.35rem; flex-wrap:wrap; }
 .sg-alert-btn { padding:.22rem .7rem; border-radius:3px; border:1.5px solid transparent; font-size:.58rem; font-weight:700; letter-spacing:.07em; cursor:pointer; background:none; transition:all .12s; }
 .sg-alert-btn.critico     { border-color:var(--red);   color:var(--red); }
@@ -4490,19 +4492,18 @@ function sgRender() {
     grid.innerHTML = '<div style="padding:2.5rem;text-align:center;color:var(--mid);font-size:.78rem;">Presiona <strong>+ Agregar área</strong> para añadir una sugerencia.</div>';
     return;
   }
-  const areaOpts = _sgAreaOptions();
   grid.innerHTML = STATE.sugerencias.map((sg, i) => {
-    const areaSelect = `<select class="sg-area-sel" onchange="sgSetArea(${i},this.value)">${
-      areaOpts.map(o => `<option value="${o.id}"${sg.areaId===o.id?' selected':''}>${o.name}</option>`).join('')
-    }</select>`;
     return `<div class="sg-card">
       <div class="sg-card-header">
-        ${areaSelect}
+        <input class="sg-title-inp" type="text"
+          placeholder="Título…"
+          value="${(sg.titulo||'').replace(/"/g,'&quot;')}"
+          oninput="sgSet(${i},'titulo',this.value)">
         <button class="sg-del-btn" onclick="sgDelete(${i})" title="Eliminar">✕</button>
       </div>
       <div class="sg-body">
         <textarea class="sg-textarea" rows="3"
-          placeholder="Escribe aquí las observaciones de esta área…"
+          placeholder="Escribe aquí las observaciones…"
           oninput="sgSet(${i},'observacion',this.value)">${sg.observacion||''}</textarea>
       </div>
     </div>`;
