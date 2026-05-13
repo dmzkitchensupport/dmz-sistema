@@ -1132,7 +1132,8 @@ function restoreEmergencyBackup() {
     const backup = JSON.parse(raw);
     if (backup.cl2State)       Object.assign(CL2_STATE, backup.cl2State);
     if (backup.hallazgosState) Object.assign(HZ_STATE,  backup.hallazgosState);
-    if (backup.aliState?.items) { ALI_STATE.items = backup.aliState.items; ALI_STATE.resumen = backup.aliState?.resumen || ""; }
+    if (backup.aliState?.items) { ALI_STATE.items = backup.aliState.items; ALI_STATE.resumen = backup.aliState?.resumen || "";
+    ALI_STATE.items.forEach(it => { if (!it.fotoB64 && it.id) { idbGetPhoto('ali_' + it.id).then(b64 => { if (b64) it.fotoB64 = b64; }).catch(()=>{}); } }); }
     if (backup.client) {
       STATE.client = backup.client;
       const el = document.getElementById('inp-client');
@@ -2936,6 +2937,14 @@ async function loadSession() {
       ALI_STATE.items = saved.aliState.items;
       ALI_STATE._cnt  = saved.aliState._cnt || 0;
       ALI_STATE.resumen = saved.aliState.resumen || '';
+      // Restaurar fotos F&B desde IDB en background
+      ALI_STATE.items.forEach(it => {
+        if (!it.fotoB64 && it.id) {
+          idbGetPhoto('ali_' + it.id).then(b64 => {
+            if (b64) { it.fotoB64 = b64; }
+          }).catch(()=>{});
+        }
+      });
     }
 
     return loaded > 0;
@@ -3834,7 +3843,8 @@ async function sbCargarAuditoria(id) {
     if (el) el.value = STATE.client;
     if (snap.cl2State)       Object.assign(CL2_STATE, snap.cl2State);
     if (snap.hallazgosState) Object.assign(HZ_STATE,  snap.hallazgosState);
-    if (snap.aliState)       { ALI_STATE.items = snap.aliState.items || []; ALI_STATE._cnt = snap.aliState._cnt || 0; ALI_STATE.resumen = snap.aliState.resumen || ''; }
+    if (snap.aliState)       { ALI_STATE.items = snap.aliState.items || []; ALI_STATE._cnt = snap.aliState._cnt || 0; ALI_STATE.resumen = snap.aliState.resumen || '';
+      ALI_STATE.items.forEach(it => { if (!it.fotoB64 && it.id) { idbGetPhoto('ali_' + it.id).then(b64 => { if (b64) it.fotoB64 = b64; }).catch(()=>{}); } }); }
 
     SB._auditoriaId = id;
     localStorage.setItem('dmz_sb_auditoria_id', id);
@@ -10236,6 +10246,8 @@ async function aliModalFoto(id, input) {
       const reader = new FileReader();
       reader.onload = ev => {
         item.fotoB64 = ev.target.result;
+        // Persistir foto F&B en IDB
+        idbPutPhoto('ali_' + item.id, ev.target.result).catch(()=>{});
         markDirty();
         aliOpenModal(id);
         showToast('✓ Foto agregada');
