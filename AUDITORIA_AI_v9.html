@@ -3265,8 +3265,13 @@ function sanitizarTexto(texto) {
 const KW_HIGHLIGHT_RE = /\b(PEPS|5S|manipulaci[oó]n\s+de\s+alimentos|suciedad|cr[ií]tico|est[aá]ndar|pre-fermento)\b/gi;
 
 function highlightKeywords(html) {
-  // Solo aplica sobre nodos de texto — no dentro de atributos ni tags
-  return html.replace(KW_HIGHLIGHT_RE, '<strong class="kw-highlight">$1</strong>');
+  // Solo aplica sobre nodos de texto — nunca dentro de tags HTML ni atributos
+  // Divide el HTML en partes: tags (<...>) y texto entre tags
+  return html.replace(/(<[^>]+>)|([^<]+)/g, (match, tag, text) => {
+    if (tag) return tag; // preservar tags intactos
+    if (text) return text.replace(KW_HIGHLIGHT_RE, '<strong class="kw-highlight">$1</strong>');
+    return match;
+  });
 }
 
 /* 
