@@ -9792,13 +9792,50 @@ async function exportReportePDF() {
   });
   await Promise.all(photoTasks);
   buildReport();
-  // Esperar a que el DOM esté completamente renderizado con todas las imágenes
+  // Esperar renderizado completo
   await new Promise(r => setTimeout(r, 1200));
-  // Ocultar toast antes de imprimir para que no aparezca en el PDF
+
+  // Crear contenedor temporal fuera del #app para print sin restricciones de scroll
+  const reportEl  = document.getElementById('report-view');
+  const printWrap = document.createElement('div');
+  printWrap.id    = 'dmz-print-wrap';
+  printWrap.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;overflow:auto;display:none;';
+  printWrap.innerHTML = reportEl.innerHTML;
+  document.body.appendChild(printWrap);
+
+  // CSS temporal para print — solo mostrar el wrap
+  const printStyle = document.createElement('style');
+  printStyle.id = 'dmz-print-style';
+  printStyle.textContent = `
+    @media print {
+      body > *:not(#dmz-print-wrap) { display: none !important; }
+      #dmz-print-wrap {
+        display: block !important;
+        position: static !important;
+        inset: auto !important;
+        z-index: auto !important;
+        overflow: visible !important;
+        background: #fff !important;
+      }
+      .rpt-bar { display: none !important; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      @page { size: A4 portrait; margin: 10mm; }
+    }
+  `;
+  document.head.appendChild(printStyle);
+
+  // Ocultar toast
   const toastEl = document.getElementById('toast');
   if (toastEl) toastEl.style.display = 'none';
+
   window.print();
-  if (toastEl) toastEl.style.display = '';
+
+  // Limpiar
+  setTimeout(() => {
+    document.body.removeChild(printWrap);
+    document.head.removeChild(printStyle);
+    if (toastEl) toastEl.style.display = '';
+  }, 500);
 }
 
 async function exportHallazgosPDF() {
