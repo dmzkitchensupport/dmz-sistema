@@ -6178,7 +6178,22 @@ function buildReport() {
       }
     });
 
+    // Intro fija para área de SERVICIO
+    const _servicioIntro = a.name === 'SERVICIO' ? `<div style="margin:.4rem 0;border-radius:0;overflow:hidden;border-left:4px solid var(--gold)">
+      <div style="background:linear-gradient(135deg,#1a2332 0%,#2D3A4F 100%);padding:.7rem 1.2rem">
+        <span style="font-size:.72rem;font-weight:800;letter-spacing:.2em;color:#fff">CONTEXTO DE SERVICIO · DMZ KITCHEN SUPPORT</span>
+      </div>
+      <div style="background:#fdfcf8;padding:1rem 1.3rem;display:flex;flex-direction:column;gap:.6rem">
+        <p style="font-size:.76rem;color:#2D3A3F;line-height:1.75;text-align:justify">Entendemos que el servicio y la operación en Estados Unidos son diferentes a los de México; sin embargo, hemos tenido la oportunidad de visitar restaurantes donde la experiencia de servicio realmente eleva la visita, haciendo que sea memorable. En estos lugares, el personal no solo atiende, sino que guía al cliente, recomienda con intención y logra despertar el interés por los platillos, lo que enriquece significativamente la experiencia.</p>
+        <p style="font-size:.76rem;color:#2D3A3F;line-height:1.75;text-align:justify">Este tipo de servicio es algo que hemos observado en varios conceptos dentro de Estados Unidos, y consideramos importante poder transmitirlo al equipo, con el objetivo de seguir evolucionando y lograr que cada cliente se vaya satisfecho y con una experiencia completa.</p>
+        <p style="font-size:.76rem;color:#2D3A3F;line-height:1.75;text-align:justify">Al mismo tiempo, es fundamental resaltar algo muy valioso: la calidez del servicio mexicano. Somos un restaurante mexicano, no un concepto tex-mex, y eso representa una gran fortaleza que debe potenciarse. Queremos que el equipo lo entienda y lo viva, guiando al cliente a través de una narrativa clara y personalizada.</p>
+        <p style="font-size:.76rem;color:#2D3A3F;line-height:1.75;text-align:justify">La idea es desarrollar un "speech" adaptado a cada colaborador, donde se comunique de forma auténtica que somos un restaurante mexicano de vanguardia, y que nuestra esencia está en el "apapacho mexicano" que brindamos en cada interacción, haciendo que el cliente se sienta bienvenido, cuidado y acompañado en todo momento.</p>
+        <p style="font-size:.76rem;color:#2D3A3F;line-height:1.75;text-align:justify">Este tipo de experiencias no solo elevan la satisfacción del cliente, sino que también impactan directamente en el negocio, permitiendo incrementar el cheque promedio y, de manera natural, mejorar las propinas. Es importante concientizar al equipo de que este enfoque en el servicio es la vía para alcanzar metas reales de venta total y crecimiento sostenible.</p>
+      </div>
+    </div>` : '';
+
     areaSections += `<div class="rpt-area">
+      ${_servicioIntro}
       <div class="rpt-ah" style="border-left-color:${dCol}">
         <div class="rpt-ah-left">
           <div class="rpt-ah-n">${String(ai+1).padStart(2,'0')}</div>
