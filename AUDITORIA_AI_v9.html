@@ -6442,7 +6442,14 @@ function buildReport() {
           '<div class="rpt-ah" style="border-left:none;padding:.75rem 1.2rem;">' +
             '<div class="rpt-ah-name" style="font-size:.85rem;letter-spacing:.08em;">' + tit + '</div>' +
           '</div>' +
-          (obs ? '<div style="padding:.5rem 1.2rem 1rem;font-size:.78rem;color:var(--dark);line-height:1.6;white-space:pre-wrap;">' + obs + '</div>' : '') +
+          (obs ? '<div style="padding:.5rem 1.2rem 1rem;">' +
+            obs.split('\n').filter(l=>l.trim()).map(l=>
+              '<div style="display:flex;align-items:flex-start;gap:.55rem;margin-bottom:.45rem;">' +
+                '<span style="color:var(--gold);font-size:.85rem;line-height:1.5;flex-shrink:0;">•</span>' +
+                '<span style="font-size:.78rem;color:var(--dark);line-height:1.6;">' + l.trim() + '</span>' +
+              '</div>'
+            ).join('') +
+          '</div>' : '') +
         '</div>';
       }).join('');
     if (sgCards) {
