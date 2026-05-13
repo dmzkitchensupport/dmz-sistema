@@ -6104,7 +6104,9 @@ function buildReport() {
         `<div class="ann-dot" style="left:${m.x*100}%;top:${m.y*100}%;background:${col}">${i+1}</div>`
       ).join('');
       const notes = p.notes.filter(n => n.trim());
-      const imgSrc = p.storageB64 ? 'data:image/jpeg;base64,' + p.storageB64 : (p.displayUrl || '');
+      // Limpiar prefijo si storageB64 ya lo tiene incluido
+      const _rawB64 = p.storageB64 ? p.storageB64.replace(/^data:image\/[^;]+;base64,/, '') : null;
+      const imgSrc = _rawB64 ? 'data:image/jpeg;base64,' + _rawB64 : (p.displayUrl || '');
       // Omitir fotos sin imagen — no mostrar negro en reporte
       if (!imgSrc || imgSrc.length < 20) return `<div class="rpt-photo rpt-photo-missing" data-pid="${p.id}">
         <div style="width:100%;height:180px;background:#f7f5f1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:4px;gap:.5rem;">
@@ -6513,14 +6515,21 @@ function buildReport() {
     if (!pid) return;
     try {
       const b64 = await idbGetPhoto(pid);
-      if (!b64 || b64.length < 100) return; // no inyectar si vacío
+      if (!b64 || b64.length < 100) return;
       const p = findPhoto(pid);
       if (p) { p.storageB64 = b64; p.displayUrl = b64ToObjectURL(b64); }
       const caption = div.querySelector('.rpt-caption');
-      const captionHtml = caption ? caption.outerHTML : '';
+      // Usar createElement para evitar bug de innerHTML con b64 largo
+      const img = document.createElement('img');
+      img.src = 'data:image/jpeg;base64,' + b64;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.style.cssText = 'width:100%;border-radius:4px 4px 0 0;display:block;';
       div.classList.remove('rpt-photo-missing');
-      div.innerHTML = `<img src="data:image/jpeg;base64,${b64}" alt="" loading="lazy" style="width:100%;border-radius:4px 4px 0 0;">` + captionHtml;
-    } catch(e) { /* IDB error — mantener placeholder */ }
+      div.innerHTML = '';
+      div.appendChild(img);
+      if (caption) div.appendChild(caption.cloneNode(true));
+    } catch(e) { /* IDB vacío — mantener placeholder */ }
   });
 }
 
