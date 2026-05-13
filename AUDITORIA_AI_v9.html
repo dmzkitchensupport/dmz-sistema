@@ -6203,15 +6203,16 @@ function buildReport() {
                 </li>`;
               }
             }
-            return `<li style="display:flex;align-items:flex-start;gap:.3rem;margin-bottom:.5rem;
-              padding:.2rem .3rem;border-radius:3px;list-style:none"
+            return `<li style="display:flex;align-items:flex-start;gap:.5rem;padding:.35rem .4rem;
+              border-radius:4px;list-style:none"
               onmouseover="this.style.background='#f9f7f3'" onmouseout="this.style.background=''">
-              <span style="flex:1;font-size:.78rem;color:#2D3A3F;line-height:1.6;text-align:justify"
-                contenteditable="true" outline:none"
+              <span style="flex-shrink:0;width:.45rem;height:.45rem;border-radius:50%;background:#C9952A;margin-top:.38rem;display:inline-block;"></span>
+              <span style="flex:1;font-size:.78rem;color:#2D3A3F;line-height:1.6;"
+                contenteditable="true"
                 onblur="rptEditStdPt('${a.id}','${s.key}',${ptIdx},this.innerText)">${esc(p.trim())}</span>
               <button onclick="rptDelStdPt('${a.id}','${s.key}',${ptIdx})"
-                style="flex-shrink:0;background:none;border:none;color:#ddd;cursor:pointer;font-size:.85rem;padding:0"
-                onmouseover="this.style.color='#C0392B'" onmouseout="this.style.color='#ddd'">×</button>
+                style="flex-shrink:0;background:none;border:none;color:#ddd;cursor:pointer;font-size:.85rem;padding:0;opacity:0"
+                onmouseover="this.style.opacity='1';this.style.color='#C0392B'" onmouseout="this.style.opacity='0'">×</button>
             </li>`;
           }).join('');
           const obs = sec.obs
@@ -6223,7 +6224,7 @@ function buildReport() {
               <span style="font-size:.72rem;font-weight:800;letter-spacing:.12em;color:#5F5E5A">${s.label.toUpperCase()}</span>
               ${badge}
             </div>
-            ${ptsHtml ? `<ul style="margin:.2rem 0 0 ${s.key==='prox'?'0':'1rem'};padding:0;list-style:${s.key==='prox'?'none':'disc'}">${ptsHtml}</ul>` : ''}
+            ${ptsHtml ? `<ul style="margin:.3rem 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:.4rem .8rem">${ptsHtml}</ul>` : ''}
             ${obs}
           </div>`;
         }).filter(Boolean).join('');
