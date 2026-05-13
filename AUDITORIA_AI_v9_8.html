@@ -1308,13 +1308,51 @@ td:hover .hz-edit-hint { opacity: 1; }
   font-weight: 600; letter-spacing: .07em;
 }
 
-/* ── PDF print styles v8 ───────────────────────────────────────── */
+/* ── PDF / Print styles ─────────────────────────────────────────── */
 @media print {
-  #topbar, #sidebar, .rpt-bar { display: none !important; }
+  /* Ocultar TODO excepto el reporte */
+  #topbar,
+  #sidebar,
+  .rpt-bar,
+  #toast,
+  #session-modal,
+  #delivery-modal,
+  #hallazgos-tab,
+  #clima-tab,
+  #fb-tab,
+  #historial-tab,
+  #captura-tab,
+  #dashboard-tab,
+  .btn-save,
+  .btn-save-sm,
+  .tab-bar,
+  .tabs-nav,
+  [id$="-view"]:not(#report-view) { display: none !important; }
+
+  /* Asegurar que el reporte sea visible */
   #report-view { display: block !important; }
-  .rpt-area { page-break-inside: avoid; }
+  body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+
+  /* Página y márgenes */
+  @page { margin: 12mm 10mm; size: A4 portrait; }
+
+  /* Tipografía y colores */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
   body { font-family: var(--f-b); }
-  .rpt-note, .rpt-hall td, .rpt-table td, p { text-align: justify; }
+
+  /* Evitar cortes dentro de áreas */
+  .rpt-area { page-break-inside: avoid; break-inside: avoid; }
+  .rpt-photo { page-break-inside: avoid; break-inside: avoid; }
+  .rpt-hall  { page-break-inside: avoid; break-inside: avoid; }
+
+  /* Saltos controlados */
+  .rpt-area { page-break-after: auto; }
+
+  /* Grid de fotos */
+  .rpt-photos { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; }
+
+  /* Textos */
+  .rpt-note, .rpt-hall td, .rpt-table td { text-align: left; }
 }
 
 /* Powered by DMZ watermark strip */
@@ -4811,15 +4849,10 @@ function buildHallazgosReportSection() {
 
 /* ── Exportación PDF con html2pdf.js ─────────────────────────── */
 async function exportReportePDF() {
-  if (window._pdfUnavailable || typeof html2pdf === 'undefined') {
-    showToast('⚠ Librería PDF no disponible — usa Ctrl+P para imprimir');
-    window.print();
-    return;
-  }
+  const el = document.getElementById('report-view');
+  if (!el) { showToast('⚠ Ve al tab REPORTE primero'); return; }
 
-  showToast('⏳ Cargando fotos para PDF…');
-
-  // Asegura que TODAS las fotos tienen storageB64 antes de generar el PDF
+  showToast('⏳ Preparando reporte…');
   const photoTasks = [];
   for (const aId in STATE.areas) {
     for (const p of STATE.areas[aId].photos) {
@@ -4839,38 +4872,13 @@ async function exportReportePDF() {
   }
   await Promise.all(photoTasks);
 
-  // Regenera el reporte con las fotos ya en memoria
   buildReport();
-  await new Promise(r => setTimeout(r, 400));
+  await new Promise(r => setTimeout(r, 500));
 
-  const el = document.getElementById('report-view');
-  if (!el) { showToast('⚠ Ve al tab REPORTE primero'); return; }
+  showToast('⏳ Abriendo diálogo de impresión…');
+  await new Promise(r => setTimeout(r, 200));
 
-  const bar = el.querySelector('.rpt-bar');
-  if (bar) bar.style.display = 'none';
-
-  showToast('⏳ Generando PDF…');
-  const client  = (STATE.client || 'auditoria').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
-  const dateStr = new Date().toISOString().slice(0,10);
-  const filename = `DMZ-Reporte-${client}-${dateStr}.pdf`;
-
-  try {
-    await html2pdf().set({
-      margin:       [10, 10, 12, 10],
-      filename:     filename,
-      image:        { type: 'jpeg', quality: 0.92 },
-      html2canvas:  { scale: 2, useCORS: true, allowTaint: true, logging: false,
-                      imageTimeout: 30000, removeContainer: true },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
-    }).from(el).save();
-    showToast('✓ PDF generado: ' + filename);
-  } catch(err) {
-    showToast('⚠ Error al generar PDF: ' + err.message);
-    console.error(err);
-  } finally {
-    if (bar) bar.style.display = '';
-  }
+  window.print();
 }
 
 async function exportHallazgosPDF() {
