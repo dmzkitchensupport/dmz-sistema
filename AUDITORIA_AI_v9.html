@@ -9766,76 +9766,40 @@ function buildHallazgosReportSection() {
 async function exportReportePDF() {
   const el = document.getElementById('report-view');
   if (!el) { showToast('⚠ Ve al tab REPORTE primero'); return; }
-  showToast('⏳ Preparando reporte…');
+
+  showToast('⏳ Preparando fotos…');
+
   const photoTasks = [];
   for (const aId in STATE.areas) {
     for (const p of (STATE.areas[aId]?.photos || [])) {
       if (!p.storageB64 && p.id) {
-        photoTasks.push(
-          idbGetPhoto(p.id).then(b64 => {
-            if (b64) { p.storageB64 = b64; }
-            else if (p.displayUrl) {
-              return resizeForStorage(p.displayUrl, 900).then(b => {
-                if (b) { p.storageB64 = b; idbPutPhoto(p.id, b); }
-              });
-            }
-          })
-        );
+        photoTasks.push(idbGetPhoto(p.id).then(b64 => { if (b64) p.storageB64 = b64; }).catch(()=>{}));
       }
     }
   }
-  // Cargar fotos F&B desde IDB
   ALI_STATE.items.filter(it => !it.fotoB64 && it.id).forEach(it => {
-    photoTasks.push(idbGetPhoto('ali_' + it.id).then(b64 => {
-      if (b64) it.fotoB64 = b64;
-    }).catch(()=>{}));
+    photoTasks.push(idbGetPhoto('ali_' + it.id).then(b64 => { if (b64) it.fotoB64 = b64; }).catch(()=>{}));
   });
   await Promise.all(photoTasks);
+
+  showToast('⏳ Generando reporte…');
   buildReport();
-  // Esperar renderizado completo
-  await new Promise(r => setTimeout(r, 1200));
+  await new Promise(r => setTimeout(r, 800));
 
-  // Crear contenedor temporal fuera del #app para print sin restricciones de scroll
-  const reportEl  = document.getElementById('report-view');
-  const printWrap = document.createElement('div');
-  printWrap.id    = 'dmz-print-wrap';
-  printWrap.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;overflow:auto;display:none;';
-  printWrap.innerHTML = reportEl.innerHTML;
-  document.body.appendChild(printWrap);
+  const reportInner = document.getElementById('report-view').innerHTML;
+  const allStyles = Array.from(document.styleSheets).map(ss => {
+    try { return Array.from(ss.cssRules).map(r => r.cssText).join('\n'); } catch(e) { return ''; }
+  }).join('\n');
 
-  // CSS temporal para print — solo mostrar el wrap
-  const printStyle = document.createElement('style');
-  printStyle.id = 'dmz-print-style';
-  printStyle.textContent = `
-    @media print {
-      body > *:not(#dmz-print-wrap) { display: none !important; }
-      #dmz-print-wrap {
-        display: block !important;
-        position: static !important;
-        inset: auto !important;
-        z-index: auto !important;
-        overflow: visible !important;
-        background: #fff !important;
-      }
-      .rpt-bar { display: none !important; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      @page { size: A4 portrait; margin: 10mm; }
-    }
-  `;
-  document.head.appendChild(printStyle);
+  const clientName = (STATE.client||'').replace(/</g,'&lt;');
+  const printHtml = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>Reporte DMZ</title>\n<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;600;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">\n<style>\n' + allStyles + '\nhtml,body{margin:0!important;padding:0!important;background:#F5F2EC!important;height:auto!important;overflow:auto!important;}\nbody>div{height:auto!important;overflow:visible!important;}\n.rpt-bar{display:none!important;}\n@media print{html,body{background:#fff!important;}.rpt-bar{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}@page{size:A4 portrait;margin:10mm;}.rpt-photo{break-inside:avoid;}.rpt-area{break-inside:auto;}}\n</style>\n</head>\n<body>\n' + reportInner + '\n<script>window.onload=function(){var b=document.querySelector(".rpt-bar");if(b)b.style.display="none";setTimeout(function(){window.print();},1000);};<\/script>\n</body>\n</html>';
 
-  // Ocultar toast
-  const toastEl = document.getElementById('toast');
-  if (toastEl) toastEl.style.display = 'none';
-
-  window.print();
-
-  // Limpiar
-  setTimeout(() => {
-    document.body.removeChild(printWrap);
-    document.head.removeChild(printStyle);
-    if (toastEl) toastEl.style.display = '';
-  }, 500);
+  showToast('⏳ Abriendo ventana para PDF…');
+  const blob = new Blob([printHtml], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const win  = window.open(url, '_blank');
+  if (!win) showToast('⚠ Permite ventanas emergentes y vuelve a intentar');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 async function exportHallazgosPDF() {
