@@ -6757,19 +6757,7 @@ function regenCode() {
 async function startDelivery() {
   const maxUses = Math.max(1, parseInt(document.getElementById('dm-uses-input').value) || 5);
   const code    = _deliveryCode;
-
-  // Collect all classified photos
-  const allPhotos = [];
-  AREAS.forEach(a => {
-    STATE.areas[a.id].photos.forEach(p => {
-      if (p.alert) allPhotos.push({ ...p, areaId: a.id, areaName: a.name });
-    });
-  });
-
-  if (!allPhotos.length) {
-    showToast(' Sin fotos clasificadas para entregar.');
-    return;
-  }
+  const codeB64 = btoa(code);
 
   const progWrap = document.getElementById('dm-progress');
   const progFill = document.getElementById('dm-prog-fill');
@@ -6777,42 +6765,172 @@ async function startDelivery() {
   progWrap.style.display = 'block';
   document.getElementById('dm-generate-btn').disabled = true;
 
-  // Convert photos to base64
-  const converted = [];
-  for (let i = 0; i < allPhotos.length; i++) {
-    progFill.style.width = ((i / allPhotos.length) * 80) + '%';
-    progText.textContent  = 'Procesando foto ' + (i + 1) + ' / ' + allPhotos.length + '...';
-    const p   = allPhotos[i];
-    let b64   = p.apiDataUrl;
-    if (!b64) {
-      try { b64 = await resizeForApi(p.displayUrl, 1200); } catch(e) { b64 = null; }
-    }
-    converted.push({ ...p, b64 });
-  }
-
-  progFill.style.width  = '90%';
-  progText.textContent   = 'Generando HTML...';
-
   try {
-    const deliveryHtml = _buildDeliveryHtml(converted, code, maxUses, STATE.logoB64 || '');
-    const client   = (STATE.client || 'cliente').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    const dateStr  = new Date().toISOString().slice(0, 10);
-    const filename = 'dmz-reporte-' + client + '-' + dateStr + '.html';
-    const blob     = new Blob([deliveryHtml], { type: 'text/html;charset=utf-8' });
-    const url      = URL.createObjectURL(blob);
-    const a        = document.createElement('a');
+    // 1. Asegurar fotos en memoria
+    progText.textContent = 'Cargando fotos...';
+    progFill.style.width = '10%';
+    const photoTasks = [];
+    for (const aId in STATE.areas) {
+      for (const p of STATE.areas[aId].photos) {
+        if (!p.storageB64 && p.id) {
+          photoTasks.push(idbGetPhoto(p.id).then(b64 => {
+            if (b64) p.storageB64 = b64;
+          }));
+        }
+      }
+    }
+    await Promise.all(photoTasks);
+
+    // 2. Regenerar reporte con todas las fotos
+    progText.textContent = 'Generando reporte...';
+    progFill.style.width = '30%';
+    buildReport();
+    await new Promise(r => setTimeout(r, 600));
+
+    // 3. Capturar el HTML del reporte exactamente como se ve
+    progFill.style.width = '60%';
+    progText.textContent = 'Empaquetando entregable...';
+    const reportEl = document.getElementById('report-view');
+    if (!reportEl) throw new Error('Ve al tab REPORTE primero');
+
+    // Ocultar barra de acciones antes de capturar
+    const bar = reportEl.querySelector('.rpt-bar');
+    if (bar) bar.style.display = 'none';
+
+    const reportInner = reportEl.innerHTML;
+    if (bar) bar.style.display = '';
+
+    // Obtener todos los estilos de la página
+    const allStyles = Array.from(document.styleSheets).map(ss => {
+      try { return Array.from(ss.cssRules).map(r => r.cssText).join('\n'); }
+      catch(e) { return ''; }
+    }).join('\n');
+
+    const client    = STATE.client || 'Cliente';
+    const clientEsc = client.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const date      = new Date().toLocaleDateString('es-MX', {year:'numeric',month:'long',day:'numeric'});
+    const usesKey   = 'dmz_uses_' + codeB64;
+
+    const deliveryHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reporte Auditoría · ${clientEsc} · DMZ Kitchen Support</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;600;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+${allStyles}
+/* Overrides entregable */
+body { background: #F5F2EC !important; margin: 0; padding: 0; }
+#login-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--dark,#2D3A3F); padding:2rem; }
+.ls-box { background:#fff; border-radius:10px; padding:2.5rem 2rem; width:360px; max-width:100%; text-align:center; box-shadow:0 12px 48px rgba(0,0,0,.25); }
+.ls-brand { font-family:'Raleway',sans-serif; font-size:.7rem; letter-spacing:.35em; font-weight:300; color:#8A9096; margin-bottom:.5rem; }
+.ls-hi { color:#C9952A; }
+.ls-title { font-family:'Raleway',sans-serif; font-size:1.1rem; font-weight:800; letter-spacing:.08em; color:#2D3A3F; margin-bottom:.3rem; }
+.ls-sub { font-size:.72rem; color:#8A9096; margin-bottom:1.6rem; line-height:1.5; }
+.ls-input { width:100%; border:1.5px solid #E5E2DC; border-radius:6px; padding:.6rem 1rem; font-size:1.05rem; font-weight:700; letter-spacing:.2em; text-align:center; text-transform:uppercase; outline:none; font-family:monospace; color:#2D3A3F; box-sizing:border-box; }
+.ls-input:focus { border-color:#C9952A; }
+.ls-btn { margin-top:.9rem; width:100%; padding:.7rem; background:#2D3A3F; color:#fff; border:none; border-radius:6px; font-size:.75rem; font-weight:700; letter-spacing:.1em; cursor:pointer; }
+.ls-btn:hover { background:#3d4f56; }
+.ls-err { font-size:.7rem; color:#C0392B; margin-top:.6rem; min-height:1em; }
+.ls-uses { font-size:.62rem; color:#8A9096; margin-top:.7rem; }
+#report-content { display:none; max-width:1200px; margin:0 auto; padding:1.5rem; }
+#expired-screen { min-height:100vh; display:none; align-items:center; justify-content:center; background:#2D3A3F; }
+.ex-box { background:#fff; border-radius:10px; padding:2.5rem 2rem; width:360px; max-width:100%; text-align:center; }
+.ex-title { font-family:'Raleway',sans-serif; font-size:1rem; font-weight:800; color:#C0392B; margin-bottom:.5rem; }
+.ex-msg { font-size:.75rem; color:#8A9096; line-height:1.6; }
+@media print { #login-screen,#expired-screen { display:none!important; } #report-content { display:block!important; } }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="ls-box">
+    <div class="ls-brand"><span class="ls-hi">D</span>ELA<span class="ls-hi">M</span>ORA<span class="ls-hi">Z</span>UMARÁN</div>
+    <div class="ls-title">REPORTE DE AUDITORÍA</div>
+    <div class="ls-sub">${clientEsc.toUpperCase()}<br>${date}</div>
+    <input class="ls-input" id="ls-inp" type="text" maxlength="6" placeholder="CÓDIGO" autocomplete="off"
+      oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')checkCode()">
+    <button class="ls-btn" onclick="checkCode()">ACCEDER AL REPORTE</button>
+    <div class="ls-err" id="ls-err"></div>
+    <div class="ls-uses" id="ls-uses-lbl"></div>
+  </div>
+</div>
+
+<div id="expired-screen">
+  <div class="ex-box">
+    <div style="font-size:2.5rem;margin-bottom:.8rem">🔒</div>
+    <div class="ex-title">REPORTE EXPIRADO</div>
+    <div class="ex-msg">Este reporte ha alcanzado el límite de ${maxUses} apertura${maxUses!==1?'s':''} permitidas.<br><br>Contacta a <strong>DMZ Kitchen Support</strong> para obtener un nuevo entregable.</div>
+  </div>
+</div>
+
+<div id="report-content">
+  ${reportInner}
+</div>
+
+<script>
+const _CODE_B64  = '${codeB64}';
+const _MAX_USES  = ${maxUses};
+const _USES_KEY  = 'dmz_uses_' + _CODE_B64;
+
+function checkCode() {
+  const inp = document.getElementById('ls-inp');
+  const err = document.getElementById('ls-err');
+  const entered = (inp.value || '').trim().toUpperCase();
+  const correct = atob(_CODE_B64).toUpperCase();
+  if (entered !== correct) { err.textContent = 'Código incorrecto. Intenta de nuevo.'; inp.value=''; return; }
+  const uses = parseInt(localStorage.getItem(_USES_KEY) || '0') + 1;
+  localStorage.setItem(_USES_KEY, uses);
+  if (uses > _MAX_USES) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('expired-screen').style.display = 'flex';
+    return;
+  }
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('report-content').style.display = 'block';
+  const rem = _MAX_USES - uses;
+  document.getElementById('ls-uses-lbl').textContent = rem + ' acceso' + (rem!==1?'s':'') + ' restante' + (rem!==1?'s':'');
+}
+
+// Mostrar usos restantes en pantalla de login
+(function() {
+  const uses = parseInt(localStorage.getItem(_USES_KEY) || '0');
+  if (uses >= _MAX_USES) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('expired-screen').style.display = 'flex';
+  } else {
+    const rem = _MAX_USES - uses;
+    document.getElementById('ls-uses-lbl').textContent = rem + ' acceso' + (rem!==1?'s':'') + ' restante' + (rem!==1?'s':'') + ' disponible' + (rem!==1?'s':'');
+  }
+})();
+<\/script>
+</body>
+</html>`;
+
+    progFill.style.width = '90%';
+    progText.textContent = 'Descargando archivo...';
+
+    const clientSlug = client.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+    const dateStr    = new Date().toISOString().slice(0,10);
+    const filename   = 'DMZ-Reporte-' + clientSlug + '-' + dateStr + '.html';
+    const blob = new Blob([deliveryHtml], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
     a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
 
     progFill.style.width = '100%';
-    progText.textContent  = 'Entregable generado correctamente.';
+    progText.textContent = '✓ Entregable generado correctamente.';
     setTimeout(() => {
       closeDelivery();
-      showToast('Entregable generado · Código: ' + code + ' · Max ' + maxUses + ' usos');
+      showToast('✓ Entregable generado · Código: ' + code + ' · Max ' + maxUses + ' usos');
     }, 1600);
+
   } catch(err) {
-    progText.textContent = 'Error: ' + err.message;
+    progText.textContent = '⚠ Error: ' + err.message;
     document.getElementById('dm-generate-btn').disabled = false;
+    console.error(err);
   }
 }
 
