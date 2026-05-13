@@ -1543,7 +1543,7 @@ td:hover .hz-edit-hint { opacity: 1; }
 /*  PDF print styles v10 — native window.print(), fiel al reporte en pantalla  */
 @media print {
   /* Ocultar TODA la UI excepto el reporte */
-  #topbar, #sidebar, .rpt-bar,
+  #topbar, #sidebar, .rpt-bar, #sb-strip,
   #main, #dash-view, #alimentos-view,
   #hallazgos-view, #clima2-view, #hist-view,
   #racreaa-view, #login-screen, #expired-screen,
@@ -1552,17 +1552,36 @@ td:hover .hz-edit-hint { opacity: 1; }
   .session-bar, .api-bar, #dmz-degraded-banner { display: none !important; }
 
   /* Asegurar que report-view sea visible y ocupe todo */
-  html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  html, body {
+    margin: 0 !important; padding: 0 !important;
+    background: #fff !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  /* Neutralizar contenedores que limitan altura */
+  #app, #main, .main-wrap, [id$="-view"] {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    display: block !important;
+    flex: none !important;
+  }
   #report-view {
     display: block !important;
     position: static !important;
     width: 100% !important;
     max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
     box-shadow: none !important;
   }
+  /* Ocultar barra de sesión */
+  .supabase-bar, [class*="session"], [class*="nav-session"],
+  #dmz-degraded-banner, .sb-status-bar { display: none !important; }
 
   /* Página A4 con márgenes */
   @page { size: A4 portrait; margin: 10mm 10mm 12mm 10mm; }
