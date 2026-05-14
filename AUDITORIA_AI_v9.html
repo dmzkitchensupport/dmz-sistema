@@ -2883,20 +2883,24 @@ async function loadSession() {
     }
     // Restaurar orden de áreas — siempre respetar el orden canónico de Mario
     {
-      const _CANON = ['fachada', 'entrada', 'salon', 'servicio', 'cocina', 'barra', 'banos'];
-      const _savedOrder = (saved.areasOrder && saved.areasOrder.length) ? saved.areasOrder : _CANON;
-      // Usar orden guardado pero priorizando el orden canónico
-      const _base = _CANON.filter(id => AREAS.find(a => a.id === id) || STATE.areas[id]);
-      const _extra = _savedOrder.filter(id => !_base.includes(id));
-      const _finalOrder = [..._base, ..._extra];
-      const ordered = _finalOrder.map(id => AREAS.find(a => a.id === id)).filter(Boolean);
+      // Orden canónico fijo — IDs reales de Cielito Mexican Flavors
+      const _CANON = ['custom_1778641844263','custom_1778456830124','custom_1778545035063','custom_1778456938388','cocina','custom_1778456921239','custom_1778456861207'];
+      // Reordenar STATE.areas según orden canónico
+      const _currentIds = Object.keys(STATE.areas);
+      const _ordered = [
+        ..._CANON.filter(id => _currentIds.includes(id)),
+        ..._currentIds.filter(id => !_CANON.includes(id))
+      ];
+      const _newAreas = {};
+      _ordered.forEach(id => { _newAreas[id] = STATE.areas[id] || { photos: [], hallazgos: _hzDefault() }; });
+      // Reemplazar STATE.areas manteniendo referencia
+      Object.keys(STATE.areas).forEach(k => delete STATE.areas[k]);
+      Object.assign(STATE.areas, _newAreas);
+      // Reordenar también AREAS para el sidebar
+      const ordered = _ordered.map(id => AREAS.find(a => a.id === id)).filter(Boolean);
       AREAS.forEach(a => { if (!ordered.find(o => o.id === a.id)) ordered.push(a); });
       AREAS.length = 0;
       ordered.forEach(a => AREAS.push(a));
-      // Reordenar STATE.areas
-      const _newAreas = {};
-      ordered.forEach(a => { _newAreas[a.id] = STATE.areas[a.id] || { photos: [], hallazgos: _hzDefault() }; });
-      Object.assign(STATE.areas, _newAreas);
     }
 
     let loaded = 0;
@@ -4451,12 +4455,7 @@ function loadClienteLogo(input) {
 
 async function init() {
   // Inicializar STATE.areas en el orden correcto de Mario
-const _ORDEN_AREAS = ['fachada', 'entrada', 'salon', 'servicio', 'cocina', 'barra', 'banos'];
-const _areasSorted = [
-  ...AREAS.filter(a => _ORDEN_AREAS.includes(a.id)).sort((a,b) => _ORDEN_AREAS.indexOf(a.id) - _ORDEN_AREAS.indexOf(b.id)),
-  ...AREAS.filter(a => !_ORDEN_AREAS.includes(a.id))
-];
-_areasSorted.forEach(a => STATE.areas[a.id] = { photos: [], hallazgos: _hzDefault() });
+AREAS.forEach(a => STATE.areas[a.id] = { photos: [], hallazgos: _hzDefault() });
   // Ocultar modal si ya hay sesión guardada
   if (localStorage.getItem('dmz_sb_token')) {
     var _m = document.getElementById('sb-login-modal');
