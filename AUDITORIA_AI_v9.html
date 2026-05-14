@@ -6668,28 +6668,7 @@ function buildReport() {
   <!--  MÓDULO I: EVIDENCIA FOTOGRÁFICA  -->
   <div class="rpt-module-divider">I · EVIDENCIA FOTOGRÁFICA POR ÁREA</div>
   ${areaSections}
-  ${dashRows ? `<div class="rpt-dash">
-    <div class="rpt-dt">Dashboard Global</div>
-    <div class="rpt-ds">RESUMEN EJECUTIVO · ${esc(client.toUpperCase())}</div>
-    <div class="rpt-dkpis">
-      <div class="rpt-dk" style="border-color:#C0392B"><div class="dn" style="color:#C0392B">${totC}</div><div class="dl">CRÍTICOS</div></div>
-      <div class="rpt-dk" style="border-color:#E07B00"><div class="dn" style="color:#E07B00">${totO}</div><div class="dl">OBSERVACIONES</div></div>
-      <div class="rpt-dk" style="border-color:#2E7D32"><div class="dn" style="color:#2E7D32">${totK}</div><div class="dl">CORRECTOS</div></div>
-      <div class="rpt-dk" style="border-color:var(--gold)"><div class="dn" style="color:var(--gold)">${gPct}%</div><div class="dl">CUMPLIMIENTO</div></div>
-    </div>
-    <div class="dash-table-wrap">
-      <table class="d-table">
-        <thead><tr>
-          <th style="width:3%">#</th><th>ÁREA</th>
-          <th style="color:#C0392B;text-align:center;width:8%">CRÍT.</th>
-          <th style="color:#E07B00;text-align:center;width:8%">OBS.</th>
-          <th style="color:#2E7D32;text-align:center;width:8%">OK</th>
-          <th>% CUMPLIMIENTO</th>
-        </tr></thead>
-        <tbody>${dashRows}</tbody>
-      </table>
-    </div>
-  </div>` : ''}
+
 
   <!--  MÓDULO II: CLIMA LABORAL  -->
   <div class="rpt-module-divider">II · EVALUACIÓN DE CLIMA LABORAL</div>
@@ -8804,7 +8783,6 @@ function buildClima2ReportSection() {
         <tbody>${respRows}</tbody>
       </table>
     </div>` : ''}
-    ${resumenHtml}
     ${analisisHtml}
   </div>`;
 }
