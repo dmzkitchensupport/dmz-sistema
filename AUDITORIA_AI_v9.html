@@ -6233,8 +6233,11 @@ function buildReport() {
   const gPct   = Math.round(totK / totAll * 100);
 
   let areaSections = '';
-  AREAS.forEach((a, ai) => {
-    const photos = STATE.areas[a.id].photos;
+  // Respetar el orden del sidebar — usar Object.keys(STATE.areas) en lugar de AREAS fijo
+  const orderedAreaIds = Object.keys(STATE.areas);
+  orderedAreaIds.forEach((aId, ai) => {
+    const a = AREAS.find(x => x.id === aId) || { id: aId, name: aId.toUpperCase(), chips: [] };
+    const photos = STATE.areas[aId].photos;
     if (!photos.length) return;
 
     let aC = 0, aO = 0, aK = 0;
