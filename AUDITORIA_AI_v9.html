@@ -6409,7 +6409,7 @@ function buildReport() {
             ? `<span style="font-size:.6rem;font-weight:700;padding:2px 10px;border-radius:10px;background:${CAL_COL[sec.cal]}18;color:${CAL_COL[sec.cal]};border:1px solid ${CAL_COL[sec.cal]}40">${CAL_LBL[sec.cal]}</span>`
             : '';
           // Cada pt puede contener texto largo — renderizar como ítem independiente con buen tamaño
-          const ptsHtml = (sec.pts||[]).filter(p => p.trim()).map((p, ptIdx) => {
+          const ptsHtml = (sec.pts||[]).filter(p => p && p.trim() && p.trim().length > 0).map((p, ptIdx) => {
             // Detectar prioridad en Próximos pasos
             if (s.key === 'prox') {
               const txt = p.trim();
