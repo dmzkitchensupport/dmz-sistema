@@ -8720,9 +8720,14 @@ function buildClima2ReportSection() {
     respRows += `<tr><td colspan="2" style="background:var(--dark);font-size:.88rem;font-weight:800;letter-spacing:.08em;padding:.6rem 1rem;color:#fff;border-top:2px solid var(--gold)">${i+1}. ${esc(q)}</td></tr>`;
     resps.forEach(c => {
       const letra = cl2LetraColab(c);
+      const rawText = (c.respuestas[i] || '').trim();
+      // Normalizar: mayúscula inicial, punto final si no hay puntuación
+      const normText = rawText
+        ? rawText.charAt(0).toUpperCase() + rawText.slice(1) + (rawText.match(/[.!?]$/) ? '' : '.')
+        : '';
       respRows += `<tr>
         <td style="width:6%;font-size:1rem;font-weight:800;color:#C9952A;vertical-align:top;padding:.5rem .6rem;text-align:center">${letra}</td>
-        <td style="font-size:.88rem;color:var(--dark);line-height:1.95;text-align:justify;padding:.5rem .8rem">${esc(c.respuestas[i])}</td>
+        <td style="font-size:.88rem;color:var(--dark);line-height:1.95;text-align:justify;padding:.5rem .8rem;hyphens:auto;word-break:break-word">${esc(normText)}</td>
       </tr>`;
 
     });
