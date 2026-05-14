@@ -8706,10 +8706,10 @@ function buildClima2ReportSection() {
   ];
   const metodologiaHtml = `<div style="margin:.4rem 0;border-radius:0;overflow:hidden;border-left:4px solid var(--gold)">
     <div style="background:linear-gradient(135deg,#1a2332 0%,#2D3A4F 100%);padding:.7rem 1.2rem">
-      <span style="font-size:.72rem;font-weight:800;letter-spacing:.2em;color:#fff">METODOLOGÍA DE TRABAJO Y ANÁLISIS DEL STAFF</span>
+      <span style="font-size:.84rem;font-weight:800;letter-spacing:.2em;color:#fff">METODOLOGÍA DE TRABAJO Y ANÁLISIS DEL STAFF</span>
     </div>
     <div style="background:#fdfcf8;padding:1rem 1.3rem">
-      ${metodoTextos.map(t => `<p style="font-size:.76rem;color:#2D3A3F;line-height:1.75;text-align:justify;margin-bottom:.6rem;last-child:margin-bottom:0">${esc(t)}</p>`).join('')}
+      ${metodoTextos.map(t => `<p style="font-size:.88rem;color:#2D3A3F;line-height:1.9;text-align:justify;margin-bottom:.6rem;last-child:margin-bottom:0">${esc(t)}</p>`).join('')}
     </div>
   </div>`;
 
@@ -8720,11 +8720,11 @@ function buildClima2ReportSection() {
       <div style="display:flex;flex-direction:column;gap:.6rem">
         ${res.map(r => `
           <div style="border-radius:5px;border:1px solid var(--border);overflow:hidden">
-            <div style="padding:.38rem .7rem;background:var(--cream);font-size:.56rem;font-weight:800;letter-spacing:.12em;display:flex;align-items:center;gap:.4rem">
-              <span style="background:var(--gold);color:#fff;padding:.1rem .35rem;border-radius:3px;font-size:.54rem">${r.pregunta}</span>
+            <div style="padding:.38rem .7rem;background:var(--cream);font-size:.82rem;font-weight:800;letter-spacing:.12em;display:flex;align-items:center;gap:.4rem">
+              <span style="background:var(--gold);color:#fff;padding:.1rem .35rem;border-radius:3px;font-size:.80rem">${r.pregunta}</span>
               <span>${esc(r.titulo)}</span>
             </div>
-            <div style="padding:.5rem .7rem;font-size:.7rem;color:var(--dark);line-height:1.6;text-align:justify">${esc(r.resumen)}</div>
+            <div style="padding:.5rem .7rem;font-size:.82rem;color:var(--dark);line-height:1.85;text-align:justify">${esc(r.resumen)}</div>
           </div>`).join('')}
       </div>
     </div>`;
@@ -8736,12 +8736,12 @@ function buildClima2ReportSection() {
   CL2_PREGUNTAS.forEach((q, i) => {
     const resps = colOrdenados.filter(c => c.respuestas[i]?.trim());
     if (!resps.length) return;
-    respRows += `<tr><td colspan="2" style="background:var(--cream);font-size:.56rem;font-weight:800;letter-spacing:.1em;padding:.35rem .6rem;color:var(--dark)">${i+1}. ${esc(q)}</td></tr>`;
+    respRows += `<tr><td colspan="2" style="background:var(--cream);font-size:.82rem;font-weight:800;letter-spacing:.1em;padding:.35rem .6rem;color:var(--dark)">${i+1}. ${esc(q)}</td></tr>`;
     resps.forEach(c => {
       const letra = cl2LetraColab(c);
       respRows += `<tr>
-        <td style="width:16%;font-size:.66rem;font-weight:600;color:var(--mid);vertical-align:top;padding:.38rem .6rem">Colaborador ${letra}</td>
-        <td style="font-size:.68rem;color:var(--dark);line-height:1.55;text-align:justify;padding:.38rem .6rem">${esc(c.respuestas[i])}</td>
+        <td style="width:16%;font-size:.78rem;font-weight:600;color:var(--mid);vertical-align:top;padding:.38rem .6rem">Colaborador ${letra}</td>
+        <td style="font-size:.80rem;color:var(--dark);line-height:1.85;text-align:justify;padding:.38rem .6rem">${esc(c.respuestas[i])}</td>
       </tr>`;
 
     });
@@ -8753,22 +8753,22 @@ function buildClima2ReportSection() {
   if (meta.fortalezas || meta.focos) {
     const fortBullets = meta.fortalezas
       ? meta.fortalezas.split('\n').filter(Boolean).map(b =>
-          `<li style="margin-bottom:.35rem;font-size:.72rem;color:var(--dark);line-height:1.55">${esc(b)}</li>`
+          `<li style="margin-bottom:.35rem;font-size:.84rem;color:var(--dark);line-height:1.85">${esc(b)}</li>`
         ).join('')
       : '';
     const focosBullets = meta.focos
       ? meta.focos.split('\n').filter(Boolean).map(b =>
-          `<li style="margin-bottom:.35rem;font-size:.72rem;color:var(--dark);line-height:1.55">${esc(b)}</li>`
+          `<li style="margin-bottom:.35rem;font-size:.84rem;color:var(--dark);line-height:1.85">${esc(b)}</li>`
         ).join('')
       : '';
 
     analisisHtml = `<div style="padding:.8rem 1rem;border-top:3px solid var(--gold)">
-      <div style="font-size:.62rem;font-weight:800;letter-spacing:.14em;color:var(--dark);margin-bottom:.9rem">
+      <div style="font-size:.75rem;font-weight:800;letter-spacing:.14em;color:var(--dark);margin-bottom:.9rem">
         ANÁLISIS DE RESULTADOS
       </div>
       ${fortBullets ? `
       <div style="margin-bottom:1rem">
-        <div style="font-size:.58rem;font-weight:800;letter-spacing:.12em;color:#27ae60;
+        <div style="font-size:.84rem;font-weight:800;letter-spacing:.12em;color:#27ae60;
           border-left:3px solid #27ae60;padding-left:.5rem;margin-bottom:.5rem">
           FORTALEZAS DETECTADAS
         </div>
@@ -8776,7 +8776,7 @@ function buildClima2ReportSection() {
       </div>` : ''}
       ${focosBullets ? `
       <div>
-        <div style="font-size:.58rem;font-weight:800;letter-spacing:.12em;color:var(--red);
+        <div style="font-size:.84rem;font-weight:800;letter-spacing:.12em;color:var(--red);
           border-left:3px solid var(--red);padding-left:.5rem;margin-bottom:.5rem">
           FOCOS ROJOS / ÁREAS DE ATENCIÓN
         </div>
@@ -8799,7 +8799,7 @@ function buildClima2ReportSection() {
     ${resumenHtml}
     ${respRows ? `<div style="padding:.6rem 1rem;border-top:1px solid var(--border)">
       <div class="rpt-hall-head" style="margin-bottom:.5rem">RESPUESTAS INDIVIDUALES</div>
-      <table style="width:100%;border-collapse:collapse;font-size:.7rem">
+      <table style="width:100%;border-collapse:collapse;font-size:.82rem">
         <tbody>${respRows}</tbody>
       </table>
     </div>` : ''}
