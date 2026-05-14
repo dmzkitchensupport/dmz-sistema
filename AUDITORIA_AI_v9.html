@@ -1546,6 +1546,7 @@ td:hover .hz-edit-hint { opacity: 1; }
 /*  PDF print styles v10 — native window.print(), fiel al reporte en pantalla  */
 @media print {
   /* Ocultar TODA la UI excepto el reporte */
+  .rpt-edit-ctrl,
   #topbar, #sidebar, .rpt-bar, #sb-strip,
   #main, #dash-view, #alimentos-view,
   #hallazgos-view, #clima2-view, #hist-view,
@@ -6225,6 +6226,17 @@ function rptEditStdPt(aId, key, li, newText) {
   hz[key].pts[li] = newText;
   markDirty();
 }
+function rptEditBullet(aId, secKey, ptIdx, btn) {
+  const pts = STATE.areas[aId]?.hallazgos?.[secKey]?.pts;
+  if (!pts) return;
+  const newText = prompt('Editar:', pts[ptIdx] || '');
+  if (newText === null) return;
+  if (!newText.trim()) { rptDelStdPt(aId, secKey, ptIdx); return; }
+  pts[ptIdx] = newText.trim();
+  markDirty();
+  buildReport();
+}
+
 function rptDelStdPt(aId, key, li) {
   const hz = STATE.areas[aId]?.hallazgos;
   if (!hz?.[key]?.pts) return;
@@ -6426,15 +6438,19 @@ function buildReport() {
               }
             }
             return `<li style="display:flex;align-items:flex-start;gap:.55rem;padding:.35rem .4rem;
-              border-radius:4px;list-style:none"
-              onmouseover="this.style.background='#f9f7f3'" onmouseout="this.style.background=''">
+              border-radius:4px;list-style:none;background:#fff;border:1px solid transparent"
+              onmouseover="this.style.background='#f9f7f3';this.style.borderColor='#E5E2DC'" 
+              onmouseout="this.style.background='#fff';this.style.borderColor='transparent'">
+              <span class="rpt-edit-ctrl" style="display:flex;align-items:center;gap:.25rem;flex-shrink:0;margin-top:.1rem;">
+                <button onclick="rptEditBullet('${a.id}','${s.key}',${ptIdx},this)"
+                  title="Editar"
+                  style="background:none;border:1px solid #C9952A;color:#C9952A;cursor:pointer;font-size:.6rem;padding:1px 5px;border-radius:3px;font-weight:700;line-height:1.4">✏</button>
+                <button onclick="rptDelStdPt('${a.id}','${s.key}',${ptIdx})"
+                  title="Eliminar"
+                  style="background:none;border:1px solid #C0392B;color:#C0392B;cursor:pointer;font-size:.6rem;padding:1px 5px;border-radius:3px;font-weight:700;line-height:1.4">✕</button>
+              </span>
               <span style="flex-shrink:0;width:.42rem;height:.42rem;border-radius:50%;background:#C9952A;margin-top:.42rem;display:inline-block;"></span>
-              <span style="flex:1;font-size:.78rem;color:#2D3A3F;line-height:1.6;text-align:justify"
-                contenteditable="true"
-                onblur="rptEditStdPt('${a.id}','${s.key}',${ptIdx},this.innerText)">${esc(p.trim())}</span>
-              <button onclick="rptDelStdPt('${a.id}','${s.key}',${ptIdx})"
-                style="flex-shrink:0;background:none;border:none;color:#ddd;cursor:pointer;font-size:.85rem;padding:0;opacity:0"
-                onmouseover="this.style.opacity='1';this.style.color='#C0392B'" onmouseout="this.style.opacity='0'">×</button>
+              <span class="rpt-bullet-text" style="flex:1;font-size:.78rem;color:#2D3A3F;line-height:1.6;text-align:justify">${esc(p.trim())}</span>
             </li>`;
           }).join('');
           const obs = sec.obs
