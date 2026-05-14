@@ -8736,7 +8736,7 @@ function buildClima2ReportSection() {
   CL2_PREGUNTAS.forEach((q, i) => {
     const resps = colOrdenados.filter(c => c.respuestas[i]?.trim());
     if (!resps.length) return;
-    respRows += `<tr><td colspan="2" style="background:var(--cream);font-size:.82rem;font-weight:800;letter-spacing:.1em;padding:.35rem .6rem;color:var(--dark)">${i+1}. ${esc(q)}</td></tr>`;
+    respRows += `<tr><td colspan="2" style="background:var(--dark);font-size:.88rem;font-weight:800;letter-spacing:.08em;padding:.6rem 1rem;color:#fff;border-top:2px solid var(--gold)">${i+1}. ${esc(q)}</td></tr>`;
     resps.forEach(c => {
       const letra = cl2LetraColab(c);
       respRows += `<tr>
@@ -8796,13 +8796,13 @@ function buildClima2ReportSection() {
       </div>
     </div>
     ${metodologiaHtml}
-    ${resumenHtml}
     ${respRows ? `<div style="padding:.6rem 1rem;border-top:1px solid var(--border)">
       <div class="rpt-hall-head" style="margin-bottom:.5rem">RESPUESTAS INDIVIDUALES</div>
-      <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+      <table style="width:100%;border-collapse:collapse;">
         <tbody>${respRows}</tbody>
       </table>
     </div>` : ''}
+    ${resumenHtml}
     ${analisisHtml}
   </div>`;
 }
