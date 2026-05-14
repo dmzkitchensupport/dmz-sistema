@@ -558,7 +558,7 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
 /* ── Panel de Hallazgos por foto ─────────────────────────────── */
 .hz-panel { border-top: 1px solid var(--border); padding: .65rem .7rem .5rem; display: flex; flex-direction: column; gap: .5rem; }
 .hz-panel-title { font-size: .78rem; font-weight: 800; letter-spacing: .14em; color: var(--dark); margin-bottom: .4rem; border-bottom: 2px solid var(--gold); padding-bottom: .3rem; }
-.hz-sec { background: var(--off); border-radius: 4px; padding: .5rem .65rem; border: 1px solid var(--border); }
+.hz-sec { background: var(--off); border-radius: 4px; padding: .35rem .55rem; border: 1px solid var(--border); }
 .hz-sec-head { display: flex; align-items: center; justify-content: space-between; gap: .4rem; margin-bottom: .4rem; }
 .hz-sec-label { font-size: .78rem; font-weight: 800; color: var(--dark); letter-spacing: .03em; }
 .hz-cal-btns { display: flex; gap: 3px; }
@@ -566,7 +566,7 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
 .hz-cal-btn.cr.sel { background: #FCEBEB; border-color: #C0392B; color: #C0392B; }
 .hz-cal-btn.de.sel { background: #FFF3E0; border-color: #E07B00; color: #E07B00; }
 .hz-cal-btn.pa.sel { background: #F0FDF4; border-color: #2E7D32; color: #2E7D32; }
-.hz-pts { display: flex; flex-direction: column; gap: 4px; margin-bottom: .3rem; }
+.hz-pts { display: flex; flex-direction: column; gap: 2px; margin-bottom: .15rem; }
 .hz-pt-row { display: flex; align-items: flex-start; gap: 4px; }
 .hz-pt-ta { flex: 1; border: 1px solid var(--border); border-radius: 4px; padding: 4px 7px; font-size: .68rem; resize: none; background: #fff; color: var(--dark); line-height: 1.4; font-family: var(--f-b); min-height: 28px; }
 .hz-pt-ta:focus { outline: none; border-color: var(--gold); }
@@ -2881,15 +2881,22 @@ async function loadSession() {
         }
       });
     }
-    // Restaurar orden de áreas si está guardado
-    if (saved.areasOrder && saved.areasOrder.length) {
-      const ordered = saved.areasOrder
-        .map(id => AREAS.find(a => a.id === id))
-        .filter(Boolean);
-      // Agregar áreas no incluidas en el orden al final
+    // Restaurar orden de áreas — siempre respetar el orden canónico de Mario
+    {
+      const _CANON = ['fachada', 'entrada', 'salon', 'servicio', 'cocina', 'barra', 'banos'];
+      const _savedOrder = (saved.areasOrder && saved.areasOrder.length) ? saved.areasOrder : _CANON;
+      // Usar orden guardado pero priorizando el orden canónico
+      const _base = _CANON.filter(id => AREAS.find(a => a.id === id) || STATE.areas[id]);
+      const _extra = _savedOrder.filter(id => !_base.includes(id));
+      const _finalOrder = [..._base, ..._extra];
+      const ordered = _finalOrder.map(id => AREAS.find(a => a.id === id)).filter(Boolean);
       AREAS.forEach(a => { if (!ordered.find(o => o.id === a.id)) ordered.push(a); });
       AREAS.length = 0;
       ordered.forEach(a => AREAS.push(a));
+      // Reordenar STATE.areas
+      const _newAreas = {};
+      ordered.forEach(a => { _newAreas[a.id] = STATE.areas[a.id] || { photos: [], hallazgos: _hzDefault() }; });
+      Object.assign(STATE.areas, _newAreas);
     }
 
     let loaded = 0;
@@ -4443,7 +4450,13 @@ function loadClienteLogo(input) {
 }
 
 async function init() {
-  AREAS.forEach(a => STATE.areas[a.id] = { photos: [], hallazgos: _hzDefault() });
+  // Inicializar STATE.areas en el orden correcto de Mario
+const _ORDEN_AREAS = ['fachada', 'entrada', 'salon', 'servicio', 'cocina', 'barra', 'banos'];
+const _areasSorted = [
+  ...AREAS.filter(a => _ORDEN_AREAS.includes(a.id)).sort((a,b) => _ORDEN_AREAS.indexOf(a.id) - _ORDEN_AREAS.indexOf(b.id)),
+  ...AREAS.filter(a => !_ORDEN_AREAS.includes(a.id))
+];
+_areasSorted.forEach(a => STATE.areas[a.id] = { photos: [], hallazgos: _hzDefault() });
   // Ocultar modal si ya hay sesión guardada
   if (localStorage.getItem('dmz_sb_token')) {
     var _m = document.getElementById('sb-login-modal');
@@ -6439,7 +6452,7 @@ function buildReport() {
               </div>
             </div>
             <div style="padding:.8rem 1.2rem;background:#fff">
-            ${ptsHtml ? `<ul id="ul-${a.id}-${s.key}" style="margin:.3rem 0 0;padding:0;list-style:none;${cols2 ? 'display:flex;flex-direction:column;gap:.35rem' : 'display:flex;flex-direction:column;gap:.35rem'}">${ptsHtml}</ul>` : ''}
+            ${ptsHtml ? `<ul id="ul-${a.id}-${s.key}" style="margin:.3rem 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.35rem">${ptsHtml}</ul>` : ''}
             ${obs}
             </div>
           </div>`;
