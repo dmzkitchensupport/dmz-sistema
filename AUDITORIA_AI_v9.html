@@ -764,8 +764,9 @@ textarea.note-ta::placeholder { color: #c4bfb8; }
 .rpt-ss:last-child { border-right: none; }
 .rpt-photos {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: .8rem; padding: 1rem; background: var(--off);
+  align-items: start;
 }
 .rpt-photo {
   position: relative; background: #F4F2EE;
@@ -6438,7 +6439,7 @@ function buildReport() {
               </div>
             </div>
             <div style="padding:.8rem 1.2rem;background:#fff">
-            ${ptsHtml ? `<ul id="ul-${a.id}-${s.key}" style="margin:.3rem 0 0;padding:0;list-style:none;${cols2 ? 'display:grid;grid-template-columns:1fr 1fr;gap:.4rem .8rem' : 'display:flex;flex-direction:column;gap:.2rem'}">${ptsHtml}</ul>` : ''}
+            ${ptsHtml ? `<ul id="ul-${a.id}-${s.key}" style="margin:.3rem 0 0;padding:0;list-style:none;${cols2 ? 'display:flex;flex-direction:column;gap:.35rem' : 'display:flex;flex-direction:column;gap:.35rem'}">${ptsHtml}</ul>` : ''}
             ${obs}
             </div>
           </div>`;
@@ -6656,7 +6657,7 @@ function buildReport() {
       </div>
 
       <!-- CARDS CUALIDADES: 3 columnas con icono dorado -->
-      <div style="background:#F4F2EE;padding:1.4rem 1.6rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem;">
+      <div style="background:#F4F2EE;padding:1.4rem 1.6rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem;align-items:start;">
         ${cards}
       </div>
 
@@ -9074,7 +9075,7 @@ async function exportClima2PDF() {
   const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">
     <style>${css}
 /* ── Modo CUALIDADES — showcase premium ─────────────────────── */
-.cualidades-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1.2rem; padding:1.2rem; }
+.cualidades-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1.2rem; padding:1.2rem; align-items:start; }
 .cual-card { border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.12); border:2px solid #E8DFC8; background:#fff; transition:transform .2s,box-shadow .2s; cursor:pointer; position:relative; }
 .cual-card:hover { transform:translateY(-3px); box-shadow:0 8px 32px rgba(0,0,0,.18); }
 .cual-card-img { width:100%; height:260px; object-fit:cover; display:block; }
@@ -10467,7 +10468,7 @@ function buildAlimentosReportSection() {
         <div style="font-size:.52rem;letter-spacing:.1em;color:var(--mid)">PROMEDIO GLOBAL</div>
       </div>
     </div>
-    <div style="padding:1.2rem 1.5rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem">
+    <div style="padding:1.2rem 1.5rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start">
       ${cards}
     </div>
     ${ALI_STATE.resumen ? `<div style="margin:0 1.5rem 1.2rem;padding:.85rem 1rem;background:#FFFEF5;
