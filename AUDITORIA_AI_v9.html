@@ -10437,7 +10437,7 @@ function buildAlimentosReportSection() {
     const col   = ECT_COLORS[nivel]||'#888';
     const lbl   = ECT_NIVELES[nivel]||'—';
     const foto  = item.fotoB64
-      ? `<img src="${item.fotoB64}" style="width:100%;height:auto;max-height:280px;object-fit:contain;display:block;border-radius:8px 8px 0 0;background:#f9f7f3;">`
+      ? `<img src="${item.fotoB64}" style="width:100%;height:auto;object-fit:cover;display:block;border-radius:8px 8px 0 0;">`
       : `<div style="width:100%;height:160px;background:var(--cream);border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:center;color:var(--mid);font-size:.72rem;">Sin foto</div>`;
     const scores = ECT_CRITERIOS.map(c => {
       const v = item.scores[c]||0;
