@@ -6990,17 +6990,72 @@ function checkCode() {
     const dateStr    = new Date().toISOString().slice(0,10);
     const filename   = 'DMZ-Reporte-' + clientSlug + '-' + dateStr + '.html';
     const blob = new Blob([deliveryHtml], { type: 'text/html;charset=utf-8' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
+
+    // ── Descarga offline (siempre) ──────────────────────────────
+    const localUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = localUrl; a.download = filename; a.click();
+    URL.revokeObjectURL(localUrl);
+
+    // ── Subida online a Supabase Storage ───────────────────────
+    let onlineUrl = null;
+    progFill.style.width = '92%';
+    progText.textContent = 'Subiendo a la nube…';
+
+    try {
+      if (SB.ready && SB.token) {
+        const storagePath = SB.userId + '/' + filename;
+        const uploadResp = await fetch(
+          SB.url + '/storage/v1/object/auditoria-fotos/' + storagePath,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + SB.token,
+              'Content-Type': 'text/html;charset=utf-8',
+              'x-upsert': 'true',
+            },
+            body: blob,
+          }
+        );
+        if (uploadResp.ok) {
+          // URL pública del archivo
+          onlineUrl = SB.url + '/storage/v1/object/public/auditoria-fotos/' + storagePath;
+        } else {
+          console.warn('Storage upload failed:', await uploadResp.text());
+        }
+      }
+    } catch(uploadErr) {
+      console.warn('Upload error:', uploadErr);
+    }
 
     progFill.style.width = '100%';
-    progText.textContent = '✓ Entregable generado correctamente.';
-    setTimeout(() => {
-      closeDelivery();
-      showToast('✓ Entregable generado · Código: ' + code + ' · Max ' + maxUses + ' usos');
-    }, 1600);
+
+    // ── Mostrar resultado con link copiable ─────────────────────
+    const progWrap2 = document.getElementById('dm-progress');
+    if (onlineUrl) {
+      const _urlEl = document.createElement('div');
+      _urlEl.innerHTML = [
+        '<p style="margin:0 0 .4rem;font-size:.78rem">✓ Entregable listo &middot; Código: <strong>' + code + '</strong></p>',
+        '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.3rem">',
+          '<input id="dm-online-url" readonly value="' + onlineUrl + '"',
+            ' style="flex:1;min-width:0;font-size:.65rem;border:1px solid #C9952A;border-radius:4px;padding:.3rem .5rem;background:#FFFEF5;color:#2D3A3F;font-family:monospace;">',
+          '<button id="dm-copy-btn" style="flex-shrink:0;background:#C9952A;color:#fff;border:none;border-radius:4px;padding:.35rem .75rem;font-size:.68rem;font-weight:700;cursor:pointer;">Copiar link</button>',
+        '</div>',
+        '<div style="font-size:.61rem;color:#8A9096">El cliente abre este link en cualquier navegador &middot; Requiere código <strong>' + code + '</strong></div>',
+      ].join('');
+      progText.textContent = '';
+      progText.appendChild(_urlEl);
+      document.getElementById('dm-copy-btn').addEventListener('click', function() {
+        navigator.clipboard.writeText(document.getElementById('dm-online-url').value)
+          .then(() => { this.textContent = '✓ Copiado'; setTimeout(() => this.textContent = 'Copiar link', 1500); });
+      });
+    } else {
+      progText.textContent = '✓ Entregable descargado · Código: ' + code + ' · (Sin sesión activa, solo offline)';
+      setTimeout(() => {
+        closeDelivery();
+        showToast('✓ Entregable offline generado · Código: ' + code);
+      }, 1600);
+    }
 
   } catch(err) {
     progText.textContent = '⚠ Error: ' + err.message;
