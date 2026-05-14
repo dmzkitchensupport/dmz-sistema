@@ -10430,29 +10430,44 @@ function buildAlimentosReportSection() {
   const avg   = proms.length ? (proms.reduce((a,b)=>a+b,0)/proms.length) : 0;
   const avgCol= avg>=4?'#2E7D32':avg>=3?'#F5C518':avg>0?'#C0392B':'#888';
 
-  const rows = items.map((item, i) => {
+  // Tarjetas 2 columnas
+  const cards = items.map((item, i) => {
     const prom  = _aliPromedio(item.scores);
     const nivel = prom>=4.5?5:prom>=3.5?4:prom>=2.5?3:prom>=1.5?2:prom>0?1:0;
     const col   = ECT_COLORS[nivel]||'#888';
     const lbl   = ECT_NIVELES[nivel]||'—';
-    const scoresCells = ECT_CRITERIOS.map(c => {
+    const foto  = item.fotoB64
+      ? `<img src="${item.fotoB64}" style="width:100%;height:200px;object-fit:cover;display:block;border-radius:8px 8px 0 0;">`
+      : `<div style="width:100%;height:200px;background:var(--cream);border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:center;color:var(--mid);font-size:.72rem;">Sin foto</div>`;
+    const scores = ECT_CRITERIOS.map(c => {
       const v = item.scores[c]||0;
-      return `<td style="text-align:center;font-weight:700;font-size:.88rem;color:${v?ECT_COLORS[v]:'var(--mid)'}">${v||'—'}</td>`;
+      const vc = v ? ECT_COLORS[v] : 'var(--mid)';
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:.1rem">
+        <span style="font-size:.52rem;letter-spacing:.08em;color:var(--mid);font-weight:700">${c.slice(0,4).toUpperCase()}</span>
+        <span style="font-size:1rem;font-weight:800;color:${vc}">${v||'—'}</span>
+      </div>`;
     }).join('');
-    const fotoCell = item.fotoB64
-      ? `<img src="${item.fotoB64}" style="width:140px;height:auto;max-height:160px;object-fit:contain;border-radius:6px;display:block;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);">`
-      : '<span style="color:var(--mid);font-size:.7rem">—</span>';
-    return `<tr>
-      <td style="text-align:center;color:var(--mid);font-weight:800;font-size:.85rem">${i+1}</td>
-      <td style="font-weight:600;font-size:.82rem">${esc(item.nombre||'—')}</td>
-      ${scoresCells}
-      <td style="text-align:center;font-family:var(--f-t);font-weight:800;font-size:1.1rem;color:${col}">${prom>0?prom.toFixed(1):'—'}</td>
-      <td style="text-align:center"><span class="tbadge" style="background:${col};font-size:.62rem">${lbl}</span></td>
-      <td style="text-align:center">${fotoCell}</td>
-    </tr>`;
+    return `<div style="background:#fff;border-radius:10px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.07);">
+      ${foto}
+      <div style="padding:.75rem 1rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+          <div>
+            <span style="font-size:.55rem;color:var(--mid);font-weight:700;letter-spacing:.1em">${i+1} ·</span>
+            <span style="font-size:.88rem;font-weight:800;color:var(--dark);margin-left:.25rem">${esc(item.nombre||'—')}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:.4rem">
+            <span style="font-family:var(--f-t);font-size:1.4rem;font-weight:800;color:${col}">${prom>0?prom.toFixed(1):'—'}</span>
+            <span class="tbadge" style="background:${col};font-size:.58rem">${lbl}</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:.25rem;border-top:1px solid var(--border);padding-top:.5rem">
+          ${scores}
+        </div>
+      </div>
+    </div>`;
   }).join('');
 
-  return `<div class="rpt-area" style="background:#fff;border-bottom:1px solid var(--border)">
+  return `<div class="rpt-area" style="background:#F5F2EC;border-bottom:1px solid var(--border)">
     <div class="rpt-ah" style="border-left-color:var(--amber)">
       <div class="rpt-ah-left">
         <div class="rpt-ah-n" style="color:var(--amber)">AL</div>
@@ -10466,22 +10481,12 @@ function buildAlimentosReportSection() {
         <div style="font-size:.52rem;letter-spacing:.1em;color:var(--mid)">PROMEDIO GLOBAL</div>
       </div>
     </div>
-    <div style="padding:1rem 1.5rem;overflow-x:auto">
-      <table class="rpt-table fb-table">
-        <thead><tr>
-          <th>#</th><th>PLATILLO</th>
-          ${ECT_CRITERIOS.map(c=>`<th style="text-align:center">${c.toUpperCase().slice(0,4)}</th>`).join('')}
-          <th style="text-align:center">PROM</th>
-          <th style="text-align:center">NIVEL</th>
-          <th style="text-align:center">FOTO</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
+    <div style="padding:1.2rem 1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+      ${cards}
     </div>
-    ${ALI_STATE.resumen ? `<div style="margin:1rem 1.5rem;padding:.85rem 1rem;background:#FFFEF5;
+    ${ALI_STATE.resumen ? `<div style="margin:0 1.5rem 1.2rem;padding:.85rem 1rem;background:#FFFEF5;
       border-left:4px solid #C9952A;border-radius:4px">
-      <div style="font-size:.56rem;font-weight:800;letter-spacing:.15em;color:#8A9096;margin-bottom:.4rem">
-        RESUMEN GENERAL F&B</div>
+      <div style="font-size:.56rem;font-weight:800;letter-spacing:.15em;color:#8A9096;margin-bottom:.4rem">RESUMEN GENERAL F&B</div>
       <div style="font-size:.78rem;line-height:1.6;color:#2D3A3F">${esc(ALI_STATE.resumen)}</div>
     </div>` : ''}
   </div>`;
